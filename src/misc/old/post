@@ -1,0 +1,12 @@
+#!/bin/sh
+echo "Content-type: text/plain"
+echo ""
+read QUERY_STRING
+eval $(echo "$QUERY_STRING"|awk -F'&' '{for(i=1;i<=NF;i++){print $i}}')
+ 
+#escaped
+#echo $txtOutput
+  
+#unescaped
+txtOutput=`uhttpd -d $txtOutput`
+echo $txtOutput

@@ -1,0 +1,33 @@
+[[1: { ["encryption"] = 
+  { ["enabled"] = true,
+    ["auth_algs"] = { } ,
+    ["description"] = mixed WPA/WPA2 PSK (TKIP),
+    ["wep"] = false,
+    ["auth_suites"] = 
+      { [1] = PSK,} ,
+    ["wpa"] = 3,
+    ["pair_ciphers"] = 
+      { [1] = TKIP,
+        [2] = CCMP,
+      } ,
+    ["group_ciphers"] = 
+      { [1] = TKIP,} ,
+  } ,
+  ["quality_max"] = 70,
+  ["ssid"] = happiesnappie2,
+  ["channel"] = 9,
+  ["signal"] = -35,
+  ["bssid"] = 00:22:6B:EF:BB:99,
+  ["mode"] = Master,
+  ["quality"] = 70,
+}  ]]
+
+config wifi-iface
+	option network 'lan'
+	option ssid 'happiesnappie2'
+	option encryption 'psk2'
+	option device 'radio0'
+	option mode 'sta'
+	option bssid '00:22:6B:EF:BB:99'
+	option key 'pr4ppal4trappa'
+	option disabled '1'

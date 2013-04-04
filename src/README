@@ -1,0 +1,8 @@
+Installation:
+- place the autowifi directory in /usr/share/lua
+- create a symlink to ext/wfcf in /www/cgi-bin (make sure the file is executable)
+- create a symlink to ext/autowifi.html in /www
+- create a symlink to ext/autowifi.css in /www
+- create a symlink to ext/autowifi.js in /www
+- create a symlink to ext/autowifi_init in /etc/rc.d and name it S19autowifi_init
+- enable init script by calling it with 'enable' argument?

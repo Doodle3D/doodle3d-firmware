@@ -5,7 +5,6 @@
 	...
 	{comma-separated line n}
 	  
-	- see autowifi.js for TODO
 	- general info on wireless config: http://wiki.openwrt.org/doc/uci/wireless
 	- uci docs: http://wiki.openwrt.org/doc/techref/uci
 	- parse/generate urls: https://github.com/keplerproject/cgilua/blob/master/src/cgilua/urlcode.lua
@@ -64,9 +63,9 @@ function main()
 		local si, se
 	
 		if sr and #sr > 0 then
+			util.printWithSuccess(#sr .. " network(s) found");
 			for _, se in ipairs(sr) do
 				--print("[[   " .. util.dump(se) .. "   ]]") --TEMP
-				util.printWithSuccess(#sr .. " network(s) found");
 				print(se.ssid .. "," .. se.bssid .. "," .. se.channel .. "," .. wifi.mapDeviceMode(se.mode))
 			end
 		else
@@ -74,11 +73,11 @@ function main()
 		end
 	
 	elseif argOperation == "getknown" then
+		util.printWithSuccess("")
 		for _, net in ipairs(wifi.getConfigs()) do
 			if net.mode == "sta" then
 				local bssid = net.bssid or "<unknown BSSID>"
 				local channel = net.channel or "<unknown channel>"
-				util.printWithSuccess("")
 				print(net.ssid .. "," .. bssid .. "," .. channel)
 			end
 		end
@@ -102,7 +101,7 @@ function main()
 			end
 		end
 		if cfg == nil or argRecreate ~= nil then
-			scanResult = wifi.getScanInfo(argSsid)
+			local scanResult = wifi.getScanInfo(argSsid)
 			if scanResult ~= nil then
 				wifi.createConfigFromScanInfo(scanResult)
 			else
@@ -111,25 +110,30 @@ function main()
 			end
 		end
 		wifi.activateConfig(argSsid)
-		--restartWlan()
-		util.printWithSuccess("");
-		print("Wlan associated with network "..argSsid.."! (dummy mode, not restarting)")
+		local rv = wifi.restart()
+		util.exitWithSuccess("Wlan associated with network "..argSsid.."! [$?=" .. rv .. "]")
 	
 	elseif argOperation == "disassoc" then
 		wifi.activateConfig()
-		--restartWlan()
-		exitWithSuccess("Deactivated all wireless networks (dummy mode, not restarting)")
+		local rv = wifi.restart()
+		util.exitWithSuccess("Deactivated all wireless networks [$?=" .. rv .. "]")
+	
+	elseif argOperation == "openap" then
+		wifi.activateConfig(wifi.AP_SSID)
+		wifi.configureDhcp(true)
+		local rv = wifi.restart(true)
+		util.exitWithSuccess("Switched to AP mode (SSID: '" .. wifi.AP_SSID .. "') [$?=" .. rv .. "]")
 	
 	elseif argOperation == "rm" then
 		if argSsid == nil or argSsid == "" then util.exitWithError("Please supply an SSID to remove") end
 		if wifi.removeConfig(argSsid) then
-			exitWithSuccess("Removed wireless network with SSID " .. argSsid)
+			util.exitWithSuccess("Removed wireless network with SSID " .. argSsid)
 		else
-			exitWithWarning("No wireless network with SSID " .. argSsid)
+			util.exitWithWarning("No wireless network with SSID " .. argSsid)
 		end
 	
 	elseif argOperation == "auto" then
-		exitWithWarning("Not implemented");
+		util.exitWithWarning("Not implemented");
 		--scan nets
 		--take union of scan and known
 		--connect to first if not empty; setup ap otherwise
@@ -149,7 +153,7 @@ if init() == false then
 	util.exitWithError(errortext)
 end
 
-if wifi.createOrReplaceApConfig() == false then
+if wifi.createOrReplaceApConfig(true) == false then
 	util.exitWithError(errortext)
 end
 

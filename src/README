@@ -6,3 +6,18 @@ Installation:
 - create a symlink to ext/autowifi.js in /www
 - create a symlink to ext/autowifi_init in /etc/rc.d and name it S19autowifi_init
 - enable init script by calling it with 'enable' argument?
+- make sure radio0 in /etc/config/wireless is not disabled
+- create a wlan network in /etc/config/network as follows <<EOF
+config interface 'wlan'
+	option ifname 'radio0'
+	option proto 'dhcp'
+EOF
+- HOWEVER in ap mode it should be static with address '192.168.10.1' and netmask '255.255.255.0'
+  AND act as dhcp server, add to /etc/config/dhcp <<EOF
+config dhcp 'wlan'
+	option interface 'wlan0'
+	option start '100'
+	option limit '150'
+	option leasetime '12h' 
+EOF
+  

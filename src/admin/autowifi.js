@@ -1,18 +1,3 @@
-/*
- * TODO
- * - finish network creation
- * - finish auto operation
- * - call auto op from init script
- * - in AP mode, route all addresses to the autowifi page
- * - escape text where necessary (e.g. in getKnown, '<unknown SSID>' is currently interpreted as html...)
- * - why is $.trim() required in string comparison? do we need to strip newlines in the parse functions?
- * - add hidden field to remember encryption (so we know whether or not a passphrase should be entered)
- * - instead of showing alerts on missing ssid/phrase in connect, disable the button until contraints have been satisfied
- *   (this is also cleaner in case no networks are present)
- * - use json for communication
- * - local all functions (see: http://stackoverflow.com/questions/4643814/why-would-this-lua-optimization-hack-help)
- */
-
 animSpeed = 200;
 cgiBase = "../cgi-bin/wfcf";
 
@@ -69,11 +54,10 @@ function fetchNetworkState() {
 		data = parseResponse(data);
 		if (data.status == "ERR") setResult(data.msg, true);
 		var net = parseNetLine(data.payload);
-		if (net.mode == "ap") {
-			$("#wlan_state").text("Access point mode (SSID: " + net.ssid + "; BSSID: " + net.bssid + "; channel: " + net.channel + ")");
-		} else {
-			$("#wlan_state").text("Client mode (SSID: " + net.ssid + "; BSSID: " + net.bssid + "; channel: " + net.channel + ")");
-		}
+		var modeText = "Unknown device mode ('" + net.mode + "')";
+		if (net.mode == "ap") modeText = "Access point mode";
+		else if (net.mode == "sta") modeText = "Client mode";
+		$("#wlan_state").text(modeText + " (SSID: " + net.ssid + "; BSSID: " + net.bssid + "; channel: " + net.channel + ")");
 	});
 }
 
@@ -104,15 +88,15 @@ function fetchKnownNetworks() {
 		data = data.payload.split("\n");
 		var container = $("#wlan_known_container");
 		container.empty();
-		container.append("<table class=\"known_nets\"><tr><th>SSID</th><th>BSSID</th><th>channel</th></tr>");
+		container.append("<table class=\"known_nets\"><tr><th>SSID</th><th>BSSID</th><th>channel</th></tr></table>");
+		var tbl = container.find("table");
 		$.each(data, function(index,value) {
 			if (value != "") {
 				net = parseNetLine(value);
 				console.log(net);
-				container.append("<tr><td>" + net.ssid + "</td><td>" + net.bssid + "</td><td>" + net.channel + "</td></tr>");
+				tbl.append("<tr><td>" + net.ssid + "</td><td>" + net.bssid + "</td><td>" + net.channel + "</td></tr>");
 			}
 		});
-		container.append("</table>");
 	});
 }
 

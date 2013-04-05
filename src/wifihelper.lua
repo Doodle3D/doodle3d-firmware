@@ -4,8 +4,11 @@ local iwinfo = require("iwinfo")
 
 local M = {}
 
-M.DFL_AP_SSID = "d3d-ap"
 M.DFL_DEVICE = "radio0" -- was wlan0
+M.AP_SSID = "d3d-ap"
+M.AP_ADDRESS = "192.168.10.1"
+M.AP_NETMASK = "255.255.255.0"
+M.NET = "wlan"
 
 local dev, dev_api
 
@@ -17,9 +20,10 @@ local dev, dev_api
 function M.mapDeviceMode(mode, masterIsAp)
 	local modeMap = {
 		["Master"] = masterIsAp and "ap" or "sta",
+		["Client"] = "sta",
 		["Ad-Hoc"] = "adhoc"
 	}
-	return modeMap[mode]
+	return modeMap[mode] or mode
 end
 
 
@@ -115,7 +119,7 @@ function M.createConfigFromScanInfo(info, passphrase, disabled)
 	local mode = M.mapDeviceMode(info.mode)
 
 	local apconfig = {
-		network = "lan",
+		network = M.NET,
 		device = "radio0",
 		ssid = info.ssid,
 		bssid = info.bssid,
@@ -145,7 +149,7 @@ function M.createOrReplaceApConfig(disabled)
 	if sname == nil then sname = uci:add("wireless", "wifi-iface") end
 	
 	local apconfig = {
-		network = "lan",
+		network = M.NET,
 		ssid = M.AP_SSID,
 		encryption = "none",
 		device = "radio0",
@@ -165,8 +169,36 @@ end
 --   unneccesary interruptions there.
 -- * ubus does not seem to work -- local c=ubus.connect();
 --   c:call("network.interface.wlan", "down"); c:call("network.interface.wlan", "up"); c:close()
-function M.restart()
-	local rv = os.execute("/etc/init.d/network reload")
+-- @param dhcpToo also reload dnsmasq if true
+function M.restart(dhcpToo)
+	os.execute("/etc/init.d/network reload") --always seems to return 0
+	if dhcpToo ~= nil and dhcpToo then os.execute("/etc/init.d/dnsmasq reload") end
+	return 0
+end
+
+--- Add or remove DHCP section for wlan network
+-- @param addCfg add section if true or nil, remove it if false
+function M.configureDhcp(addCfg)
+	if addCfg == nil or addCfg == true then
+		uci:set("dhcp", M.NET, "dhcp")
+		uci:set("dhcp", M.NET, "interface", M.NET)
+		uci:set("dhcp", M.NET, "start", "100")
+		uci:set("dhcp", M.NET, "limit", "150")
+		uci:set("dhcp", M.NET, "leasetime", "12h")
+		uci:set("network", M.NET, "proto", "static")
+		uci:set("network", M.NET, "ipaddr", M.AP_ADDRESS)
+		uci:set("network", M.NET, "netmask", M.AP_NETMASK)
+		uci:set("network", M.NET, "type", "bridge")
+	else
+		uci:delete("dhcp", M.NET)
+		uci:set("network", M.NET, "proto", "dhcp")
+		uci:delete("network", M.NET, "ipaddr")
+		uci:delete("network", M.NET, "netmask")
+--		uci:delete("network", M.NET, "bridge")
+	end
+	uci:commit("dhcp")
+	uci:commit("network")
+	--TODO: is network reload enough here?
 end
 
 return M

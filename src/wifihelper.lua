@@ -1,4 +1,4 @@
-local util = require("util")
+local reconf = require("reconf")
 local uci = require("uci").cursor()
 local iwinfo = require("iwinfo")
 
@@ -136,33 +136,6 @@ function M.createConfigFromScanInfo(info, passphrase, disabled)
 	uci:commit("wireless")
 end
 
---- Ensure a suitable config section for the access point network exists
--- @param disabled	flag the network as disabled (optional)
-function M.createOrReplaceApConfig(disabled)
-	local sname = nil
-	uci:foreach("wireless", "wifi-iface", function(s)
-		if s.ssid == M.AP_SSID then
-			sname = s[".name"]
-			return false
-		end
-	end)
-	if sname == nil then sname = uci:add("wireless", "wifi-iface") end
-	
-	local apconfig = {
-		network = M.NET,
-		ssid = M.AP_SSID,
-		encryption = "none",
-		device = "radio0",
-		mode = "ap",
-	}
-	apconfig.disabled = disabled ~= nil and disabled and 1 or 0
-	
-	for k, v in pairs(apconfig) do
-		uci:set("wireless", sname, k, v)
-	end
-	uci:commit("wireless")
-end
-
 --- Reload network config to reflect contents of config
 -- @see http://wiki.openwrt.org/doc/techref/netifd)
 -- * Network reload only restarts interfaces which need to be restarted so no
@@ -174,31 +147,6 @@ function M.restart(dhcpToo)
 	os.execute("/etc/init.d/network reload") --always seems to return 0
 	if dhcpToo ~= nil and dhcpToo then os.execute("/etc/init.d/dnsmasq reload") end
 	return 0
-end
-
---- Add or remove DHCP section for wlan network
--- @param addCfg add section if true or nil, remove it if false
-function M.configureDhcp(addCfg)
-	if addCfg == nil or addCfg == true then
-		uci:set("dhcp", M.NET, "dhcp")
-		uci:set("dhcp", M.NET, "interface", M.NET)
-		uci:set("dhcp", M.NET, "start", "100")
-		uci:set("dhcp", M.NET, "limit", "150")
-		uci:set("dhcp", M.NET, "leasetime", "12h")
-		uci:set("network", M.NET, "proto", "static")
-		uci:set("network", M.NET, "ipaddr", M.AP_ADDRESS)
-		uci:set("network", M.NET, "netmask", M.AP_NETMASK)
-		uci:set("network", M.NET, "type", "bridge")
-	else
-		uci:delete("dhcp", M.NET)
-		uci:set("network", M.NET, "proto", "dhcp")
-		uci:delete("network", M.NET, "ipaddr")
-		uci:delete("network", M.NET, "netmask")
---		uci:delete("network", M.NET, "bridge")
-	end
-	uci:commit("dhcp")
-	uci:commit("network")
-	--TODO: is network reload enough here?
 end
 
 return M

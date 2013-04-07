@@ -55,9 +55,11 @@ function fetchNetworkState() {
 		if (data.status == "ERR") setResult(data.msg, true);
 		var net = parseNetLine(data.payload);
 		var modeText = "Unknown device mode ('" + net.mode + "')";
-		if (net.mode == "ap") modeText = "Access point mode";
-		else if (net.mode == "sta") modeText = "Client mode";
-		$("#wlan_state").text(modeText + " (SSID: " + net.ssid + "; BSSID: " + net.bssid + "; channel: " + net.channel + ")");
+		if (net.mode == "ap") {
+			$("#wlan_state").text("Access point mode");
+		} else if (net.mode == "sta") {
+			$("#wlan_state").text("Client mode (SSID: " + net.ssid + "; BSSID: " + net.bssid + "; channel: " + net.channel + ")");
+		}
 	});
 }
 
@@ -72,8 +74,9 @@ function fetchAvailableNetworks() {
 		options.empty();
 		$.each(data, function(index,value) {
 			if (value != "") {
-				var ssid = parseNetLine(value).ssid;
-				options.append($("<option />").val(ssid).text(ssid));
+				var netinf = parseNetLine(value);
+				var ssid = netinf.ssid;
+				options.append($("<option />").val(ssid).text(ssid + " - " + netinf.mode + " mode"));
 			}
 		});
 		$("#wlan_btn_connect").prop('disabled', false);

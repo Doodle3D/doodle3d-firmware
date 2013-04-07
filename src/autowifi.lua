@@ -14,10 +14,11 @@
 	  http://wiki.openwrt.org/doc/howto/wireless.hotspot
   ]]
 --print ("HTTP/1.0 200 OK")
-print ("Content-type: text/plain\r\n")
+io.write ("Content-type: text/plain\r\n\r\n")
 
-local util = require("util")
+local u = require("util")
 local wifi = require("wifihelper")
+local reconf = require("reconf")
 local uci = require("uci").cursor()
 local urlcode = require("urlcode")
 local iwinfo = require("iwinfo")
@@ -26,6 +27,7 @@ local argOperation, argDevice, argSsid, argPhrase, argRecreate
 local errortext = nil
 
 function init()
+	u:initlog(u.LOG_LEVEL.debug, true, io.stderr)
 	local qs = os.getenv("QUERY_STRING")
 	local urlargs = {}
 	urlcode.parsequery(qs, urlargs)
@@ -53,7 +55,7 @@ function init()
 		return false
 	end
 
-	return wifi.init()
+	return wifi.init() and reconf.init(wifi, true)
 end
 
 
@@ -61,19 +63,24 @@ function main()
 	if argOperation == "getavl" then
 		local sr = wifi.getScanInfo()
 		local si, se
-	
+		
+		--TODO:
+		--  - extend reconf interface to support function arguments (as tables) so wifihelper functionality can be integrated
+		--    but how? idea: pass x_args={arg1="a",arg2="2342"} with component 'x'
 		if sr and #sr > 0 then
-			util.printWithSuccess(#sr .. " network(s) found");
+			u.printWithSuccess(#sr .. " network(s) found");
 			for _, se in ipairs(sr) do
-				--print("[[   " .. util.dump(se) .. "   ]]") --TEMP
-				print(se.ssid .. "," .. se.bssid .. "," .. se.channel .. "," .. wifi.mapDeviceMode(se.mode))
+				print("[[   " .. u.dump(se) .. "   ]]") --TEMP
+				if se.mode ~= "ap" then
+					print(se.ssid .. "," .. se.bssid .. "," .. se.channel .. "," .. wifi.mapDeviceMode(se.mode))
+				end
 			end
 		else
-			util.exitWithError("No scan results or scanning not possible")
+			u.exitWithError("No scan results or scanning not possible")
 		end
 	
 	elseif argOperation == "getknown" then
-		util.printWithSuccess("")
+		u.printWithSuccess("")
 		for _, net in ipairs(wifi.getConfigs()) do
 			if net.mode == "sta" then
 				local bssid = net.bssid or "<unknown BSSID>"
@@ -87,11 +94,11 @@ function main()
 		local ssid = ds.ssid or "<unknown SSID>"
 		local bssid = ds.bssid or "<unknown BSSID>"
 		local channel = ds.channel or "<unknown channel>"
-		util.printWithSuccess("");
+		u.printWithSuccess("");
 		print(ssid .. "," .. bssid .. "," .. channel .. "," .. ds.mode)
 	
 	elseif argOperation == "assoc" then
-		if argSsid == nil or argSsid == "" then util.exitWithError("Please supply an SSID to associate with") end
+		if argSsid == nil or argSsid == "" then u.exitWithError("Please supply an SSID to associate with") end
 		
 		local cfg = nil
 		for _, net in ipairs(wifi.getConfigs()) do
@@ -106,40 +113,46 @@ function main()
 				wifi.createConfigFromScanInfo(scanResult)
 			else
 				--check for error
-				util.exitWithError("No wireless network with SSID '" .. argSsid .. "' is available")
+				u.exitWithError("No wireless network with SSID '" .. argSsid .. "' is available")
 			end
 		end
 		wifi.activateConfig(argSsid)
 		local rv = wifi.restart()
-		util.exitWithSuccess("Wlan associated with network "..argSsid.."! [$?=" .. rv .. "]")
+		u.exitWithSuccess("Wlan associated with network "..argSsid.."! [$?=" .. rv .. "]")
 	
 	elseif argOperation == "disassoc" then
 		wifi.activateConfig()
 		local rv = wifi.restart()
-		util.exitWithSuccess("Deactivated all wireless networks [$?=" .. rv .. "]")
+		u.exitWithSuccess("Deactivated all wireless networks [$?=" .. rv .. "]")
 	
 	elseif argOperation == "openap" then
+		--add AP net, activate it, deactivate all others, reload network/wireless config, add all dhcp and captive settings and reload as needed
+		reconf.switchConfiguration{apnet="add_noreload"}
 		wifi.activateConfig(wifi.AP_SSID)
-		wifi.configureDhcp(true)
-		local rv = wifi.restart(true)
-		util.exitWithSuccess("Switched to AP mode (SSID: '" .. wifi.AP_SSID .. "') [$?=" .. rv .. "]")
+		reconf.switchConfiguration{ network="reload", staticaddr="add", dhcppool="add", wwwredir="add", dnsredir="add", wwwcaptive="add", natreflect="add" }
+		u.exitWithSuccess("Switched to AP mode (SSID: '" .. wifi.AP_SSID .. "')")
 	
 	elseif argOperation == "rm" then
-		if argSsid == nil or argSsid == "" then util.exitWithError("Please supply an SSID to remove") end
+		if argSsid == nil or argSsid == "" then u.exitWithError("Please supply an SSID to remove") end
 		if wifi.removeConfig(argSsid) then
-			util.exitWithSuccess("Removed wireless network with SSID " .. argSsid)
+			u.exitWithSuccess("Removed wireless network with SSID " .. argSsid)
 		else
-			util.exitWithWarning("No wireless network with SSID " .. argSsid)
+			u.exitWithWarning("No wireless network with SSID " .. argSsid)
 		end
+		
+	elseif argOperation == "test" then
+		reconf.switchConfiguration{ apnet="rm", staticaddr="rm", dhcppool="rm", wwwredir="rm", dnsredir="rm", wwwcaptive="rm", natreflect="rm" }
+--		reconf.switchConfiguration{dnsredir="add"}
+		u.exitWithSuccess("nop")
 	
 	elseif argOperation == "auto" then
-		util.exitWithWarning("Not implemented");
+		u.exitWithWarning("Not implemented");
 		--scan nets
 		--take union of scan and known
 		--connect to first if not empty; setup ap otherwise
 		
 	else
-		util.exitWithError("Unknown operation: '" .. argOperation .. "'")
+		u.exitWithError("Unknown operation: '" .. argOperation .. "'")
 	end
 	
 	os.exit(0)
@@ -150,11 +163,7 @@ end
 --[[ START OF CODE ]]--
 
 if init() == false then
-	util.exitWithError(errortext)
-end
-
-if wifi.createOrReplaceApConfig(true) == false then
-	util.exitWithError(errortext)
+	u.exitWithError(errortext)
 end
 
 main()

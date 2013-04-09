@@ -46,6 +46,7 @@ function parseNetLine(line) {
 	r.bssid = line[1];
 	r.channel = line[2];
 	r.mode = line[3];
+	r.encryption = line[4];
 	return r;
 }
 
@@ -76,7 +77,7 @@ function fetchAvailableNetworks() {
 			if (value != "") {
 				var netinf = parseNetLine(value);
 				var ssid = netinf.ssid;
-				options.append($("<option />").val(ssid).text(ssid + " - " + netinf.mode + " mode"));
+				options.append($("<option />").val(ssid).text(ssid + " - " + netinf.mode + " mode" + "(encryption: " + netinf.encryption + ")"));
 			}
 		});
 		$("#wlan_btn_connect").prop('disabled', false);
@@ -113,7 +114,7 @@ function connectBtnHandler() {
 		return;
 	}
 	
-	$.get(cgiBase + "?op=assoc&ssid=" + ssid + "&passphrase=" + phrase, function(data) {
+	$.get(cgiBase + "?op=assoc&ssid=" + ssid + "&phrase=" + phrase, function(data) {
 		data = parseResponse(data);
 		if (data.status == "ERR") {
 			setResult(data.msg, true);

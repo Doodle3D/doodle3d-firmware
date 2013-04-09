@@ -66,13 +66,15 @@ function main()
 		
 		--TODO:
 		--  - extend reconf interface to support function arguments (as tables) so wifihelper functionality can be integrated
-		--    but how? idea: pass x_args={arg1="a",arg2="2342"} with component 'x'
+		--    but how? idea: pass x_args={arg1="a",arg2="2342"} for component 'x'
+		--    or: allow alternative for x="y" --> x={action="y", arg1="a", arg2="2342"}
+		--    in any case, arguments should be put in a new table to pass to the function (since order is undefined it must be an assoc array)
 		if sr and #sr > 0 then
 			u.printWithSuccess(#sr .. " network(s) found");
 			for _, se in ipairs(sr) do
-				print("[[   " .. u.dump(se) .. "   ]]") --TEMP
-				if se.mode ~= "ap" then
-					print(se.ssid .. "," .. se.bssid .. "," .. se.channel .. "," .. wifi.mapDeviceMode(se.mode))
+				--print("[[   " .. u.dump(se) .. "   ]]") --TEMP
+				if se.mode ~= "ap" and se.ssid ~= wifi.AP_SSID then
+					print(se.ssid .. "," .. se.bssid .. "," .. se.channel .. "," .. wifi.mapDeviceMode(se.mode) .. "," .. wifi.mapEncryptionType(se.encryption))
 				end
 			end
 		else
@@ -110,15 +112,15 @@ function main()
 		if cfg == nil or argRecreate ~= nil then
 			local scanResult = wifi.getScanInfo(argSsid)
 			if scanResult ~= nil then
-				wifi.createConfigFromScanInfo(scanResult)
+				wifi.createConfigFromScanInfo(scanResult, argPhrase)
 			else
 				--check for error
 				u.exitWithError("No wireless network with SSID '" .. argSsid .. "' is available")
 			end
 		end
 		wifi.activateConfig(argSsid)
-		local rv = wifi.restart()
-		u.exitWithSuccess("Wlan associated with network "..argSsid.."! [$?=" .. rv .. "]")
+		reconf.switchConfiguration{ wifiiface="add", apnet="rm", staticaddr="rm", dhcppool="rm", wwwredir="rm", dnsredir="rm", wwwcaptive="rm", wireless="reload" }
+		u.exitWithSuccess("Wlan associated with network " .. argSsid .. "!")
 	
 	elseif argOperation == "disassoc" then
 		wifi.activateConfig()
@@ -129,7 +131,7 @@ function main()
 		--add AP net, activate it, deactivate all others, reload network/wireless config, add all dhcp and captive settings and reload as needed
 		reconf.switchConfiguration{apnet="add_noreload"}
 		wifi.activateConfig(wifi.AP_SSID)
-		reconf.switchConfiguration{ network="reload", staticaddr="add", dhcppool="add", wwwredir="add", dnsredir="add", wwwcaptive="add", natreflect="add" }
+		reconf.switchConfiguration{ wifiiface="add", network="reload", staticaddr="add", dhcppool="add", wwwredir="add", dnsredir="add", wwwcaptive="add" }
 		u.exitWithSuccess("Switched to AP mode (SSID: '" .. wifi.AP_SSID .. "')")
 	
 	elseif argOperation == "rm" then
@@ -141,7 +143,8 @@ function main()
 		end
 		
 	elseif argOperation == "test" then
-		reconf.switchConfiguration{ apnet="rm", staticaddr="rm", dhcppool="rm", wwwredir="rm", dnsredir="rm", wwwcaptive="rm", natreflect="rm" }
+		--invert actions performed by openap operation
+		reconf.switchConfiguration{ apnet="rm", staticaddr="rm", dhcppool="rm", wwwredir="rm", dnsredir="rm", wwwcaptive="rm" }
 --		reconf.switchConfiguration{dnsredir="add"}
 		u.exitWithSuccess("nop")
 	

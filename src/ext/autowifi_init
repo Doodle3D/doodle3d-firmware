@@ -1,12 +1,17 @@
 #!/bin/sh /etc/rc.common
 
 START=19
+LOGGER="logger -s -t autowifi -p 6"
 
-start() {
-	echo "dummy auto wifi init"
+boot() {
+	$LOGGER "dummy boot"
 	#/www/cgi-bin/wfcf op=auto
 }
 
+start() {
+	$LOGGER "dummy start"
+}
+
 stop() {
-	echo "dummy auto wifi deinit"
+	$LOGGER "dummy stop"
 }

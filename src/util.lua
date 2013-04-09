@@ -68,16 +68,19 @@ local function log(level, msg, verbose)
 	if level >= logLevel then
 		local now = os.date("%m-%d %H:%M:%S")
 		local i = debug.getinfo(3)
-		local v = verbose ~= nil and verbose or logVerbose
-		if v then logStream:write(now .. " (" .. level .. ")  \t" .. msg .. "  [" .. i.name .. "@" .. i.short_src .. ":" .. i.linedefined .. "]\n")
+		local v = verbose
+		if v == nil then v = logVerbose end
+		local name = i.name or "(nil)"
+		local vVal = "nil"
+		if v then logStream:write(now .. " (" .. level .. ")  \t" .. msg .. "  [" .. name .. "@" .. i.short_src .. ":" .. i.linedefined .. "]\n")
 		else logStream:write(now .. " (" .. level .. ")  \t" .. msg .. "\n") end
 	end
 end
 
-function M:logdebug(msg, verbose) log(M.LOG_LEVEL.debug, msg, verbose) end
-function M:loginfo(msg, verbose) log(M.LOG_LEVEL.info, msg, verbose) end
-function M:logwarn(msg, verbose) log(M.LOG_LEVEL.warn, msg, verbose) end
-function M:logerror(msg, verbose) log(M.LOG_LEVEL.error, msg, verbose) end
-function M:logfatal(msg, verbose) log(M.LOG_LEVEL.fatal, msg, verbose) end
+function M:logdebug(msg, verbose) log(M.LOG_LEVEL.debug, msg, verbose); return true end
+function M:loginfo(msg, verbose) log(M.LOG_LEVEL.info, msg, verbose); return true end
+function M:logwarn(msg, verbose) log(M.LOG_LEVEL.warn, msg, verbose); return true end
+function M:logerror(msg, verbose) log(M.LOG_LEVEL.error, msg, verbose); return false end
+function M:logfatal(msg, verbose) log(M.LOG_LEVEL.fatal, msg, verbose); return false end
 
 return M

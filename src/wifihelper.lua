@@ -1,4 +1,5 @@
 local reconf = require("reconf")
+local util = require("util")
 local uci = require("uci").cursor()
 local iwinfo = require("iwinfo")
 
@@ -24,6 +25,19 @@ function M.mapDeviceMode(mode, masterIsAp)
 		["Ad-Hoc"] = "adhoc"
 	}
 	return modeMap[mode] or mode
+end
+
+--[[
+	- TODO: several modes need to be tested (wep, psk2, mixed-psk)
+	- See: http://wiki.openwrt.org/doc/uci/wireless#wpa.modes
+]]
+function M.mapEncryptionType(scanEncrTbl)
+	local wpaModeMap = { [1] = "psk", [2] = "psk2", [3] = "mixed-psk" }
+	
+	if scanEncrTbl.enabled == false then return "none" end
+	if scanEncrTbl.wep == true then return "wep" end
+	
+	return wpaModeMap[scanEncrTbl.wpa] or scanEncrTbl.description
 end
 
 
@@ -111,7 +125,7 @@ end
 
 --- Create a new UCI network from the given iwinfo data
 -- http://luci.subsignal.org/trac/browser/luci/trunk/libs/iwinfo/src/iwinfo_wext.c?rev=5645 (outdated?)
--- TODO: configure encryption correctly (how?)
+-- TODO: delete previous network if exists (match on MAC-address)
 -- @param info			iwinfo data to create a network from
 -- @param passphrase	passphrase to use (optional)
 -- @param disabled		immediately disable the network (optional)
@@ -123,7 +137,7 @@ function M.createConfigFromScanInfo(info, passphrase, disabled)
 		device = "radio0",
 		ssid = info.ssid,
 		bssid = info.bssid,
-		--encryption = "none",
+		encryption = M.mapEncryptionType(info.encryption),
 		mode = mode,
 	}
 	if passphrase ~= nil then apconfig.key = passphrase end

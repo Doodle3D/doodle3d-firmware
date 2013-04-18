@@ -1,9 +1,0 @@
-#!/bin/sh
-echo "Content-type: text/plain"
-echo ""
-echo "Sample CGI Output"
-echo ""
-echo ""
-env
-echo ""
-echo ""

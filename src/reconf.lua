@@ -10,6 +10,8 @@ M.WWW_CAPTIVE_PATH = "/usr/share/lua/autowifi/ext/www"
 M.WWW_CAPTIVE_INDICATOR = "/www/.autowifi-inplace"
 M.WWW_RENAME_NAME = "/www-regular"
 
+
+
 local function reloadBit(dlist, itemname)
 	if dlist[itemname] == nil then dlist[itemname] = "" end
 	if dlist[itemname] == "" then dlist[itemname] = "r"
@@ -23,6 +25,8 @@ local function commitBit(dlist, itemname)
 	end
 end
 local function bothBits(dlist, itemname) dlist[itemname] = "b" end
+
+
 
 function M.init(wifiInstance, reloadSilent)
 	wifi = wifiInstance
@@ -82,9 +86,9 @@ function reconf.wireless_reload(dirtyList) reloadBit(dirtyList, "wireless") end
 --[[ Add wlan interface declaration to /etc/config/network ]]
 function reconf.wifiiface_add(dirtyList)
 	uci:set("network", wifi.NET, "interface")
---	uci:set("network", wifi.NET, "proto", "dhcp")
 	commitBit(dirtyList, "network")
 end
+
 
 --[[ Add/remove access point network ]]
 function reconf.apnet_add_noreload(dirtyList) reconf.apnet_add(dirtyList, true) end
@@ -116,6 +120,7 @@ function reconf.apnet_rm(dirtyList)
 	reloadBit(dirtyList, "network"); commitBit(dirtyList, "wireless")
 end
 
+
 --[[ Switch between wireless static IP and DHCP ]]
 function reconf.staticaddr_add(dirtyList)
 	uci:set("network", wifi.NET, "interface")
@@ -137,6 +142,7 @@ function reconf.staticaddr_rm(dirtyList)
 	bothBits(dirtyList, "network")
 end
 
+
 --[[ Add/remove DHCP pool for wireless net ]]
 function reconf.dhcppool_add(dirtyList)
 	uci:set("dhcp", wifi.NET, "dhcp") --create section
@@ -153,6 +159,7 @@ function reconf.dhcppool_rm(dirtyList)
 	commitBit(dirtyList, "dhcp"); reloadBit(dirtyList, "dnsmasq")
 end
 
+
 --[[ Add/remove webserver 404 redirection and denial of dirlisting ]]
 function reconf.wwwredir_add(dirtyList)
 	uci:set("uhttpd", "main", "error_page", "/admin/autowifi.html")
@@ -164,6 +171,7 @@ function reconf.wwwredir_rm(dirtyList)
 	uci:delete("uhttpd", "main", "no_dirlist")
 	bothBits(dirtyList, "uhttpd")
 end
+
 
 --[[ Add/remove redirecton of all DNS requests to self ]]
 function reconf.dnsredir_add(dirtyList)
@@ -183,20 +191,28 @@ function reconf.dnsredir_rm(dirtyList)
 	commitBit(dirtyList, "dhcp"); reloadBit(dirtyList, "dnsmasq")
 end
 
+
 --TODO: handle os.rename() return values (nil+msg on error)
 function reconf.wwwcaptive_add(dirtyList)
 	if u.exists(M.WWW_CAPTIVE_INDICATOR) then
 		return u:logdebug("WWW captive directory already in place, not redoing", false)
 	end
-	os.rename("/www", M.WWW_RENAME_NAME)
-	u.symlink(M.WWW_CAPTIVE_PATH, "/www")
-	return true
+	if os.rename("/www", M.WWW_RENAME_NAME) == true then
+		u.symlink(M.WWW_CAPTIVE_PATH, "/www")
+		return true
+	else
+		return u:logerror("Could not rename /www to " .. M.WWW_RENAME_NAME)
+	end
 end
 function reconf.wwwcaptive_rm(dirtyList)
 	if not u.exists(M.WWW_CAPTIVE_INDICATOR) then return u:logdebug("WWW captive directory not in place, not undoing", false) end
 	os.remove("/www")
-	return os.rename(M.WWW_RENAME_NAME, "/www")
+	if os.rename(M.WWW_RENAME_NAME, "/www") ~= true then
+		return u:logerror("Could not rename " .. M.WWW_RENAME_NAME .. " to /www")
+	end
+	return true
 end
+
 
 --[[ Setup/remove NAT reflection to redirect all IPs ]]
 function reconf.natreflect_add(dirtyList)

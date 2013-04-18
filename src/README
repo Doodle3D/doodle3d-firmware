@@ -1,17 +1,19 @@
 Installation:
-- place the autowifi directory in /usr/share/lua
+- place the src directory in /usr/share/lua and name it 'autowifi'
 - create a symlink to ext/wfcf in /www/cgi-bin (make sure the file is executable)
-- create a symlink to ext/autowifi.html in /www
-- create a symlink to ext/autowifi.css in /www
-- create a symlink to ext/autowifi.js in /www
-- create a symlink to ext/autowifi_init in /etc/rc.d and name it S19autowifi_init
-- enable init script by calling it with 'enable' argument?
+- create a symlink to admin in /www
+- create a symlink to ext/autowifi_init in /etc/rc.d and name it S18autowifi_init
+- (not necessary) enable init script by calling it with 'enable' argument?
 - make sure radio0 in /etc/config/wireless is not disabled
+- the wlan net must also be added to firewall in the lan zone
+
+== these two items are now handled by the script
 - create a wlan network in /etc/config/network as follows <<EOF
 config interface 'wlan'
 	option ifname 'radio0'
 	option proto 'dhcp'
 EOF
+  NOTE: apparently it should have no ifname (network reload will complain about an unsupported operation)
 - HOWEVER in ap mode it should be static with address '192.168.10.1' and netmask '255.255.255.0'
   AND act as dhcp server, add to /etc/config/dhcp <<EOF
 config dhcp 'wlan'
@@ -20,4 +22,6 @@ config dhcp 'wlan'
 	option limit '150'
 	option leasetime '12h' 
 EOF
-  
+
+== package creation
+- starting point: http://manoftoday.wordpress.com/2007/10/11/writing-and-compiling-a-simple-program-for-openwrt/

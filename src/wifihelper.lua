@@ -143,6 +143,14 @@ function M.createConfigFromScanInfo(info, passphrase, disabled)
 	if passphrase ~= nil then apconfig.key = passphrase end
 	apconfig.disabled = disabled ~= nil and disabled and 1 or 0
 	
+	uci:foreach("wireless", "wifi-iface", function(s)
+		if s.bssid == info.bssid then
+			util:logdebug("removing old wireless config for net '" .. s.ssid .. "(bssid: " .. s.bssid .. ")'")
+			uci:delete("wireless", s[".name"])
+--			return false --keep looking, just in case multiple entries with this bssid exist
+		end
+	end)
+	
 	local sname = uci:add("wireless", "wifi-iface");
 	for k, v in pairs(apconfig) do
 		uci:set("wireless", sname, k, v)

@@ -1,17 +1,3 @@
-/*
- * TODO
- * - finish network creation
- * - finish auto operation
- * - call auto op from init script
- * - in AP mode, route all addresses to the autowifi page
- * - escape text where necessary (e.g. in getKnown, '<unknown SSID>' is currently interpreted as html...)
- * - why is $.trim() required in string comparison? do we need to strip newlines in the parse functions?
- * - add hidden field to remember encryption (so we know whether or not a passphrase should be entered)
- * - instead of showing alerts on missing ssid/phrase in connect, disable the button until contraints have been satisfied
- *   (this is also cleaner in case no networks are present)
- * - use json for communication
- */
-
 animSpeed = 200;
 cgiPath = "asdasd/cgi-bin/wfcf";
 

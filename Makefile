@@ -100,5 +100,10 @@ endif
 	$(LN) -s /usr/share/lua/autowifi/ext/autowifi_init $(1)/etc/rc.d/S18autowifi_init
 endef
 
+define Package/wifibox/postinst
+	#!/bin/sh
+	touch /.postinst-was-here
+endef
+
 
 $(eval $(call BuildPackage,wifibox))

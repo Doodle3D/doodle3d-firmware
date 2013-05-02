@@ -13,5 +13,6 @@
 	</buildSpec>
 	<natures>
 		<nature>org.eclipse.koneki.ldt.nature</nature>
+		<nature>net.sourceforge.shelled.core.nature</nature>
 	</natures>
 </projectDescription>

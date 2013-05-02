@@ -7,6 +7,31 @@
 		bool "Enable development aids"
 		default n
 		help
-			Enable development features (currently a script to copy and zip all relevant code for updating the git repository).
+			Enable development features (currently a script to copy and zip all relevant
+			code for updating the git repository, and two shell aliases for convenience,
+			see /root/.profile).
+
+	config WIFIBOX_AP_SSID
+		depends on PACKAGE_wifibox
+		string "AP mode SSID"
+		default "d3d-ap"
+		help
+			The SSID the device will use when switching into access point mode.
+			Note: the Lua scripts do not actually use this yet.
+	
+	config WIFIBOX_INIT_PRIORITY
+		depends on PACKAGE_wifibox
+		int "Init-script priority"
+		default "18"
+		help
+			The priority given to the auto-wifi init-script.
+	
+	config WIFIBOX_WIRELESS_DEVICE
+		depends on PACKAGE_wifibox
+		string "Physical wireless device name"
+		default "radio0"
+		help
+			The wireless device name used in the UCI wireless configuration ('radio0'
+			on the supported TP-Link devices with a recent OpenWRT version).
 
 #endmenu

@@ -1,0 +1,12 @@
+# Doodle3D Wifibox configuration
+#menu "Configuration"
+#	depends on PACKAGE_wifibox
+
+	config WIFIBOX_DEVEL_PACKAGE
+		depends on PACKAGE_wifibox
+		bool "Enable development aids"
+		default n
+		help
+			Enable development features (currently a script to copy and zip all relevant code for updating the git repository).
+
+#endmenu

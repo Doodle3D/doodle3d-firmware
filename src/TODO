@@ -1,0 +1,6 @@
+- write a shellscript to automate tasks like swapping out /www and packaging modified code for git merging
+- finish postinst and prerm/postrm scripts
+- do things right and copy (not link) the init script to init.d
+  (and enable it automatically, which links to it from rc.d with the proper start priority?)
+- add/link general OpenWrt build instructions for OSX to installation page on wiki.
+- see if updating works when a new version is 'released' (probably needs a real feed)

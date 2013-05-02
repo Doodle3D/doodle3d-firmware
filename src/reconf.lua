@@ -124,6 +124,7 @@ end
 --[[ Switch between wireless static IP and DHCP ]]
 function reconf.staticaddr_add(dirtyList)
 	uci:set("network", wifi.NET, "interface")
+	--TODO: remove ifname on wlan interface?
 	M.uciTableSet("network", wifi.NET, {
 		proto = "static",
 		ipaddr = wifi.AP_ADDRESS,

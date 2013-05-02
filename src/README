@@ -1,11 +1,12 @@
 Installation:
-- place the src directory in /usr/share/lua and name it 'autowifi'
-- create a symlink to ext/wfcf in /www/cgi-bin (make sure the file is executable)
-- create a symlink to admin in /www
-- create a symlink to ext/autowifi_init in /etc/rc.d and name it S18autowifi_init
-- (not necessary) enable init script by calling it with 'enable' argument?
 - make sure radio0 in /etc/config/wireless is not disabled
 - the wlan net must also be added to firewall in the lan zone
+
+== these steps are performed by the package installer
+- (ignore) place the src directory in /usr/share/lua and name it 'autowifi'
+- (ignore) create a symlink to ext/wfcf in /www/cgi-bin (make sure the file is executable)
+- (ignore) create a symlink to admin in /www
+- (ignore) create a symlink to ext/autowifi_init in /etc/rc.d and name it S18autowifi_init
 
 == these two items are now handled by the script
 - create a wlan network in /etc/config/network as follows <<EOF
@@ -22,6 +23,3 @@ config dhcp 'wlan'
 	option limit '150'
 	option leasetime '12h' 
 EOF
-
-== package creation
-- starting point: http://manoftoday.wordpress.com/2007/10/11/writing-and-compiling-a-simple-program-for-openwrt/

@@ -1,24 +1,20 @@
+########### NOTE: add an extra '$' in front of all existing ones when copying into Makefile (and remove this line...)
+
+
 #!/bin/sh
-
-##############
-# MAIN CODE #
-############
-
 if [ ! -f /etc/banner.default ]; then
 	mv /etc/banner /etc/banner.default
 	cat <<-'EOM' > /etc/banner
 		........D o o d l e 3 D
 		.......________     _____  _____  v $(PACKAGE_VERSION) 
 		....../  /  /  |__ /  __/ /  - /___ __
-		...../  /  /  /--//  _|-//  - | . /- /
-		..../________/__//__/__//____/___/_-_\
+		...../  /  /  /--//  _|-//  --| . /v /
+		..../________/__//__/__//____/___/_^_\\
 		...
 		..A cad in a box.
 		.
 EOM
-
 fi
-
 grep '^# DO NOT MODIFY.*wifibox package.$' /root/.profile >/dev/null 2>&1
 if [ $? -eq 1 ]; then
 		cat <<-EOM >> /root/.profile
@@ -29,5 +25,10 @@ if [ $? -eq 1 ]; then
 EOM
 fi
 
-#3. make sure the radio0 interface is enabled in /etc/config/wireless (preferably through uci)
-#4. make sure the wlan net is in the lan zone in /etc/config/dnsmasq (and make sure wlan net exists?)
+@echo "Enabling wifi device..."
+uci set wireless.@wifi-device[0].disabled=0; uci commit wireless; wifi
+
+./add-fw-net.sh
+
+@echo "Adding network interface 'wlan'..."
+uci set network.wlan=interface; uci commit network; /etc/init.d/network reload

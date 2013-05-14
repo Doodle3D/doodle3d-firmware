@@ -1,15 +1,19 @@
 # TODO
 - finish postinst and prerm/postrm scripts
-  - preliminary test with postinst does not seem to work (i.e. touch a file in the device root does not result in a file being there)
+- externalize postinst+prerm scripts by doing something like: 'POSTINST_SCRIPT:=$(shell cat postinst.sh)'?
+  see: http://stackoverflow.com/questions/1435861/computing-makefile-variable-on-assignment
+- do things right and copy (not link) the init script to init.d
+  (and enable it automatically, which links to it from rc.d with the proper start priority?)
+  as sudo does: '[ -n "$$IPKG_INSTROOT" ] || { /etc/init.d/sudo enable}'; and here: https://forum.openwrt.org/viewtopic.php?pid=85197#p85197
 - add more config options to package; candidates:
   reconf.WWW_RENAME_NAME, wifihelper.{AP_ADDRESS, AP_NETMASK, (NET)}
   about bridging this to lua: have some Makefile stage create a ini/lua file with k/v's and have lua read out that file?
 - write a shellscript to automate tasks like swapping out /www and packaging modified code for git merging
-- do things right and copy (not link) the init script to init.d
-  (and enable it automatically, which links to it from rc.d with the proper start priority?)
 - add dependency on either wr703n or mr3020 (and probably comment it out to avoid being to conservative...)
-- add/link general OpenWrt build instructions for OSX to installation page on wiki.
 - see if updating works when a new version is 'released' (probably needs a real feed)
+- add config option to compile sources using luac?
+- add/link general OpenWrt build instructions for OSX to installation page on wiki.
+- remove usr/share/lua/autowifi and subdirectories (if empty) in postrm
 
 
 # TODO for autowifi.js
@@ -43,12 +47,12 @@ Check http://geon.github.io/Programming/2012/04/25/ascii-art-signatures-in-the-w
 ....D o o d l e 3 D
 ...________     _____  _____  v 1.0.1 
 ../  /  /  |__ /  __/ /  - /___ __
-./  '  '  /--//  _|-//  - | . /- /
-/________/__//__/__//____/___/_-_\
+./  '  '  /--//  _|-//  --| . /v /
+/________/__//__/__//____/___/_^_\
 
 
 
-# Shelled bugs/annoyances
+# Shelled bugs/annoyances (all except the lua errors have been filed)
 + scripts are only allowed to be created in src folder? (nothing else shown, root greys out 'Finish')
 + text inside heredoc is highlighted
 + only one space allowed at start of line...makes it impossible to draw ascii art

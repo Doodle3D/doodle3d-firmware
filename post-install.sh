@@ -41,7 +41,7 @@ if [ ! -f /etc/banner.default ]; then
 		.......________     _____  _____  v $(PACKAGE_VERSION) 
 		....../  /  /  |__ /  __/ /  - /___ __
 		...../  /  /  /--//  _|-//  --| . /v /
-		..../________/__//__/__//____/___/_^_\\
+		..../________/__//__/__//____/___/_^_\
 		...
 		..A cad in a box.
 		.
@@ -68,3 +68,7 @@ addFirewallNet
 
 echo "Adding network interface 'wlan'..."
 uci set network.wlan=interface; uci commit network; /etc/init.d/network reload
+
+[ -z "$$IPKG_INSTROOT" ] || { /etc/init.d/autowifi_init enable; }
+
+exit 0

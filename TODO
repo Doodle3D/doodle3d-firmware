@@ -1,19 +1,14 @@
 # TODO
-- do things right and copy (not link) the init script to init.d
-  (and enable it automatically, which links to it from rc.d with the proper start priority?)
-  as sudo does: '[ -n "$$IPKG_INSTROOT" ] || { /etc/init.d/sudo enable}'; and here: https://forum.openwrt.org/viewtopic.php?pid=85197#p85197
 - add more config options to package; candidates:
   reconf.WWW_RENAME_NAME, wifihelper.{AP_ADDRESS, AP_NETMASK, (NET)}
   about bridging this to lua: have some Makefile stage create a ini/lua file with k/v's and have lua read out that file?
 - write a shellscript to automate tasks like swapping out /www and packaging modified code for git merging
-- add dependency on either wr703n or mr3020 (and probably comment it out to avoid being to conservative...)
 - see if updating works when a new version is 'released' (probably needs a real feed)
 - add aliases to root profile only when debugging was requested in menuconfig
-- symlinks created in the install section of the Makefile should perhaps be created in the postinstall script,
-  this way the package is truly relocatable
 - add config option to compile sources using luac?
+- add dependency on either wr703n or mr3020 (and probably comment it out to avoid being to conservative...)
 - add/link general OpenWrt build instructions for OSX to installation page on wiki.
-- remove usr/share/lua/autowifi and subdirectories (if empty) in postrm
+- relocatabilty of package (take root prefix into consideration everywhere)
 
 
 # TODO for autowifi.js
@@ -47,7 +42,7 @@ Check http://geon.github.io/Programming/2012/04/25/ascii-art-signatures-in-the-w
 ....D o o d l e 3 D
 ...________     _____  _____  v 1.0.1 
 ../  /  /  |__ /  __/ /  - /___ __
-./  '  '  /--//  _|-//  --| . /v /
+./  '  '  /--//  _|-//  - | . /v /
 /________/__//__/__//____/___/_^_\
 
 

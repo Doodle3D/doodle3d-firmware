@@ -14,9 +14,9 @@ IncludeWithNewlines = $(subst ¤,$(newline),$(shell cat $1 | tr '\n' '¤'))
 
 
 # Name and release number of this package
-PKG_NAME:=wifibox
-PKG_VERSION:=0.1.0
-PKG_RELEASE:=1
+PKG_NAME := wifibox
+PKG_VERSION := 0.1.0
+PKG_RELEASE := 3
 
 # This specifies the directory where we're going to build the program.  
 # The root build directory, $(BUILD_DIR), is by default the build_mipsel 
@@ -82,7 +82,7 @@ define Package/wifibox/install
 #	$(INSTALL_DIR) $(1)/usr/share/lua/autowifi/ext
 #	$(INSTALL_DIR) $(1)/usr/share/lua/autowifi/ext/www
 	$(INSTALL_DIR) $(1)/usr/share/lua/autowifi/ext/www/cgi-bin
-	$(INSTALL_DIR) $(1)/etc/rc.d
+	$(INSTALL_DIR) $(1)/etc/init.d
 	$(INSTALL_DIR) $(1)/www/cgi-bin
 	
 ### create all files in /usr/share/lua/autowifi (autowifi)
@@ -109,7 +109,7 @@ endif
 	
 	$(LN) -s /usr/share/lua/autowifi/ext/wfcf $(1)/www/cgi-bin
 	$(LN) -s /usr/share/lua/autowifi/admin $(1)/www
-	$(LN) -s /usr/share/lua/autowifi/ext/autowifi_init $(1)/etc/rc.d/S18autowifi_init
+	$(LN) -s /usr/share/lua/autowifi/ext/autowifi_init $(1)/etc/init.d/autowifi_init
 	
 ### install gpx utility
 	$(INSTALL_DIR) $(1)/usr/bin
@@ -118,6 +118,10 @@ endef
 
 define Package/wifibox/postinst
 $(call IncludeWithNewlines,post-install.sh)
+endef
+
+define Package/wifibox/prerm
+$(call IncludeWithNewlines,pre-remove.sh)
 endef
 
 define Package/wifibox/postrm

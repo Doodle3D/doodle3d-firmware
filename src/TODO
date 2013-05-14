@@ -1,7 +1,4 @@
 # TODO
-- finish postinst and prerm/postrm scripts
-- externalize postinst+prerm scripts by doing something like: 'POSTINST_SCRIPT:=$(shell cat postinst.sh)'?
-  see: http://stackoverflow.com/questions/1435861/computing-makefile-variable-on-assignment
 - do things right and copy (not link) the init script to init.d
   (and enable it automatically, which links to it from rc.d with the proper start priority?)
   as sudo does: '[ -n "$$IPKG_INSTROOT" ] || { /etc/init.d/sudo enable}'; and here: https://forum.openwrt.org/viewtopic.php?pid=85197#p85197

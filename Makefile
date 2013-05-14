@@ -3,6 +3,16 @@
 ##############################################
 include $(TOPDIR)/rules.mk
 
+#NOTE: this hack is required to get files included inside a define block, see this link:
+#http://stackoverflow.com/questions/3524726/how-to-make-eval-shell-work-in-gnu-make
+#The '¤' character must not appear in included scripts.
+define newline
+
+
+endef
+IncludeWithNewlines = $(subst ¤,$(newline),$(shell cat $1 | tr '\n' '¤'))
+
+
 # Name and release number of this package
 PKG_NAME:=wifibox
 PKG_VERSION:=0.1.0
@@ -101,9 +111,11 @@ endif
 endef
 
 define Package/wifibox/postinst
-	#!/bin/sh
-	touch /.postinst-was-here
+$(call IncludeWithNewlines,post-install.sh)
 endef
 
+define Package/wifibox/postrm
+$(call IncludeWithNewlines,post-remove.sh)
+endef
 
 $(eval $(call BuildPackage,wifibox))

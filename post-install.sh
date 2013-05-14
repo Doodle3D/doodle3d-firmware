@@ -1,5 +1,6 @@
 #!/bin/sh
 
+### This function makes sure the 'wlan' net is in the 'lan' zone
 addFirewallNet() {
 	cfgChanged=0; zoneNum=-1; i=0
 	
@@ -32,6 +33,7 @@ addFirewallNet() {
 }
 
 
+### Replace the banner with a custom one
 if [ ! -f /etc/banner.default ]; then
 	mv /etc/banner /etc/banner.default
 	cat <<-'EOM' > /etc/banner
@@ -46,6 +48,7 @@ if [ ! -f /etc/banner.default ]; then
 EOM
 fi
 
+### Add some convenience functionality to root's profile
 grep '^# DO NOT MODIFY.*wifibox package.$' /root/.profile >/dev/null 2>&1
 if [ $? -eq 1 ]; then
 		cat <<-EOM >> /root/.profile
@@ -55,6 +58,8 @@ if [ $? -eq 1 ]; then
 		alias encore='ulimit -c unlimited'
 EOM
 fi
+
+### Finally make sure basic configuration is set correctly
 
 echo "Enabling wifi device..."
 uci set wireless.@wifi-device[0].disabled=0; uci commit wireless; wifi

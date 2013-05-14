@@ -70,9 +70,12 @@ endef
 # directory if it does not already exist.  Likewise $(INSTALL_BIN) contains the 
 # command to copy the binary file from its current location (in our case the build
 # directory) to the install directory.
+
+AUTOWIFI_BASE_DIR := $(PKG_BUILD_DIR)/autowifi
+GPX_BASE_DIR := $(PKG_BUILD_DIR)/util/GPX.git
+
 define Package/wifibox/install
-	
-### create required directories
+### create required directories (autowifi)
 	
 #	$(INSTALL_DIR) $(1)/usr/share/lua/autowifi
 	$(INSTALL_DIR) $(1)/usr/share/lua/autowifi/admin
@@ -82,32 +85,35 @@ define Package/wifibox/install
 	$(INSTALL_DIR) $(1)/etc/rc.d
 	$(INSTALL_DIR) $(1)/www/cgi-bin
 	
+### create all files in /usr/share/lua/autowifi (autowifi)
 	
-### create all files in /usr/share/lua/autowifi
+	$(CP) $(AUTOWIFI_BASE_DIR)/*.lua $(1)/usr/share/lua/autowifi/
+	$(CP) $(AUTOWIFI_BASE_DIR)/admin/* $(1)/usr/share/lua/autowifi/admin/
 	
-	$(CP) $(PKG_BUILD_DIR)/*.lua $(1)/usr/share/lua/autowifi/
-	$(CP) $(PKG_BUILD_DIR)/admin/* $(1)/usr/share/lua/autowifi/admin/
+	$(CP) $(AUTOWIFI_BASE_DIR)/ext/autowifi.js $(1)/usr/share/lua/autowifi/ext
+	$(CP) $(AUTOWIFI_BASE_DIR)/ext/autowifi_init $(1)/usr/share/lua/autowifi/ext
+	$(CP) $(AUTOWIFI_BASE_DIR)/ext/wfcf $(1)/usr/share/lua/autowifi/ext
 	
-	$(CP) $(PKG_BUILD_DIR)/ext/autowifi.js $(1)/usr/share/lua/autowifi/ext
-	$(CP) $(PKG_BUILD_DIR)/ext/autowifi_init $(1)/usr/share/lua/autowifi/ext
-	$(CP) $(PKG_BUILD_DIR)/ext/wfcf $(1)/usr/share/lua/autowifi/ext
-	
-	$(CP) $(PKG_BUILD_DIR)/ext/www/.autowifi-inplace $(1)/usr/share/lua/autowifi/ext/www
-	$(CP) $(PKG_BUILD_DIR)/ext/www/index.html $(1)/usr/share/lua/autowifi/ext/www
+	$(CP) $(AUTOWIFI_BASE_DIR)/ext/www/.autowifi-inplace $(1)/usr/share/lua/autowifi/ext/www
+	$(CP) $(AUTOWIFI_BASE_DIR)/ext/www/index.html $(1)/usr/share/lua/autowifi/ext/www
 	$(LN) -s /usr/share/lua/autowifi/admin $(1)/usr/share/lua/autowifi/ext/www
 	$(LN) -s /usr/share/lua/autowifi/ext/wfcf $(1)/usr/share/lua/autowifi/ext/www/cgi-bin
 	
 ifeq ($(CONFIG_WIFIBOX_DEVEL_PACKAGE),y)
 	$(INSTALL_DIR) $(1)/usr/share/lua/autowifi/misc
-	$(CP) $(PKG_BUILD_DIR)/misc/collect-code.sh $(1)/usr/share/lua/autowifi/misc/
+	$(CP) $(AUTOWIFI_BASE_DIR)/misc/collect-code.sh $(1)/usr/share/lua/autowifi/misc/
 endif
 	
 	
-### create links elsewhere in the system
+### create links elsewhere in the system (autowifi)
 	
 	$(LN) -s /usr/share/lua/autowifi/ext/wfcf $(1)/www/cgi-bin
 	$(LN) -s /usr/share/lua/autowifi/admin $(1)/www
 	$(LN) -s /usr/share/lua/autowifi/ext/autowifi_init $(1)/etc/rc.d/S18autowifi_init
+	
+### install gpx utility
+	$(INSTALL_DIR) $(1)/usr/bin
+	$(INSTALL_BIN) $(GPX_BASE_DIR)/gpx $(1)/usr/bin
 endef
 
 define Package/wifibox/postinst

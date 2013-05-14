@@ -8,6 +8,9 @@
 - write a shellscript to automate tasks like swapping out /www and packaging modified code for git merging
 - add dependency on either wr703n or mr3020 (and probably comment it out to avoid being to conservative...)
 - see if updating works when a new version is 'released' (probably needs a real feed)
+- add aliases to root profile only when debugging was requested in menuconfig
+- symlinks created in the install section of the Makefile should perhaps be created in the postinstall script,
+  this way the package is truly relocatable
 - add config option to compile sources using luac?
 - add/link general OpenWrt build instructions for OSX to installation page on wiki.
 - remove usr/share/lua/autowifi and subdirectories (if empty) in postrm

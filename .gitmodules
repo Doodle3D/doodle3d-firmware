@@ -1,0 +1,3 @@
+[submodule "src/util/GPX.git"]
+	path = src/util/GPX.git
+	url = git://github.com/whpthomas/GPX.git

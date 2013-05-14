@@ -1,5 +1,9 @@
+GPX_PATH := util/GPX.git
+
+.PHONY: $(GPX_PATH)
+
 all:
-	@echo "No compilation here...(dummy Makefile to keep buildroot happy)"
+	$(MAKE) -C $(GPX_PATH)
 
 clean:
-	@echo "No cleaning here... (dummy Makefile to keep buildroot happy)"
+	$(MAKE) -C $(GPX_PATH) clean

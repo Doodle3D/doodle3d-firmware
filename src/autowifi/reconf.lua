@@ -125,11 +125,11 @@ end
 function reconf.staticaddr_add(dirtyList)
 	uci:set("network", wifi.NET, "interface")
 	--TODO: remove ifname on wlan interface?
+	--NOTE: 'type = "bridge"' should -not- be added as this prevents defining a separate dhcp pool (http://wiki.openwrt.org/doc/recipes/routedap)
 	M.uciTableSet("network", wifi.NET, {
 		proto = "static",
 		ipaddr = wifi.AP_ADDRESS,
-		netmask = wifi.AP_NETMASK,
-		type = "bridge",
+		netmask = wifi.AP_NETMASK
 	})
 	bothBits(dirtyList, "network")
 end
@@ -139,7 +139,7 @@ function reconf.staticaddr_rm(dirtyList)
 	uci:set("network", wifi.NET, "proto", "dhcp")
 	uci:delete("network", wifi.NET, "ipaddr")
 	uci:delete("network", wifi.NET, "netmask")
-	uci:delete("network", wifi.NET, "type")
+	--uci:delete("network", wifi.NET, "type") --do not remove since it is not added anymore
 	bothBits(dirtyList, "network")
 end
 
@@ -198,11 +198,12 @@ function reconf.wwwcaptive_add(dirtyList)
 	if u.exists(M.WWW_CAPTIVE_INDICATOR) then
 		return u:logdebug("WWW captive directory already in place, not redoing", false)
 	end
-	if os.rename("/www", M.WWW_RENAME_NAME) == true then
+	local rv,reason = os.rename("/www", M.WWW_RENAME_NAME)
+	if rv == true then
 		u.symlink(M.WWW_CAPTIVE_PATH, "/www")
 		return true
 	else
-		return u:logerror("Could not rename /www to " .. M.WWW_RENAME_NAME)
+		return u:logerror("Could not rename /www to " .. M.WWW_RENAME_NAME .. "(" .. reason .. ")")
 	end
 end
 function reconf.wwwcaptive_rm(dirtyList)

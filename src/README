@@ -1,3 +1,6 @@
+NOTE: text below is otudated, take it with a grain of salt.
+-----
+
 Installation:
 - make sure radio0 in /etc/config/wireless is not disabled
 - the wlan net must also be added to firewall in the lan zone

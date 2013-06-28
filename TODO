@@ -5,6 +5,8 @@
   reconf.WWW_RENAME_NAME, wifihelper.{AP_ADDRESS, AP_NETMASK, (NET)}
   about bridging this to lua: have some Makefile stage create a ini/lua file with k/v's and have lua read out that file?
   https://github.com/2ion/ini.lua
+- in captive portal mode, https is not redirected
+- postinstall operations should be conditional, or work properly on image creation
 - write a shellscript to automate tasks like swapping out /www and packaging modified code for git merging
 - see if updating works when a new version is 'released' (probably needs a real feed)
 - perhaps opkg+safeboot could be useful in the update mechanism?

@@ -9,7 +9,7 @@ addFirewallNet() {
 		exists=`echo "$name" | grep "Entry not found" >/dev/null 2>&1; echo $?`
 		
 		if [ $exists -eq 0 ]; then break; fi
-		if [ $name = "lan" ]; then zoneNum=$i; fi
+		if [ "x$name" = "xlan" ]; then zoneNum=$i; fi
 		
 		i=`expr $i + 1`
 	done

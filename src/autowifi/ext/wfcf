@@ -6,5 +6,3 @@ SCRIPT_PATH=/usr/share/lua/autowifi
 
 cd $SCRIPT_PATH
 $LUA ./autowifi.lua $@
-
-#$LUA $SCRIPT_PATH/autowifi.lua $@

@@ -1,4 +1,5 @@
 local u = require("util")
+local l = require("logger")
 local uci = require("uci").cursor()
 
 local M = {}
@@ -44,10 +45,10 @@ function M.switchConfiguration(components)
 	for k,v in pairs(components) do
 		local fname = k .. "_" .. v
 		if type(reconf[fname]) == "function" then
-			u:logdebug("reconfiguring component '" .. k .. "' (" .. v .. ")")
+			l:debug("reconfiguring component '" .. k .. "' (" .. v .. ")")
 			reconf[fname](dirtyList)
 		else
-			u:logwarn("unknown component or action '" .. fname .. "' skipped")
+			l:warn("unknown component or action '" .. fname .. "' skipped")
 		end
 	end
 	
@@ -61,12 +62,12 @@ function M.switchConfiguration(components)
 end
 
 function M.commitComponent(c)
-	u:loginfo("committing component '" .. c .. "'")
+	l:info("committing component '" .. c .. "'")
 	uci:commit(c)
 end
 
 function M.reloadComponent(c, silent)
-	u:loginfo("reloading component '" .. c .. "'")
+	l:info("reloading component '" .. c .. "'")
 	if silent ~= nil and silent then os.execute("/etc/init.d/" .. c .. " reload &> /dev/null")
 	else os.execute("/etc/init.d/" .. c .. " reload") end
 end
@@ -115,7 +116,7 @@ function reconf.apnet_rm(dirtyList)
 	uci:foreach("wireless", "wifi-iface", function(s)
 		if s.ssid == wifi.AP_SSID then sname = s[".name"]; return false end
 	end)
-	if sname == nil then return u:loginfo("AP network configuration does not exist, nothing to remove") end
+	if sname == nil then return l:info("AP network configuration does not exist, nothing to remove") end
 	uci:delete("wireless", sname)
 	reloadBit(dirtyList, "network"); commitBit(dirtyList, "wireless")
 end
@@ -178,15 +179,15 @@ end
 function reconf.dnsredir_add(dirtyList)
 	local redirText = "/#/" .. wifi.AP_ADDRESS
 	local sname = u.getUciSectionName("dhcp", "dnsmasq")
-	if sname == nil then return u:logerror("dhcp config does not contain a dnsmasq section") end
-	if uci:get("dhcp", sname, "address") ~= nil then return u:logdebug("DNS address redirection already in place, not re-adding", false) end
+	if sname == nil then return l:error("dhcp config does not contain a dnsmasq section") end
+	if uci:get("dhcp", sname, "address") ~= nil then return l:debug("DNS address redirection already in place, not re-adding", false) end
 	
 	uci:set("dhcp", sname, "address", {redirText})
 	commitBit(dirtyList, "dhcp"); reloadBit(dirtyList, "dnsmasq")
 end
 function reconf.dnsredir_rm(dirtyList)
 	local sname = u.getUciSectionName("dhcp", "dnsmasq")
-	if sname == nil then return u:logerror("dhcp config does not contain a dnsmasq section") end
+	if sname == nil then return l:error("dhcp config does not contain a dnsmasq section") end
 	
 	uci:delete("dhcp", sname, "address")
 	commitBit(dirtyList, "dhcp"); reloadBit(dirtyList, "dnsmasq")
@@ -196,21 +197,21 @@ end
 --TODO: handle os.rename() return values (nil+msg on error)
 function reconf.wwwcaptive_add(dirtyList)
 	if u.exists(M.WWW_CAPTIVE_INDICATOR) then
-		return u:logdebug("WWW captive directory already in place, not redoing", false)
+		return l:debug("WWW captive directory already in place, not redoing", false)
 	end
 	local rv,reason = os.rename("/www", M.WWW_RENAME_NAME)
 	if rv == true then
 		u.symlink(M.WWW_CAPTIVE_PATH, "/www")
 		return true
 	else
-		return u:logerror("Could not rename /www to " .. M.WWW_RENAME_NAME .. "(" .. reason .. ")")
+		return l:error("Could not rename /www to " .. M.WWW_RENAME_NAME .. "(" .. reason .. ")")
 	end
 end
 function reconf.wwwcaptive_rm(dirtyList)
-	if not u.exists(M.WWW_CAPTIVE_INDICATOR) then return u:logdebug("WWW captive directory not in place, not undoing", false) end
+	if not u.exists(M.WWW_CAPTIVE_INDICATOR) then return l:debug("WWW captive directory not in place, not undoing", false) end
 	os.remove("/www")
 	if os.rename(M.WWW_RENAME_NAME, "/www") ~= true then
-		return u:logerror("Could not rename " .. M.WWW_RENAME_NAME .. " to /www")
+		return l:error("Could not rename " .. M.WWW_RENAME_NAME .. " to /www")
 	end
 	return true
 end

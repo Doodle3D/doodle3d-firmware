@@ -17,6 +17,7 @@
 io.write ("Content-type: text/plain\r\n\r\n")
 
 local u = require("util")
+local l = require("logger")
 local wifi = require("wifihelper")
 local reconf = require("reconf")
 local uci = require("uci").cursor()
@@ -27,7 +28,7 @@ local argOperation, argDevice, argSsid, argPhrase, argRecreate
 local errortext = nil
 
 function init()
-	u:initlog(u.LOG_LEVEL.debug, true, io.stderr)
+	l:init(l.LEVEL.debug, true, io.stderr)
 	local qs = os.getenv("QUERY_STRING")
 	local urlargs = {}
 	urlcode.parsequery(qs, urlargs)

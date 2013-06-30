@@ -32,7 +32,7 @@ define Package/wifibox
 #	DEFAULT:=y
 	TITLE:=Doodle3D WifiBox firmware
 	URL:=http://www.doodle3d.com/wifibox
-	DEPENDS:=+lua +libuci-lua +libiwinfo-lua +uhttpd
+	DEPENDS:=+lua +libuci-lua +libiwinfo-lua +uhttpd +kmod-usb-acm
 endef
 
 define Package/wifibox/description
@@ -71,45 +71,50 @@ endef
 # command to copy the binary file from its current location (in our case the build
 # directory) to the install directory.
 
-AUTOWIFI_BASE_DIR := $(PKG_BUILD_DIR)/autowifi
+WIFIBOX_BASE_DIR := $(PKG_BUILD_DIR)
 GPX_BASE_DIR := $(PKG_BUILD_DIR)/util/GPX.git
+TGT_LUA_DIR_SUFFIX := usr/share/lua/wifibox
 
 define Package/wifibox/install
 ### create required directories (autowifi)
 	
-#	$(INSTALL_DIR) $(1)/usr/share/lua/autowifi
-	$(INSTALL_DIR) $(1)/usr/share/lua/autowifi/admin
-#	$(INSTALL_DIR) $(1)/usr/share/lua/autowifi/ext
-#	$(INSTALL_DIR) $(1)/usr/share/lua/autowifi/ext/www
-	$(INSTALL_DIR) $(1)/usr/share/lua/autowifi/ext/www/cgi-bin
+#	$(INSTALL_DIR) $(1)/$(TGT_LUA_DIR_SUFFIX)
+	$(INSTALL_DIR) $(1)/$(TGT_LUA_DIR_SUFFIX)/network
+	$(INSTALL_DIR) $(1)/$(TGT_LUA_DIR_SUFFIX)/rest
+	$(INSTALL_DIR) $(1)/$(TGT_LUA_DIR_SUFFIX)/script
+	$(INSTALL_DIR) $(1)/$(TGT_LUA_DIR_SUFFIX)/util
+#	$(INSTALL_DIR) $(1)/$(TGT_LUA_DIR_SUFFIX)/www
+#	$(INSTALL_DIR) $(1)/$(TGT_LUA_DIR_SUFFIX)/www/cgi-bin
+	$(INSTALL_DIR) $(1)/$(TGT_LUA_DIR_SUFFIX)/www/wifibox
 	$(INSTALL_DIR) $(1)/etc/init.d
 	$(INSTALL_DIR) $(1)/www/cgi-bin
 	
 ### create all files in /usr/share/lua/autowifi (autowifi)
 	
-	$(CP) $(AUTOWIFI_BASE_DIR)/*.lua $(1)/usr/share/lua/autowifi/
-	$(CP) $(AUTOWIFI_BASE_DIR)/admin/* $(1)/usr/share/lua/autowifi/admin/
+	$(CP) $(WIFIBOX_BASE_DIR)/*.lua $(1)/$(TGT_LUA_DIR_SUFFIX)/
+	$(CP) $(WIFIBOX_BASE_DIR)/network/*.lua $(1)/$(TGT_LUA_DIR_SUFFIX)/network/
+	$(CP) $(WIFIBOX_BASE_DIR)/rest/*.lua $(1)/$(TGT_LUA_DIR_SUFFIX)/rest/
+	$(CP) $(WIFIBOX_BASE_DIR)/util/*.lua $(1)/$(TGT_LUA_DIR_SUFFIX)/util/
 	
-	$(CP) $(AUTOWIFI_BASE_DIR)/ext/autowifi.js $(1)/usr/share/lua/autowifi/ext
-	$(CP) $(AUTOWIFI_BASE_DIR)/ext/autowifi_init $(1)/usr/share/lua/autowifi/ext
-	$(CP) $(AUTOWIFI_BASE_DIR)/ext/wfcf $(1)/usr/share/lua/autowifi/ext
-	
-	$(CP) $(AUTOWIFI_BASE_DIR)/ext/www/.autowifi-inplace $(1)/usr/share/lua/autowifi/ext/www
-	$(CP) $(AUTOWIFI_BASE_DIR)/ext/www/index.html $(1)/usr/share/lua/autowifi/ext/www
-	$(LN) -s /usr/share/lua/autowifi/admin $(1)/usr/share/lua/autowifi/ext/www
-	$(LN) -s /usr/share/lua/autowifi/ext/wfcf $(1)/usr/share/lua/autowifi/ext/www/cgi-bin
+	$(CP) $(WIFIBOX_BASE_DIR)/script/wifibox_init $(1)/$(TGT_LUA_DIR_SUFFIX)/script
+	$(CP) $(WIFIBOX_BASE_DIR)/script/d3dapi $(1)/$(TGT_LUA_DIR_SUFFIX)/script
+
+	$(CP) $(WIFIBOX_BASE_DIR)/www/wifibox/* $(1)/$(TGT_LUA_DIR_SUFFIX)/www/wifibox/
+	$(CP) $(WIFIBOX_BASE_DIR)/script/d3dapi $(1)/www/cgi-bin
+
+#	$(CP) $(WIFIBOX_BASE_DIR)/www/.autowifi-inplace $(1)/$(TGT_LUA_DIR_SUFFIX)/www
 	
 ifeq ($(CONFIG_WIFIBOX_DEVEL_PACKAGE),y)
-	$(INSTALL_DIR) $(1)/usr/share/lua/autowifi/misc
-	$(CP) $(AUTOWIFI_BASE_DIR)/misc/collect-code.sh $(1)/usr/share/lua/autowifi/misc/
+#	$(INSTALL_DIR) $(1)/$(TGT_LUA_DIR_SUFFIX)/misc
+#	$(CP) $(WIFIBOX_BASE_DIR)/../misc/collect-code.sh $(1)/$(TGT_LUA_DIR_SUFFIX)/misc/
 endif
 	
 	
 ### create links elsewhere in the system (autowifi)
 	
-	$(LN) -s /usr/share/lua/autowifi/ext/wfcf $(1)/www/cgi-bin
-	$(LN) -s /usr/share/lua/autowifi/admin $(1)/www
-	$(LN) -s /usr/share/lua/autowifi/ext/autowifi_init $(1)/etc/init.d/autowifi_init
+	$(LN) -s /$(TGT_LUA_DIR_SUFFIX)/script/d3dapi $(1)/www/cgi-bin
+	$(LN) -s /$(TGT_LUA_DIR_SUFFIX)/www/wifibox $(1)/www
+	$(LN) -s /$(TGT_LUA_DIR_SUFFIX)/script/wifibox_init $(1)/etc/init.d/wifibox_init
 	
 ### install gpx utility
 	$(INSTALL_DIR) $(1)/usr/bin

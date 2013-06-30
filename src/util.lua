@@ -2,19 +2,6 @@ local uci = require("uci").cursor()
 
 local M = {}
 
-function M.dump(o)
-	if type(o) == 'table' then
-		local s = '{ '
-		for k,v in pairs(o) do
-			if type(k) ~= 'number' then k = '"'..k..'"' end
-			s = s .. '['..k..'] = ' .. M.dump(v) .. ','
-		end
-		return s .. '} '
-	else
-		return tostring(o)
-	end
-end
-
 function M.printWithSuccess(msg)
 	if msg ~= nil and msg ~= "" then print("OK," .. msg)
 	else print("OK") end
@@ -47,40 +34,11 @@ function M.exists(file)
 	return r ~= nil
 end
 
+--FIXME: somehow protect this function from running arbitrary commands
 function M.symlink(from, to)
 	if from == nil or from == "" or to == nil or to == "" then return -1 end
 	local x = "ln -s " .. from .. " " .. to
 	return os.execute(x)
 end
-
-
--- logging
-M.LOG_LEVEL = {debug = 1, info = 2, warn = 3, error = 4, fatal = 5}
-local logLevel, logVerbose, logStream
-
-function M:initlog(level, verbose, stream)
-	logLevel = level or M.LOG_LEVEL.warn
-	logVerbose = verbose or false
-	logStream = stream or io.stdout
-end
-
-local function log(level, msg, verbose)
-	if level >= logLevel then
-		local now = os.date("%m-%d %H:%M:%S")
-		local i = debug.getinfo(3)
-		local v = verbose
-		if v == nil then v = logVerbose end
-		local name = i.name or "(nil)"
-		local vVal = "nil"
-		if v then logStream:write(now .. " (" .. level .. ")  \t" .. msg .. "  [" .. name .. "@" .. i.short_src .. ":" .. i.linedefined .. "]\n")
-		else logStream:write(now .. " (" .. level .. ")  \t" .. msg .. "\n") end
-	end
-end
-
-function M:logdebug(msg, verbose) log(M.LOG_LEVEL.debug, msg, verbose); return true end
-function M:loginfo(msg, verbose) log(M.LOG_LEVEL.info, msg, verbose); return true end
-function M:logwarn(msg, verbose) log(M.LOG_LEVEL.warn, msg, verbose); return true end
-function M:logerror(msg, verbose) log(M.LOG_LEVEL.error, msg, verbose); return false end
-function M:logfatal(msg, verbose) log(M.LOG_LEVEL.fatal, msg, verbose); return false end
 
 return M

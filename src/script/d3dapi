@@ -2,7 +2,7 @@
 #chmod 755 /www/cgi-bin/wfcf
 
 LUA=lua
-SCRIPT_PATH=/usr/share/lua/autowifi
+SCRIPT_PATH=/usr/share/lua/wifibox
 
 cd $SCRIPT_PATH
-$LUA ./autowifi.lua $@
+$LUA ./main.lua $@

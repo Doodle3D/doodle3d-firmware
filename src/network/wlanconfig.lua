@@ -1,5 +1,6 @@
 local reconf = require("reconf")
 local util = require("util")
+local l = require("logger")
 local uci = require("uci").cursor()
 local iwinfo = require("iwinfo")
 
@@ -145,7 +146,7 @@ function M.createConfigFromScanInfo(info, passphrase, disabled)
 	
 	uci:foreach("wireless", "wifi-iface", function(s)
 		if s.bssid == info.bssid then
-			util:logdebug("removing old wireless config for net '" .. s.ssid .. "(bssid: " .. s.bssid .. ")'")
+			l:debug("removing old wireless config for net '" .. s.ssid .. "(bssid: " .. s.bssid .. ")'")
 			uci:delete("wireless", s[".name"])
 --			return false --keep looking, just in case multiple entries with this bssid exist
 		end

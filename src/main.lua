@@ -18,10 +18,10 @@ io.write ("Content-type: text/plain\r\n\r\n")
 
 local u = require("util")
 local l = require("logger")
-local wifi = require("wifihelper")
-local reconf = require("reconf")
+local wifi = require("network.wlanconfig")
+local reconf = require("network.netconf")
+local urlcode = require("util.urlcode")
 local uci = require("uci").cursor()
-local urlcode = require("urlcode")
 local iwinfo = require("iwinfo")
 
 local argOperation, argDevice, argSsid, argPhrase, argRecreate

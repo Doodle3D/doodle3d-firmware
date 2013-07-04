@@ -1,4 +1,4 @@
-local reconf = require("reconf")
+local reconf = require("network.netconf")
 local util = require("util")
 local l = require("logger")
 local uci = require("uci").cursor()

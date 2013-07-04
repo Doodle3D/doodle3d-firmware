@@ -54,21 +54,28 @@ if [ $? -eq 1 ]; then
 		cat <<-EOM >> /root/.profile
 		
 		# DO NOT MODIFY - this block of lines has been added by the wifibox package.
-		alias wfcfr='/usr/share/lua/autowifi/ext/wfcf'
+		alias d3dapi='/usr/share/lua/wifibox/script/d3dapi'
 		alias encore='ulimit -c unlimited'
 EOM
 fi
 
 ### Finally make sure basic configuration is set correctly
 
-echo "Enabling wifi device..."
-uci set wireless.@wifi-device[0].disabled=0; uci commit wireless; wifi
+echo "s_$IPKG_INSTROOT_"
+echo "ss_$$IPKG_INSTROOT_"
+echo "ssa_$${IPKG_INSTROOT}_"
+if [ -z "$IPKG_INSTROOT" ]; then
+	echo "Enabling wifi device..."
+	uci set wireless.@wifi-device[0].disabled=0; uci commit wireless; wifi
 
-addFirewallNet
+	addFirewallNet
 
-echo "Adding network interface 'wlan'..."
-uci set network.wlan=interface; uci commit network; /etc/init.d/network reload
+	echo "Adding network interface 'wlan'..."
+	uci set network.wlan=interface; uci commit network; /etc/init.d/network reload
 
-[ -z "$$IPKG_INSTROOT" ] || { /etc/init.d/autowifi_init enable; }
+	/etc/init.d/wifibox_init enable
+else
+	echo "WARNING: WiFiBox network configuration can only be prepared when installing on real device"
+fi
 
 exit 0

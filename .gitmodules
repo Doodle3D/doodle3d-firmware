@@ -1,3 +1,6 @@
 [submodule "src/util/GPX.git"]
 	path = src/util/GPX.git
 	url = git://github.com/whpthomas/GPX.git
+[submodule "src/www"]
+	path = src/www
+	url = https://github.com/Doodle3D/doodle3d-client.git

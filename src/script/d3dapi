@@ -1,5 +1,5 @@
 #!/bin/sh
-#chmod 755 /www/cgi-bin/wfcf
+#chmod 755 /www/cgi-bin/d3dapi
 
 LUA=lua
 SCRIPT_PATH=/usr/share/lua/wifibox

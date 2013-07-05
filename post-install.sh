@@ -61,9 +61,6 @@ fi
 
 ### Finally make sure basic configuration is set correctly
 
-echo "s_$IPKG_INSTROOT_"
-echo "ss_$$IPKG_INSTROOT_"
-echo "ssa_$${IPKG_INSTROOT}_"
 if [ -z "$IPKG_INSTROOT" ]; then
 	echo "Enabling wifi device..."
 	uci set wireless.@wifi-device[0].disabled=0; uci commit wireless; wifi

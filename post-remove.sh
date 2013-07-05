@@ -4,16 +4,15 @@ if [ -f /etc/banner.default ]; then
 	mv /etc/banner.default /etc/banner
 fi
 
-rmdir /usr/share/lua/autowifi/ext/www/cgi-bin
-rm /usr/share/lua/autowifi/ext/www/admin
-rmdir /usr/share/lua/autowifi/ext/www
-rmdir /usr/share/lua/autowifi/admin
-rmdir /usr/share/lua/autowifi/ext
-rmdir /usr/share/lua/autowifi/misc
-rmdir /usr/share/lua/autowifi
+rmdir /usr/share/lua/wifibox/www/wifibox
+rmdir /usr/share/lua/wifibox/www
+rmdir /usr/share/lua/wifibox/network
+rmdir /usr/share/lua/wifibox/rest
+rmdir /usr/share/lua/wifibox/script
+rmdir /usr/share/lua/wifibox/util
+rmdir /usr/share/lua/wifibox
 rmdir /usr/share/lua
-rm /www/admin
-rmdir /www/cgi-bin
+rm /www/wifibox
 
 echo "The wifibox banner has been removed. Changes to the root profile however, have"
 echo "not been reverted, as haven't the wlan firewall zone and the radio0 device state."

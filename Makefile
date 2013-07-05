@@ -99,7 +99,7 @@ define Package/wifibox/install
 	$(CP) $(WIFIBOX_BASE_DIR)/script/wifibox_init $(1)/$(TGT_LUA_DIR_SUFFIX)/script
 	$(CP) $(WIFIBOX_BASE_DIR)/script/d3dapi $(1)/$(TGT_LUA_DIR_SUFFIX)/script
 
-	$(CP) $(WIFIBOX_BASE_DIR)/www/wifibox/* $(1)/$(TGT_LUA_DIR_SUFFIX)/www/wifibox/
+	$(CP) $(WIFIBOX_BASE_DIR)/www/* $(1)/$(TGT_LUA_DIR_SUFFIX)/www/
 	$(CP) $(WIFIBOX_BASE_DIR)/script/d3dapi $(1)/www/cgi-bin
 
 #	$(CP) $(WIFIBOX_BASE_DIR)/www/.autowifi-inplace $(1)/$(TGT_LUA_DIR_SUFFIX)/www

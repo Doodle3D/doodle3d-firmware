@@ -31,12 +31,18 @@ function M.new(requestObject)
 	return self
 end
 
-function M:setStatus(s)
-	self.body.status = s
-end
+--use set{Success|Fail|Error}()
+--function M:setStatus(s)
+--	self.body.status = s
+--end
 
 function M:setSuccess(msg)
 	self.body.status = "success"
+	if msg ~= "" then self.body.msg = msg end
+end
+
+function M:setFail(msg)
+	self.body.status = "fail"
 	if msg ~= "" then self.body.msg = msg end
 end
 

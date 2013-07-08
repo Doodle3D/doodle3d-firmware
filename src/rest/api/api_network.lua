@@ -44,7 +44,7 @@ function M.available(d)
 		r:addData("count", #netInfoList)
 		r:addData("networks", netInfoList)
 	else
-		r:setError("No scan results or scanning not possible")
+		r:setFail("No scan results or scanning not possible")
 	end
 	
 	return r
@@ -121,7 +121,7 @@ function M.assoc(d)
 			wifi.createConfigFromScanInfo(scanResult, argPhrase)
 		else
 			--check for error
-			r:setError("no wireless network with requested SSID is available")
+			r:setFail("no wireless network with requested SSID is available")
 			r:addData("ssid", argSsid)
 		end
 	end
@@ -175,7 +175,7 @@ function M.rm(d)
 		r:setSuccess("removed wireless network with requested SSID")
 		r:addData("ssid", argSsid)
 	else
-		r:setError("no wireless network with requested SSID") --this used to be a warning instead of an error...
+		r:setFail("no wireless network with requested SSID") --this used to be a warning instead of an error...
 		r:addData("ssid", argSsid)
 	end
 	

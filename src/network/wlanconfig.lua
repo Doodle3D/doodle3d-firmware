@@ -1,4 +1,3 @@
-local reconf = require("network.netconfig")
 local util = require("util.utils")
 local l = require("logger")
 local uci = require("uci").cursor()
@@ -6,7 +5,9 @@ local iwinfo = require("iwinfo")
 
 local M = {}
 
-M.DFL_DEVICE = "wlan0" -- was radio0
+--NOTE: fallback device 'radio0' is required because sometimes the wlan0 device disappears
+M.DFL_DEVICE = "wlan0"
+M.DFL_DEVICE_FALLBACK = "radio0"
 M.AP_SSID = "d3d-ap"
 M.AP_ADDRESS = "192.168.10.1"
 M.AP_NETMASK = "255.255.255.0"
@@ -50,7 +51,14 @@ function M.init(device)
 	dev = device or M.DFL_DEVICE
 	dev_api = iwinfo.type(dev)
 	if not dev_api then
-		return false, "No such wireless device: '"..dev.."'"
+		--TODO: warn about missing dev here?
+		local devInitial = dev
+		dev = M.DFL_DEVICE_FALLBACK
+		dev_api = iwinfo.type(dev)
+		
+		if not dev_api then
+			return false, "No such wireless device: '" .. devInitial .. "' (and fallback '" .. dev .. "' does not exist either)"
+		end
 	end
 
 	return true

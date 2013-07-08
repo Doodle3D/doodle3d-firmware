@@ -7,7 +7,7 @@ local reconf = {}
 local wifi
 local reloadSilent
 
-M.WWW_CAPTIVE_PATH = "/usr/share/lua/wifibox/ext/www"
+M.WWW_CAPTIVE_PATH = "/usr/share/lua/wifibox/www"
 M.WWW_CAPTIVE_INDICATOR = "/www/.wifibox-inplace"
 M.WWW_RENAME_NAME = "/www-regular"
 

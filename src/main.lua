@@ -1,19 +1,21 @@
 --[[
 TODO:
  - document REST API (mention rq IDs and endpoint information, list endpoints+args+CRUD type, unknown values are empty fields)
+   (describe fail/error difference: fail is valid rq..could not comply, while error is invalid rq _or_ system error)
  - use a slightly more descriptive success/error definition (e.g. errortype=system/missing-arg/generic)
  - how to handle requests which need a restart of uhttpd? (e.g. network/openap)
  - a plain GET request (no ajax/script) runs the risk of timing out on lengthy operations: implement polling in API to get progress updates?
    (this would require those operations to run in a separate daemon process which can be monitored by the CGI handler) 
  - protect dump function against reference loops (see: http://lua-users.org/wiki/TableSerialization, json also handles this well)
  - (this is an old todo item from network:available(), might still be relevant at some point)
-   extend reconf interface to support function arguments (as tables) so wifihelper functionality can be integrated
+   extend netconf interface to support function arguments (as tables) so wifihelper functionality can be integrated
    but how? idea: pass x_args={arg1="a",arg2="2342"} for component 'x'
    or: allow alternative for x="y" --> x={action="y", arg1="a", arg2="2342"}
    in any case, arguments should be put in a new table to pass to the function (since order is undefined it must be an assoc array)
 
 NOTES:
- - using iwinfo with interface name 'radio0' yields very little 'info' output while wlan0 works fine
+ - using iwinfo with interface name 'radio0' yields very little 'info' output while wlan0 works fine.
+   However, sometimes wlan0 disappears (happened after trying to associate with non-existing network)...why?
  - The endpoint function info in response objects is incorrect when the global function is called with a blank argument,
    to cleanly solve this, module/function resolution should be moved from main() to the request object
 ]]--
@@ -22,7 +24,7 @@ local l = require("logger")
 local RequestClass = require("rest.request")
 local ResponseClass = require("rest.response")
 local wifi = require("network.wlanconfig")
-local reconf = require("network.netconfig")
+local netconf = require("network.netconfig")
 
 
 --NOTE: pcall protects from invocation exceptions, which is what we need except
@@ -50,7 +52,14 @@ local function init()
 		postData = io.read(n)
 	end
 	
-	return wifi.init() and reconf.init(wifi, true)
+	local s, msg
+	s, msg = wifi.init()
+	if not s then return s, msg end
+	
+	s, msg = netconf.init(wifi, true)
+	if not s then return s, msg end
+	
+	return true
 end
 
 --usually returns function+nil, function+number in case of number in place of function name; or
@@ -135,12 +144,12 @@ end
 	end
 end
 
-
-if init() == false then
+local s, msg = init()
+if s == false then
 	local resp = ResponseClass.new()
-	resp:setError("initialization failed")
+	resp:setError("initialization failed (" .. msg .. ")")
 	print(resp:serializeAsJson()) --FIXME: this message does not seem to be sent
-	l:error("initialization failed") --NOTE: this assumes the logger has been inited properly, despite init() having failed
+	l:error("initialization failed (" .. msg .. ")") --NOTE: this assumes the logger has been inited properly, despite init() having failed
 	os.exit(1)
 else
 	main()

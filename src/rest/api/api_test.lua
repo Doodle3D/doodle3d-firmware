@@ -21,6 +21,12 @@ function M.success(d)
 	return r
 end
 
+function M.fail(d)
+	local r = ResponseClass.new(d)
+	r:setFail()
+	return r
+end
+
 function M.error(d)
 	local r = ResponseClass.new(d)
 	r:setError("this error has been generated on purpose")

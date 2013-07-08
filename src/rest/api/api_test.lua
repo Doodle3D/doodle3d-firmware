@@ -17,19 +17,22 @@ end
 
 function M.success(d)
 	local r = ResponseClass.new(d)
-	r:setSuccess()
+	r:setSuccess("this successful response has been generated on purpose")
+	r:addData("url", "http://xkcd.com/349/")
 	return r
 end
 
 function M.fail(d)
 	local r = ResponseClass.new(d)
-	r:setFail()
+	r:setFail("this failure has been generated on purpose")
+	r:addData("url", "http://xkcd.com/336/")
 	return r
 end
 
 function M.error(d)
 	local r = ResponseClass.new(d)
 	r:setError("this error has been generated on purpose")
+	r:addData("url", "http://xkcd.com/1024/")
 	return r
 end
 

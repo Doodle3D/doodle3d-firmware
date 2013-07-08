@@ -61,4 +61,8 @@ function M:serializeAsJson()
 	return JSON:encode(self.body)
 end
 
+function M:send()
+	print(self:serializeAsJson())
+end
+
 return M

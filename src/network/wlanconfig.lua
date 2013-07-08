@@ -1,5 +1,5 @@
 local reconf = require("network.netconfig")
-local util = require("util")
+local util = require("util.utils")
 local l = require("logger")
 local uci = require("uci").cursor()
 local iwinfo = require("iwinfo")

@@ -6,7 +6,7 @@ local iwinfo = require("iwinfo")
 
 local M = {}
 
-M.DFL_DEVICE = "radio0" -- was wlan0
+M.DFL_DEVICE = "wlan0" -- was radio0
 M.AP_SSID = "d3d-ap"
 M.AP_ADDRESS = "192.168.10.1"
 M.AP_NETMASK = "255.255.255.0"
@@ -60,9 +60,16 @@ end
 function M.getDeviceState()
 	local iw = iwinfo[dev_api]
 	local result = {
-		["mode"] = M.mapDeviceMode(iw.mode(dev), true),
 		["ssid"] = iw.ssid(dev),
-		["bssid"] = iw.bssid(dev)
+		["bssid"] = iw.bssid(dev),
+		["channel"] = iw.channel(dev),
+		["mode"] = M.mapDeviceMode(iw.mode(dev), true),
+		["encryption"] = M.mapEncryptionType(iw.encryption(dev).description),
+		["quality"] = iw.quality(dev),
+		["quality_max"] = iw.quality_max(dev),
+		["txpower"] = iw.txpower(dev),
+		["signal"] = iw.signal(dev),
+		["noise"] = iw.noise(dev)
 	}
 	return result
 end

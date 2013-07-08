@@ -64,7 +64,7 @@ function M.known(d)
 			netInfo["bssid"] = net.bssid or ""
 			netInfo["channel"] = net.channel or ""
 			netInfo["encryption"] = net.encryption
-			netInfo["raw"] = l:dump(net) --TEMP for debugging only
+			--netInfo["raw"] = l:dump(net) --TEMP for debugging only
 			table.insert(netInfoList, netInfo)
 		end
 	end
@@ -83,7 +83,13 @@ function M.state(d)
 	r:addData("bssid", ds.bssid or "")
 	r:addData("channel", ds.channel or "")
 	r:addData("mode", ds.mode)
-	r:addData("raw", l:dump(ds)) --TEMP for debugging only
+	r:addData("encryption", ds.encryption)
+	r:addData("quality", ds.quality)
+	r:addData("quality_max", ds.quality_max)
+	r:addData("txpower", ds.txpower)
+	r:addData("signal", ds.signal)
+	r:addData("noise", ds.noise)
+	--r:addData("raw", l:dump(ds)) --TEMP for debugging only
 	
 	return r
 end

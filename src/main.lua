@@ -1,6 +1,5 @@
 --[[
 TODO:
- - network/state returns awfully little information (only station mode)
  - document REST API (mention rq IDs and endpoint information, list endpoints+args+CRUD type, unknown values are empty fields)
  - use a slightly more descriptive success/error definition (e.g. errortype=system/missing-arg/generic)
  - how to handle requests which need a restart of uhttpd? (e.g. network/openap)
@@ -14,6 +13,7 @@ TODO:
    in any case, arguments should be put in a new table to pass to the function (since order is undefined it must be an assoc array)
 
 NOTES:
+ - using iwinfo with interface name 'radio0' yields very little 'info' output while wlan0 works fine
  - The endpoint function info in response objects is incorrect when the global function is called with a blank argument,
    to cleanly solve this, module/function resolution should be moved from main() to the request object
 ]]--

@@ -3,6 +3,17 @@
 
 LUA=lua
 SCRIPT_PATH=/usr/share/lua/wifibox
+LOG_FILE=/tmp/wifibox.log
 
 cd $SCRIPT_PATH
-$LUA ./main.lua $@
+$LUA ./main.lua $@ 2>> $LOG_FILE
+
+exit
+
+# Code below is for debugging incoming CGI data
+read -n $CONTENT_LENGTH POSTDATA
+echo -e "Content-type: text/plain\r\n\r\n"
+set
+echo "---"
+echo $POSTDATA
+echo "---"

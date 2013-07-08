@@ -9,9 +9,14 @@ for i,v in ipairs(M.LEVEL) do
 	M.LEVEL[v] = i
 end
 
-function M:init(level, verbose, stream)
+function M:init(level, verbose)
 	logLevel = level or M.LEVEL.warn
 	logVerbose = verbose or false
+	logStream = stream or io.stdout
+end
+
+--pass nil as stream to reset to stdout
+function M:setStream(stream)
 	logStream = stream or io.stdout
 end
 
@@ -24,8 +29,8 @@ local function log(level, msg, verbose)
 		local name = i.name or "(nil)"
 		local vVal = "nil"
 		local m = (type(msg) == "string") and msg or M:dump(msg)
-		if v then logStream:write(now .. " (" .. M.LEVEL[level] .. ")  \t" .. m .. "  [" .. name .. "@" .. i.short_src .. ":" .. i.linedefined .. "]\n")
-		else logStream:write(now .. " (" .. M.LEVEL[level] .. ")  \t" .. m .. "\n") end
+		if v then logStream:write(now .. " (" .. M.LEVEL[level] .. ")     " .. m .. "  [" .. name .. "@" .. i.short_src .. ":" .. i.linedefined .. "]\n")
+		else logStream:write(now .. " (" .. M.LEVEL[level] .. ")     " .. m .. "\n") end
 	end
 end
 

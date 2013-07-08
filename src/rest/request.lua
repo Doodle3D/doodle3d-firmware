@@ -59,6 +59,9 @@ function M.new(postData, debug)
 		self.apiFunction = self.cmdLineArgs["f"] or self.apiFunction
 	end
 	
+	if self.apiModule == "" then self.apiModule = nil end
+	if self.apiFunction == "" then self.apiFunction = nil end
+	
 	return self
 end
 

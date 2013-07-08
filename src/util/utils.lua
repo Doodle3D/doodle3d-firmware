@@ -2,6 +2,13 @@ local uci = require("uci").cursor()
 
 local M = {}
 
+function M.toboolean(s)
+	if not s then return false end
+	
+	local b = s:lower()
+	return (b == "1" or b == "t" or b == "true") and true or false
+end
+
 function M.getUciSectionName(config, type)
 	local sname = nil
 	uci:foreach(config, type, function(s) sname = s[".name"] end)

@@ -1,13 +1,36 @@
+--[[
+TODO:
+ - network/state returns awfully little information (only station mode)
+ - document REST API (mention rq IDs and endpoint information, list endpoints+args+CRUD type, unknown values are empty fields)
+ - use a slightly more descriptive success/error definition (e.g. errortype=system/missing-arg/generic)
+ - how to handle requests which need a restart of uhttpd? (e.g. network/openap)
+ - a plain GET request (no ajax/script) runs the risk of timing out on lengthy operations: implement polling in API to get progress updates?
+   (this would require those operations to run in a separate daemon process which can be monitored by the CGI handler) 
+ - protect dump function against reference loops (see: http://lua-users.org/wiki/TableSerialization, json also handles this well)
+ - (this is an old todo item from network:available(), might still be relevant at some point)
+   extend reconf interface to support function arguments (as tables) so wifihelper functionality can be integrated
+   but how? idea: pass x_args={arg1="a",arg2="2342"} for component 'x'
+   or: allow alternative for x="y" --> x={action="y", arg1="a", arg2="2342"}
+   in any case, arguments should be put in a new table to pass to the function (since order is undefined it must be an assoc array)
+
+NOTES:
+ - The endpoint function info in response objects is incorrect when the global function is called with a blank argument,
+   to cleanly solve this, module/function resolution should be moved from main() to the request object
+]]--
+
 local l = require("logger")
 local RequestClass = require("rest.request")
 local ResponseClass = require("rest.response")
+local wifi = require("network.wlanconfig")
+local reconf = require("network.netconfig")
 
 
-local DEBUG_PCALLS = false
+--NOTE: pcall protects from invocation exceptions, which is what we need except
+--during debugging. This flag replaces them with a normal call so we can inspect stack traces.
+local DEBUG_PCALLS = true
 
 
 local postData = nil
-local resp = ResponseClass.new()
 
 
 local function setupAutoWifiMode()
@@ -26,6 +49,8 @@ local function init()
 		local n = tonumber(os.getenv("CONTENT_LENGTH"))
 		postData = io.read(n)
 	end
+	
+	return wifi.init() and reconf.init(wifi, true)
 end
 
 --usually returns function+nil, function+number in case of number in place of function name; or
@@ -96,12 +121,14 @@ end
 			if ok == true then
 				print(r:serializeAsJson())
 			else
+				local resp = ResponseClass.new(rq)
 				resp:setError("call to function '" .. mod .. "/" .. sr .. "' failed")
 				print(resp:serializeAsJson())
 				l:error("calling function '" .. func .. "' in API module '" .. mod .. "' somehow failed ('" .. r .. "')")
 			end
 		else
-			resp:setError("function unknown '" .. mod .. "/" .. func .. "'")
+			local resp = ResponseClass.new(rq)
+			resp:setError("function unknown '" .. (mod or "<empty>") .. "/" .. (func or "<global>") .. "'")
 			print(resp:serializeAsJson())
 			l:error("could not resolve requested API function ('" .. sr .. "')")
 		end
@@ -109,5 +136,13 @@ end
 end
 
 
-init()
-main()
+if init() == false then
+	local resp = ResponseClass.new()
+	resp:setError("initialization failed")
+	print(resp:serializeAsJson()) --FIXME: this message does not seem to be sent
+	l:error("initialization failed") --NOTE: this assumes the logger has been inited properly, despite init() having failed
+	os.exit(1)
+else
+	main()
+	os.exit(0)
+end

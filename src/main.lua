@@ -5,7 +5,8 @@ TODO:
  - use a slightly more descriptive success/error definition (e.g. errortype=system/missing-arg/generic)
  - how to handle requests which need a restart of uhttpd? (e.g. network/openap)
  - a plain GET request (no ajax/script) runs the risk of timing out on lengthy operations: implement polling in API to get progress updates?
-   (this would require those operations to run in a separate daemon process which can be monitored by the CGI handler) 
+   (this would require those operations to run in a separate daemon process which can be monitored by the CGI handler)
+   (!!!is this true? it could very well be caused by a uhttpd restart) 
  - protect dump function against reference loops (see: http://lua-users.org/wiki/TableSerialization, json also handles this well)
  - (this is an old todo item from network:available(), might still be relevant at some point)
    extend netconf interface to support function arguments (as tables) so wifihelper functionality can be integrated
@@ -16,8 +17,6 @@ TODO:
 NOTES:
  - using iwinfo with interface name 'radio0' yields very little 'info' output while wlan0 works fine.
    However, sometimes wlan0 disappears (happened after trying to associate with non-existing network)...why?
- - The endpoint function info in response objects is incorrect when the global function is called with a blank argument,
-   to cleanly solve this, module/function resolution should be moved from main() to the request object
 ]]--
 
 local l = require("logger")

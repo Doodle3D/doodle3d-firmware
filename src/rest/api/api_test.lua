@@ -5,42 +5,31 @@ local M = {}
 
 M.isApi = true
 
-function M._global(d)
-	local r = ResponseClass.new(d)
-	local ba = d:getBlankArgument()
+function M._global(request, response)
+	local ba = request:getBlankArgument()
 	
-	r:setSuccess("REST test API - default function called with blank argument: '" .. (ba or "<nil>") .. "'")
-	if ba ~= nil then r:addData("blank_argument", ba) end
-	
-	return r
+	response:setSuccess("REST test API - default function called with blank argument: '" .. (ba or "<nil>") .. "'")
+	if ba ~= nil then response:addData("blank_argument", ba) end
 end
 
-function M.success(d)
-	local r = ResponseClass.new(d)
-	r:setSuccess("this successful response has been generated on purpose")
-	r:addData("url", "http://xkcd.com/349/")
-	return r
+function M.success(request, response)
+	response:setSuccess("this successful response has been generated on purpose")
+	response:addData("url", "http://xkcd.com/349/")
 end
 
-function M.fail(d)
-	local r = ResponseClass.new(d)
-	r:setFail("this failure has been generated on purpose")
-	r:addData("url", "http://xkcd.com/336/")
-	return r
+function M.fail(request, response)
+	response:setFail("this failure has been generated on purpose")
+	response:addData("url", "http://xkcd.com/336/")
 end
 
-function M.error(d)
-	local r = ResponseClass.new(d)
-	r:setError("this error has been generated on purpose")
-	r:addData("url", "http://xkcd.com/1024/")
-	return r
+function M.error(request, response)
+	response:setError("this error has been generated on purpose")
+	response:addData("url", "http://xkcd.com/1024/")
 end
 
-function M.echo(d)
-	local r = ResponseClass.new(d)
-	r:setSuccess("request echo")
-	r:addData("request_data", d)
-	return r
+function M.echo(request, response)
+	response:setSuccess("request echo")
+	response:addData("request_data", request)
 end
 
 return M

@@ -1,4 +1,5 @@
 local urlcode = require("util.urlcode")
+local config = require("config")
 local ResponseClass = require("rest.response")
 
 local M = {}
@@ -6,12 +7,24 @@ M.__index = M
 
 local GLOBAL_API_FUNCTION_NAME = "_global"
 
+
+--NOTE: requestedApi* contain what was extracted from the request data
+--  regarding the other variables: either both resolvedApiFunction and realApiFunctionName
+--  are nil and resolutionError is not, or exactly the other way around
+M.requestedApiModule = nil
+M.requestedApiFunction = nil
+M.resolvedApiFunction = nil --will contain function address, or nil
+M.realApiFunctionName = nil --will contain requested name, or global name, or nil
+M.resolutionError = nil --non-nil means function could not be resolved
+
+
 local function kvTableFromUrlEncodedString(encodedText)
 	local args = {}
 	if (encodedText ~= nil) then
 		urlcode.parsequery(encodedText, args)
 	end
 	return args
+
 end
 
 local function kvTableFromArray(argArray)
@@ -30,12 +43,53 @@ local function kvTableFromArray(argArray)
 end
 
 
+--returns either a module object, or nil+errmsg
+local function resolveApiModule(modname)
+	if modname == nil then return nil, "missing module name" end
+	if string.find(modname, "_") == 1 then return nil, "module names starting with '_' are preserved for internal use" end
+	
+	local reqModName = "rest.api.api_" .. modname
+	local ok, modObj
+	
+	if config.DEBUG_PCALLS then ok, modObj = true, require(reqModName)
+	else ok, modObj = pcall(require, reqModName)
+	end
+	
+	if ok == false then return nil, "API module does not exist" end
+	if modObj == nil then return nil, "API module could not be found" end
+	if modObj.isApi ~= true then return nil, "module is not part of the CGI API" end
+	
+	return modObj
+end
+
+--returns funcobj+nil (usual), funcobj+number (global func with blank arg), or nil+errmsg (unresolvable or inaccessible)
+local function resolveApiFunction(modname, funcname)
+	if funcname and string.find(funcname, "_") == 1 then return nil, "function names starting with '_' are preserved for internal use" end
+	
+	local mod, msg = resolveApiModule(modname)
+	
+	if (funcname == nil or funcname == '') then funcname = GLOBAL_API_FUNCTION_NAME end --treat empty function name as nil
+	local f = mod[funcname]
+	local funcNumber = tonumber(funcname)
+	
+	if (type(f) == "function") then
+		return f
+	elseif funcNumber ~= nil then
+		return mod[GLOBAL_API_FUNCTION_NAME], funcNumber
+	else
+		return nil, ("function '" .. funcname .. "' does not exist in API module '" .. modname .. "'")
+	end
+end
+
+
 setmetatable(M, {
 	__call = function(cls, ...)
 		return cls.new(...)
 	end
 })
 
+--This function initializes itself using various environment variables, the arg array and the given postData
+--NOTE: if debugging is enabled, commandline arguments 'm' and 'f' override requested module and function
 function M.new(postData, debug)
 	local self = setmetatable({}, M)
 	
@@ -54,30 +108,54 @@ function M.new(postData, debug)
 	self.postArgs = kvTableFromUrlEncodedString(postData)
 	
 	--TEMP: until these can be extracted from the url path itself
-	self.apiModule = self.getArgs["m"]
-	self.apiFunction = self.getArgs["f"]
+	self.requestedApiModule = self.getArgs["m"]
+	self.requestedApiFunction = self.getArgs["f"]
 	
 	if debug then
-		self.apiModule = self.cmdLineArgs["m"] or self.apiModule
-		self.apiFunction = self.cmdLineArgs["f"] or self.apiFunction
+		self.requestedApiModule = self.cmdLineArgs["m"] or self.requestedApiModule
+		self.requestedApiFunction = self.cmdLineArgs["f"] or self.requestedApiFunction
 	end
 	
-	if self.apiModule == "" then self.apiModule = nil end
-	if self.apiFunction == "" then self.apiFunction = nil end
+	if self.requestedApiModule == "" then self.requestedApiModule = nil end
+	if self.requestedApiFunction == "" then self.requestedApiFunction = nil end
+	
+	
+	-- Perform module/function resolution
+	--TODO: improve naming and perhaps argument passing
+	local sfunc, sres = resolveApiFunction(self:getRequestedApiModule(), self:getRequestedApiFunction())
+	
+	if sfunc ~= nil then --function (possibly the global one) could be resolved
+		self.resolvedApiFunction = sfunc
+		if sres ~= nil then --apparently it was the global one, and we received a 'blank argument'
+			self:setBlankArgument(sres)
+			self.realApiFunctionName = GLOBAL_API_FUNCTION_NAME
+		else --resolved without blank argument but still potentially the global function, hence the _or_ construction
+			self.realApiFunctionName = self:getRequestedApiFunction() or GLOBAL_API_FUNCTION_NAME
+		end
+	else
+		--instead of throwing an error, save the message for handle() which is expected to return a response anyway
+		self.resolutionError = sres
+	end
+	
 	
 	return self
 end
 
+--GET/POST/CMDLINE
 function M:getRequestMethod()
 	return self.requestMethod
 end
 
-function M:getApiModule()
-	return self.apiModule
+function M:getRequestedApiModule()
+	return self.requestedApiModule
 end
 
-function M:getApiFunction()
-	return self.apiFunction
+function M:getRequestedApiFunction()
+	return self.requestedApiFunction
+end
+
+function M:getRealApiFunctionName()
+	return self.realApiFunctionName
 end
 
 function M:getBlankArgument()
@@ -116,72 +194,29 @@ function M:getAll()
 	end
 end
 
---returns either a module object, or nil+errmsg
-local function resolveApiModule(modname)
-	if modname == nil then return nil, "missing module name" end
-	if string.find(modname, "_") == 1 then return nil, "module names starting with '_' are preserved for internal use" end
-	
-	local reqModName = "rest.api.api_" .. modname
-	local ok, modObj
-	
-	--TODO: create config.lua which contains DEBUG_PCALLS (nothing else for the moment)
-	if DEBUG_PCALLS then ok, modObj = true, require(reqModName)
-	else ok, modObj = pcall(require, reqModName)
-	end
-	
-	if ok == false then return nil, "API module does not exist" end
-	if modObj == nil then return nil, "API module could not be found" end
-	if modObj.isApi ~= true then return nil, "module is not part of the CGI API" end
-	
-	return modObj
-end
-
---returns funcobj+nil (usual), funcobj+number (global func with blank arg), or nil+errmsg (unresolvable or inaccessible)
-local function resolveApiFunction(modname, funcname)
-	if funcname and string.find(funcname, "_") == 1 then return nil, "function names starting with '_' are preserved for internal use" end
-	
-	local mod, msg = resolveApiModule(modname)
-	
-	if (funcname == nil or funcname == '') then funcname = GLOBAL_API_FUNCTION_NAME end --treat empty function name as nil
-	local f = mod[funcname]
-	local funcNumber = tonumber(funcname)
-	
-	if (type(f) == "function") then
-		return f
-	elseif funcNumber ~= nil then
-		return mod[GLOBAL_API_FUNCTION_NAME], funcNumber
-	else
-		return nil, ("function '" .. funcname .. "' does not exist in API module '" .. modname .. "'")
-	end
-end
 
 --returns either a response object+nil, or response object+errmsg
 function M:handle()
-
-	--TEMP: should be moved to init
-	local mod = self:getApiModule()
-	local func = self:getApiFunction()
-	local sf, sr = resolveApiFunction(mod, func)
+	local modname = self:getRequestedApiModule()
+	local resp = ResponseClass.new(self)
 	
-	local resp = ResponseClass.new(rq) --TEMP: do not do this before resolving. after resolving has been moved to init that will be automatically true
-	
-	if (sf ~= nil) then
-		if (sr ~= nil) then self:setBlankArgument(sr) end
-		
+	if (self.resolvedApiFunction ~= nil) then --we found a function (possible the global function)
+		--invoke the function
 		local ok, r
-		if DEBUG_PCALLS then ok, r = true, sf(self)
-		else ok, r = pcall(sf, self)
+		if config.DEBUG_PCALLS then ok, r = true, self.resolvedApiFunction(self, resp)
+		else ok, r = pcall(self.resolvedApiFunction, self, resp)
 		end
-		 
+		
+		--handle the result
 		if ok == true then
-			return r, nil
+			return resp, nil
 		else
-			resp:setError("call to function '" .. mod .. "/" .. sr .. "' failed")
-			return resp, ("calling function '" .. func .. "' in API module '" .. mod .. "' somehow failed ('" .. r .. "')")
+			resp:setError("call to function '" .. modname .. "/" .. self.realApiFunctionName .. "' failed")
+			return resp, ("calling function '" .. self.realApiFunctionName .. "' in API module '" .. modname .. "' somehow failed ('" .. r .. "')")
 		end
 	else
-		resp:setError("function unknown '" .. (mod or "<empty>") .. "/" .. (func or "<global>") .. "'")
-		return resp, ("could not resolve requested API function ('" .. sr .. "')")
+		resp:setError("function unknown '" .. (modname or "<empty>") .. "/" .. (self:getRequestedApiFunction() or "<empty>") .. "'")
+		return resp, ("could not resolve requested API function ('" .. self.resolutionError .. "')")
 	end
 	
 	return resp

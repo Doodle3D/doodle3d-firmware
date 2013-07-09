@@ -1,10 +1,16 @@
 # TODO (new functionality)
- - save requested mod+func in request, as well as resolved function/pretty print version/function pointer (or subset…); then fix endpoint function name (when called with blank argument) in response objects to show pretty print name
  - fix init script handling as described here: http://wiki.openwrt.org/doc/devel/packages#packaging.a.service
- - write a simple client script to autotest as much of the api as possible  
-   extend the client script to run arbitrary post/get requests 
- - document REST API (mention rq IDs and endpoint information, list endpoints+args+CRUD type, unknown values are empty fields)
-   (describe fail/error difference: fail is valid rq..could not comply, while error is invalid rq _or_ system error)
+ - implement (automated) test code where possible
+   * in 'test' dir next to 'src', with API tests under 'test/www/'
+   * www tests check functionality of the test module
+   * www tests also provide an interface to run arbitrary get/post requests
+ - document REST API
+   * fail/error difference: fail is a valid rq aka 'could not comply', while error is invalid rq _or_ system error
+   * modules/functions prefixed with '_' are for internal use
+   * rq IDs and endpoint information can be supplied (but it's probably not useful after all)
+   * list endpoints+args+CRUD type
+   * success/fail/error statuses are justified by drupal api
+   * unknown values (e.g. in network info) are either empty or unmentioned fields
  - use a slightly more descriptive success/error definition (e.g. errortype=system/missing-arg/generic)
  - steps to take regarding versioning/updating
    * versioning scheme
@@ -17,7 +23,9 @@
    * expose through info API and/or system API; also provide a way (future) to flash a new image
  - dynamic AP name based on partial MAC (set once on installation and then only upon explicit request? (e.g. api/config/wifiname/default))
  - require api functions which change state to be invoked as post request
- - add API functions to test network connectivity in steps (ifup? hasip? resolve? ping?) to network or test
+  * can this be modelled like java annotations or c function attributes?
+  * otherwise maybe pair each function with <func>_attribs = {…}?
+ - add API functions to test network connectivity in steps (any chance(e.g. ~ap)? ifup? hasip? resolve? ping?) to network or test
  - add more config options to package, which should act as defaults for a config file on the system; candidates:  
    reconf.WWW_RENAME_NAME, wifihelper.{AP_ADDRESS, AP_NETMASK, (NET)}  
    <https://github.com/2ion/ini.lua>

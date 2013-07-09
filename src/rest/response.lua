@@ -1,10 +1,10 @@
 local JSON = (loadfile "util/JSON.lua")()
+local config = require("config")
 
 local M = {}
 M.__index = M
 
 local REQUEST_ID_ARGUMENT = "rq_id"
-local INCLUDE_ENDPOINT_INFO = false
 
 setmetatable(M, {
 	__call = function(cls, ...)
@@ -22,19 +22,14 @@ function M.new(requestObject)
 		local rqId = requestObject:get(REQUEST_ID_ARGUMENT)
 		if rqId ~= nil then self.body[REQUEST_ID_ARGUMENT] = rqId end
 		
-		if INCLUDE_ENDPOINT_INFO == true then
-			self.body["module"] = requestObject:getApiModule()
-			self.body["function"] = requestObject:getApiFunction() or ""
+		if config.API_INCLUDE_ENDPOINT_INFO == true then
+			self.body["module"] = requestObject:getRequestedApiModule()
+			self.body["function"] = requestObject:getRealApiFunctionName() or ""
 		end
 	end
 	
 	return self
 end
-
---use set{Success|Fail|Error}()
---function M:setStatus(s)
---	self.body.status = s
---end
 
 function M:setSuccess(msg)
 	self.body.status = "success"

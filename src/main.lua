@@ -3,12 +3,7 @@ local RequestClass = require("rest.request")
 local ResponseClass = require("rest.response")
 local wifi = require("network.wlanconfig")
 local netconf = require("network.netconfig")
-
-
---NOTE: pcall protects from invocation exceptions, which is what we need except
---during debugging. This flag replaces them with a normal call so we can inspect stack traces.
-local DEBUG_PCALLS = true
-
+local config = require("config")
 
 local postData = nil
 
@@ -21,7 +16,7 @@ local function init()
 	l:init(l.LEVEL.debug)
 	l:setStream(io.stderr)
 	
-	if DEBUG_PCALLS then l:info("Wifibox CGI handler started (pcall debugging enabled)")
+	if config.DEBUG_PCALLS then l:info("Wifibox CGI handler started (pcall debugging enabled)")
 	else l:info("Wifibox CGI handler started")
 	end
 	
@@ -41,7 +36,7 @@ local function init()
 end
 
  local function main()
-	local rq = RequestClass.new(postData, DEBUG_PCALLS) -- initializes itself using various environment variables and the arg array
+	local rq = RequestClass.new(postData, config.DEBUG_PCALLS)
 	
 	l:info("received request of type " .. rq:getRequestMethod() .. " with arguments: " .. l:dump(rq:getAll()))
 	if rq:getRequestMethod() ~= "CMDLINE" then
@@ -49,7 +44,7 @@ end
 		l:debug("user agent: " .. rq:getUserAgent())
 	end
 	
-	if (not DEBUG_PCALLS and rq:getRequestMethod() == "CMDLINE") then
+	if (not config.DEBUG_PCALLS and rq:getRequestMethod() == "CMDLINE") then
 		if rq:get("autowifi") ~= nil then
 			setupAutoWifiMode()
 		else
@@ -65,12 +60,17 @@ end
 	end
 end
 
+---'entry point'---
 local s, msg = init()
 if s == false then
 	local resp = ResponseClass.new()
-	resp:setError("initialization failed (" .. msg .. ")")
-	resp:send() --FIXME: this message does not seem to be sent
-	l:error("initialization failed (" .. msg .. ")") --NOTE: this assumes the logger has been inited properly, despite init() having failed
+	local errSuffix = msg and " (" .. msg .. ")" or ""
+	
+	resp:setError("initialization failed" .. errSuffix)
+	io.write ("Content-type: text/plain\r\n\r\n")
+	resp:send()
+	l:error("initialization failed" .. errSuffix) --NOTE: this assumes the logger has been inited properly, despite init() having failed
+	
 	os.exit(1)
 else
 	main()

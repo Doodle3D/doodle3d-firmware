@@ -8,21 +8,20 @@ local M = {}
 
 M.isApi = true
 
-function M._global(d)
-	local r = ResponseClass.new(d)
-	r:setError("not implemented")
-	return r
+function M._global(request, response)
+	response:setError("not implemented")
 end
 
 --accepts API argument 'nofilter'(bool) to disable filtering of APs and 'self'
-function M.available(d)
-	local r = ResponseClass.new(d)
-	local noFilter = u.toboolean(d:get("nofilter"))
+--accepts with_raw(bool) to include raw table dump
+function M.available(request, response)
+	local noFilter = u.toboolean(request:get("nofilter"))
+	local withRaw = u.toboolean(request:get("with_raw"))
 	local sr = wifi.getScanInfo()
 	local si, se
 	
 	if sr and #sr > 0 then
-		r:setSuccess("")
+		response:setSuccess("")
 		local netInfoList = {}
 		for _, se in ipairs(sr) do
 			if noFilter or se.mode ~= "ap" and se.ssid ~= wifi.AP_SSID then
@@ -36,26 +35,25 @@ function M.available(d)
 				netInfo["signal"] = se.signal
 				netInfo["quality"] = se.quality
 				netInfo["quality_max"] = se.quality_max
-				--netInfo["raw"] = l:dump(se) --TEMP for debugging only
+				if withRaw then netInfo["_raw"] = l:dump(se) end
 				
 				table.insert(netInfoList, netInfo)
 			end
 		end
-		r:addData("count", #netInfoList)
-		r:addData("networks", netInfoList)
+		response:addData("count", #netInfoList)
+		response:addData("networks", netInfoList)
 	else
-		r:setFail("No scan results or scanning not possible")
+		response:setFail("No scan results or scanning not possible")
 	end
-	
-	return r
 end
 
 --accepts API argument 'nofilter'(bool) to disable filtering of APs and 'self'
-function M.known(d)
-	local r = ResponseClass.new(d)
-	local noFilter = u.toboolean(d:get("nofilter"))
+--accepts with_raw(bool) to include raw table dump
+function M.known(request, response)
+	local noFilter = u.toboolean(request:get("nofilter"))
+	local withRaw = u.toboolean(request:get("with_raw"))
 	
-	r:setSuccess()
+	response:setSuccess()
 	local netInfoList = {}
 	for _, net in ipairs(wifi.getConfigs()) do
 		if noFilter or net.mode == "sta" then
@@ -64,47 +62,43 @@ function M.known(d)
 			netInfo["bssid"] = net.bssid or ""
 			netInfo["channel"] = net.channel or ""
 			netInfo["encryption"] = net.encryption
-			--netInfo["raw"] = l:dump(net) --TEMP for debugging only
+			if withRaw then netInfo["_raw"] = l:dump(net) end
 			table.insert(netInfoList, netInfo)
 		end
 	end
-	r:addData("count", #netInfoList)
-	r:addData("networks", netInfoList)
-	
-	return r
+	response:addData("count", #netInfoList)
+	response:addData("networks", netInfoList)
 end
 
-function M.state(d)
-	local r = ResponseClass.new(d)
+--accepts with_raw(bool) to include raw table dump
+function M.state(request, response)
+	local withRaw = u.toboolean(request:get("with_raw"))
 	local ds = wifi.getDeviceState()
 	
-	r:setSuccess()
-	r:addData("ssid", ds.ssid or "")
-	r:addData("bssid", ds.bssid or "")
-	r:addData("channel", ds.channel or "")
-	r:addData("mode", ds.mode)
-	r:addData("encryption", ds.encryption)
-	r:addData("quality", ds.quality)
-	r:addData("quality_max", ds.quality_max)
-	r:addData("txpower", ds.txpower)
-	r:addData("signal", ds.signal)
-	r:addData("noise", ds.noise)
-	--r:addData("raw", l:dump(ds)) --TEMP for debugging only
-	
-	return r
+	response:setSuccess()
+	response:addData("ssid", ds.ssid or "")
+	response:addData("bssid", ds.bssid or "")
+	response:addData("channel", ds.channel or "")
+	response:addData("mode", ds.mode)
+	response:addData("encryption", ds.encryption)
+	response:addData("quality", ds.quality)
+	response:addData("quality_max", ds.quality_max)
+	response:addData("txpower", ds.txpower)
+	response:addData("signal", ds.signal)
+	response:addData("noise", ds.noise)
+	if withRaw then response:addData("_raw", l:dump(ds)) end
 end
 
 --UNTESTED
 --requires ssid(string), accepts phrase(string), recreate(bool)
-function M.assoc(d)
-	local r = ResponseClass.new(d)
-	local argSsid = d:get("ssid")
-	local argPhrase = d:get("phrase")
-	local argRecreate = d:get("recreate")
+function M.assoc(request, response)
+	local argSsid = request:get("ssid")
+	local argPhrase = request:get("phrase")
+	local argRecreate = request:get("recreate")
 	
 	if argSsid == nil or argSsid == "" then
-		r:setError("missing ssid argument")
-		return r
+		response:setError("missing ssid argument")
+		return
 	end
 
 	local cfg = nil
@@ -121,65 +115,53 @@ function M.assoc(d)
 			wifi.createConfigFromScanInfo(scanResult, argPhrase)
 		else
 			--check for error
-			r:setFail("no wireless network with requested SSID is available")
-			r:addData("ssid", argSsid)
+			response:setFail("no wireless network with requested SSID is available")
+			response:addData("ssid", argSsid)
+			return
 		end
 	end
 	
 	wifi.activateConfig(argSsid)
 	netconf.switchConfiguration{ wifiiface="add", apnet="rm", staticaddr="rm", dhcppool="rm", wwwredir="rm", dnsredir="rm", wwwcaptive="rm", wireless="reload" }
-	r:setSuccess("wlan associated")
-	r:addData("ssid", argSsid)
-	
-	return r
+	response:setSuccess("wlan associated")
+	response:addData("ssid", argSsid)
 end
 
 --UNTESTED
-function M.disassoc(d)
-	local r = ResponseClass.new(d)
-	
+function M.disassoc(request, response)
 	wifi.activateConfig()
 	local rv = wifi.restart()
-	r:setSuccess("all wireless networks deactivated")
-	r:addData("wifi_restart_result", rv)
-	
-	return r
+	response:setSuccess("all wireless networks deactivated")
+	response:addData("wifi_restart_result", rv)
 end
 
 --UNTESTED
-function M.openap(d)
-	local r = ResponseClass.new(d)
-
+function M.openap(request, response)
 	--add AP net, activate it, deactivate all others, reload network/wireless config, add all dhcp and captive settings and reload as needed
 	netconf.switchConfiguration{apnet="add_noreload"}
 	wifi.activateConfig(wifi.AP_SSID)
 	netconf.switchConfiguration{ wifiiface="add", network="reload", staticaddr="add", dhcppool="add", wwwredir="add", dnsredir="add", wwwcaptive="add" }
-	r:setSuccess("switched to Access Point mode")
-	r:addData("ssid", wifi.AP_SSID)
-	
-	return r
+	response:setSuccess("switched to Access Point mode")
+	response:addData("ssid", wifi.AP_SSID)
 end
 
 --UNTESTED
 --requires ssid(string)
-function M.rm(d)
-	local r = ResponseClass.new(d)
-	local argSsid = d:get("ssid")
+function M.rm(request, response)
+	local argSsid = request:get("ssid")
 	
 	if argSsid == nil or argSsid == "" then
-		r:setError("missing ssid argument")
-		return r
+		response:setError("missing ssid argument")
+		return
 	end
 	
 	if wifi.removeConfig(argSsid) then
-		r:setSuccess("removed wireless network with requested SSID")
-		r:addData("ssid", argSsid)
+		response:setSuccess("removed wireless network with requested SSID")
+		response:addData("ssid", argSsid)
 	else
-		r:setFail("no wireless network with requested SSID") --this used to be a warning instead of an error...
-		r:addData("ssid", argSsid)
+		response:setFail("no wireless network with requested SSID") --this used to be a warning instead of an error...
+		response:addData("ssid", argSsid)
 	end
-	
-	return r
 end
 
 return M

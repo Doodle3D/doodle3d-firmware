@@ -4,6 +4,7 @@
    * in 'test' dir next to 'src', with API tests under 'test/www/'
    * www tests check functionality of the test module
    * www tests also provide an interface to run arbitrary get/post requests
+   * test path splitting as well
  - document REST API
    * fail/error difference: fail is a valid rq aka 'could not comply', while error is invalid rq _or_ system error
    * modules/functions prefixed with '_' are for internal use
@@ -11,7 +12,7 @@
    * list endpoints+args+CRUD type
    * success/fail/error statuses are justified by drupal api
    * unknown values (e.g. in network info) are either empty or unmentioned fields
- - use a slightly more descriptive success/error definition (e.g. errortype=system/missing-arg/generic)
+ - define a list of REST error codes to be more descriptive for clients (e.g. errortype=system/missing-arg/generic)
  - steps to take regarding versioning/updating
    * versioning scheme
    * create feed location (e.g. www.doodle3d.com/firmware/packages) (see here: http://wiki.openwrt.org/doc/packages#third.party.packages)
@@ -21,25 +22,24 @@
    * determine how opkg decides what is 'upgradeable'
    * at this point manual updating should be possible, now find out how to implement in lua (execve? or write a minimalistic binding to libopkg?)
    * expose through info API and/or system API; also provide a way (future) to flash a new image
- - dynamic AP name based on partial MAC (set once on installation and then only upon explicit request? (e.g. api/config/wifiname/default))
+ - generally, for configuration keys, it could be a good idea to use the concept of default values so it's always possible to return to a 'sane default config'
+   * use a uci wifibox config to store configuration and a uci wifibox-defaults config as fallback-lookup (which contains a complete default configuration)
+   * specify min/max/type/regex for each config key in separate lua file
+   * perhaps defaults should be specified together with min/max/type/regex
+ - dynamic AP name based on partial MAC (present in default config so it can be overridden and reverted again)
  - require api functions which change state to be invoked as post request
   * can this be modelled like java annotations or c function attributes?
   * otherwise maybe pair each function with <func>_attribs = {…}?
  - add API functions to test network connectivity in steps (any chance(e.g. ~ap)? ifup? hasip? resolve? ping?) to network or test
+ - handling requests which need a restart of uhttpd (e.g. network/openap) will probably respond with some kind of 'please check back in a few seconds' response
  - add more config options to package, which should act as defaults for a config file on the system; candidates:  
    reconf.WWW_RENAME_NAME, wifihelper.{AP_ADDRESS, AP_NETMASK, (NET)}  
    <https://github.com/2ion/ini.lua>
 
 
 # Ideas / issues to work out
- - generally, for configuration keys, it could be a good idea to use the concept of default values so it's always possible to return to a 'sane default config'
- - add system api module? with check-updates/do-update/etc
- - how to handle requests which need a restart of uhttpd? (e.g. network/openap)
- - a plain GET request (no ajax/script) runs the risk of timing out on lengthy operations: implement polling in API to get progress updates?
-   (this would require those operations to run in a separate daemon process which can be monitored by the CGI handler)
-   (!!!is this true? it could very well be caused by a uhttpd restart) 
- - licensing (also for hardware and firmware) + credits for external code and used ideas
-  <http://www.codinghorror.com/blog/2007/04/pick-a-license-any-license.html>
+ - add system api module? for check-updates/do-update/etc
+ - licensing (also for hardware and firmware) + credits for external code and used ideas (<http://www.codinghorror.com/blog/2007/04/pick-a-license-any-license.html>)
  - (this is an old todo item from network:available(), might still be relevant at some point)
    extend netconf interface to support function arguments (as tables) so wifihelper functionality can be integrated
    but how? idea: pass x_args={arg1="a",arg2="2342"} for component 'x'

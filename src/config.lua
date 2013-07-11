@@ -7,4 +7,8 @@ M.DEBUG_PCALLS = true
 --REST responses will contain 'module' and 'function' keys describing what was requested
 M.API_INCLUDE_ENDPOINT_INFO = true
 
+M.DEFAULT_AP_SSID = "d3d-ap-%MAC_ADDR_TAIL%"
+M.DEFAULT_AP_ADDRESS = "192.168.10.1"
+M.DEFAULT_AP_NETMASK = "255.255.255.0"
+
 return M

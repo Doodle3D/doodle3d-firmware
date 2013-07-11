@@ -1,3 +1,4 @@
+local util = require("util.utils") --required for string:split()
 local urlcode = require("util.urlcode")
 local config = require("config")
 local ResponseClass = require("rest.response")
@@ -42,6 +43,12 @@ local function kvTableFromArray(argArray)
 	return args
 end
 
+--NOTE: this function ignores empty tokens (e.g. '/a//b/' yields { [1] = a, [2] = b })
+local function arrayFromPath(pathText)
+	return pathText and pathText:split("/") or {} --FIXME: nothing returned? regardless of which sep is used
+	--return pathText:split("/")
+end
+
 
 --returns either a module object, or nil+errmsg
 local function resolveApiModule(modname)
@@ -67,6 +74,10 @@ local function resolveApiFunction(modname, funcname)
 	if funcname and string.find(funcname, "_") == 1 then return nil, "function names starting with '_' are preserved for internal use" end
 	
 	local mod, msg = resolveApiModule(modname)
+	
+	if mod == nil then
+		return nil, msg
+	end
 	
 	if (funcname == nil or funcname == '') then funcname = GLOBAL_API_FUNCTION_NAME end --treat empty function name as nil
 	local f = mod[funcname]
@@ -106,22 +117,27 @@ function M.new(postData, debug)
 	self.cmdLineArgs = kvTableFromArray(arg)
 	self.getArgs = kvTableFromUrlEncodedString(os.getenv("QUERY_STRING"))
 	self.postArgs = kvTableFromUrlEncodedString(postData)
+	self.pathArgs = arrayFromPath(os.getenv("PATH_INFO"))
 	
-	--TEMP: until these can be extracted from the url path itself
-	self.requestedApiModule = self.getArgs["m"]
-	self.requestedApiFunction = self.getArgs["f"]
-	
-	if debug then
-		self.requestedApiModule = self.cmdLineArgs["m"] or self.requestedApiModule
-		self.requestedApiFunction = self.cmdLineArgs["f"] or self.requestedApiFunction
+	--override path arguments with command line parameter if debugging is enabled
+	if debug and self.requestMethod == "CMDLINE" then
+		self.pathArgs = arrayFromPath(self.cmdLineArgs["p"])
 	end
+	
+	
+	if #self.pathArgs >= 1 then self.requestedApiModule = self.pathArgs[1] end
+	if #self.pathArgs >= 2 then self.requestedApiFunction = self.pathArgs[2] end
+	
+--	if debug then
+--		self.requestedApiModule = self.cmdLineArgs["m"] or self.requestedApiModule
+--		self.requestedApiFunction = self.cmdLineArgs["f"] or self.requestedApiFunction
+--	end
 	
 	if self.requestedApiModule == "" then self.requestedApiModule = nil end
 	if self.requestedApiFunction == "" then self.requestedApiFunction = nil end
 	
 	
 	-- Perform module/function resolution
-	--TODO: improve naming and perhaps argument passing
 	local sfunc, sres = resolveApiFunction(self:getRequestedApiModule(), self:getRequestedApiFunction())
 	
 	if sfunc ~= nil then --function (possibly the global one) could be resolved
@@ -130,7 +146,12 @@ function M.new(postData, debug)
 			self:setBlankArgument(sres)
 			self.realApiFunctionName = GLOBAL_API_FUNCTION_NAME
 		else --resolved without blank argument but still potentially the global function, hence the _or_ construction
-			self.realApiFunctionName = self:getRequestedApiFunction() or GLOBAL_API_FUNCTION_NAME
+			if self:getRequestedApiFunction() ~= nil then
+				self.realApiFunctionName = self:getRequestedApiFunction()
+				if #self.pathArgs >= 3 then self:setBlankArgument(self.pathArgs[3]) end --aha, we have both a function and a blank argument
+			else
+				self.realApiFunctionName = GLOBAL_API_FUNCTION_NAME
+			end
 		end
 	else
 		--instead of throwing an error, save the message for handle() which is expected to return a response anyway
@@ -141,7 +162,7 @@ function M.new(postData, debug)
 	return self
 end
 
---GET/POST/CMDLINE
+--returns either GET or POST or CMDLINE
 function M:getRequestMethod()
 	return self.requestMethod
 end
@@ -194,6 +215,10 @@ function M:getAll()
 	end
 end
 
+function M:getPathData()
+	return self.pathArgs
+end
+
 
 --returns either a response object+nil, or response object+errmsg
 function M:handle()
@@ -215,7 +240,7 @@ function M:handle()
 			return resp, ("calling function '" .. self.realApiFunctionName .. "' in API module '" .. modname .. "' somehow failed ('" .. r .. "')")
 		end
 	else
-		resp:setError("function unknown '" .. (modname or "<empty>") .. "/" .. (self:getRequestedApiFunction() or "<empty>") .. "'")
+		resp:setError("function or module unknown '" .. (modname or "<empty>") .. "/" .. (self:getRequestedApiFunction() or "<empty>") .. "'")
 		return resp, ("could not resolve requested API function ('" .. self.resolutionError .. "')")
 	end
 	

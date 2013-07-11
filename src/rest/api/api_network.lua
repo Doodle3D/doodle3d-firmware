@@ -1,3 +1,4 @@
+local config = require("config")
 local l = require("logger")
 local u = require("util.utils")
 local netconf = require("network.netconfig")
@@ -24,7 +25,7 @@ function M.available(request, response)
 		response:setSuccess("")
 		local netInfoList = {}
 		for _, se in ipairs(sr) do
-			if noFilter or se.mode ~= "ap" and se.ssid ~= wifi.AP_SSID then
+			if noFilter or se.mode ~= "ap" and se.ssid ~= config.DEFAULT_AP_SSID then
 				local netInfo = {}
 				
 				netInfo["ssid"] = se.ssid
@@ -139,10 +140,10 @@ end
 function M.openap(request, response)
 	--add AP net, activate it, deactivate all others, reload network/wireless config, add all dhcp and captive settings and reload as needed
 	netconf.switchConfiguration{apnet="add_noreload"}
-	wifi.activateConfig(wifi.AP_SSID)
+	wifi.activateConfig(config.DEFAULT_AP_SSID)
 	netconf.switchConfiguration{ wifiiface="add", network="reload", staticaddr="add", dhcppool="add", wwwredir="add", dnsredir="add", wwwcaptive="add" }
 	response:setSuccess("switched to Access Point mode")
-	response:addData("ssid", wifi.AP_SSID)
+	response:addData("ssid", config.DEFAULT_AP_SSID)
 end
 
 --UNTESTED

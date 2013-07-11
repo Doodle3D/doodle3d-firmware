@@ -29,7 +29,9 @@ end
 
 function M.echo(request, response)
 	response:setSuccess("request echo")
-	response:addData("request_data", request)
+	response:addData("request_data", request:getAll())
+	response:addData("blank_argument", request:getBlankArgument())
+	response:addData("path_data", request:getPathData())
 end
 
 return M

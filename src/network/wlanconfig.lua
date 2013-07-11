@@ -8,9 +8,6 @@ local M = {}
 --NOTE: fallback device 'radio0' is required because sometimes the wlan0 device disappears
 M.DFL_DEVICE = "wlan0"
 M.DFL_DEVICE_FALLBACK = "radio0"
-M.AP_SSID = "d3d-ap"
-M.AP_ADDRESS = "192.168.10.1"
-M.AP_NETMASK = "255.255.255.0"
 M.NET = "wlan"
 
 local dev, dev_api
@@ -80,6 +77,21 @@ function M.getDeviceState()
 		["noise"] = iw.noise(dev)
 	}
 	return result
+end
+
+--returns the wireless device's MAC address (as string, without colons)
+--(lua numbers on openWrt seem to be 32bit so they cannot represent a MAC address as one number)
+function M.getMacAddress()
+	local iw = iwinfo[dev_api]
+	local macText = iw.bssid(dev)
+	local out = ""
+	
+	for i = 0, 5 do
+		local bt = string.sub(macText, i*3+1, i*3+2)
+		out = out .. bt
+	end
+	
+	return out
 end
 
 --- Return one or all available wifi networks resulting from an iwinfo scan

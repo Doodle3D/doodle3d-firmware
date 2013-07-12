@@ -80,12 +80,11 @@ define Package/wifibox/install
 	
 #	$(INSTALL_DIR) $(1)/$(TGT_LUA_DIR_SUFFIX)
 	$(INSTALL_DIR) $(1)/$(TGT_LUA_DIR_SUFFIX)/network
-	$(INSTALL_DIR) $(1)/$(TGT_LUA_DIR_SUFFIX)/rest
+#	$(INSTALL_DIR) $(1)/$(TGT_LUA_DIR_SUFFIX)/rest
+	$(INSTALL_DIR) $(1)/$(TGT_LUA_DIR_SUFFIX)/rest/api
 	$(INSTALL_DIR) $(1)/$(TGT_LUA_DIR_SUFFIX)/script
 	$(INSTALL_DIR) $(1)/$(TGT_LUA_DIR_SUFFIX)/util
-#	$(INSTALL_DIR) $(1)/$(TGT_LUA_DIR_SUFFIX)/www
-#	$(INSTALL_DIR) $(1)/$(TGT_LUA_DIR_SUFFIX)/www/cgi-bin
-	$(INSTALL_DIR) $(1)/$(TGT_LUA_DIR_SUFFIX)/www/wifibox
+	$(INSTALL_DIR) $(1)/$(TGT_LUA_DIR_SUFFIX)/www
 	$(INSTALL_DIR) $(1)/etc/init.d
 	$(INSTALL_DIR) $(1)/www/cgi-bin
 	
@@ -94,26 +93,28 @@ define Package/wifibox/install
 	$(CP) $(WIFIBOX_BASE_DIR)/*.lua $(1)/$(TGT_LUA_DIR_SUFFIX)/
 	$(CP) $(WIFIBOX_BASE_DIR)/network/*.lua $(1)/$(TGT_LUA_DIR_SUFFIX)/network/
 	$(CP) $(WIFIBOX_BASE_DIR)/rest/*.lua $(1)/$(TGT_LUA_DIR_SUFFIX)/rest/
+	$(CP) $(WIFIBOX_BASE_DIR)/rest/api/*.lua $(1)/$(TGT_LUA_DIR_SUFFIX)/rest/api/
 	$(CP) $(WIFIBOX_BASE_DIR)/util/*.lua $(1)/$(TGT_LUA_DIR_SUFFIX)/util/
 	
 	$(CP) $(WIFIBOX_BASE_DIR)/script/wifibox_init $(1)/$(TGT_LUA_DIR_SUFFIX)/script
 	$(CP) $(WIFIBOX_BASE_DIR)/script/d3dapi $(1)/$(TGT_LUA_DIR_SUFFIX)/script
 
-	$(CP) $(WIFIBOX_BASE_DIR)/www/* $(1)/$(TGT_LUA_DIR_SUFFIX)/www/
-	$(CP) $(WIFIBOX_BASE_DIR)/script/d3dapi $(1)/www/cgi-bin
+#	$(CP) $(WIFIBOX_BASE_DIR)/www/* $(1)/$(TGT_LUA_DIR_SUFFIX)/www/
+	$(CP) $(WIFIBOX_BASE_DIR)/www/* $(1)/www/ #copy www files directly to /www
 
-#	$(CP) $(WIFIBOX_BASE_DIR)/www/.autowifi-inplace $(1)/$(TGT_LUA_DIR_SUFFIX)/www
-	
 ifeq ($(CONFIG_WIFIBOX_DEVEL_PACKAGE),y)
 #	$(INSTALL_DIR) $(1)/$(TGT_LUA_DIR_SUFFIX)/misc
 #	$(CP) $(WIFIBOX_BASE_DIR)/../misc/collect-code.sh $(1)/$(TGT_LUA_DIR_SUFFIX)/misc/
+
+	$(INSTALL_DIR) $(1)/$(TGT_LUA_DIR_SUFFIX)/test
+	$(CP) $(WIFIBOX_BASE_DIR)/test/* $(1)/$(TGT_LUA_DIR_SUFFIX)/test/
+	$(LN) -s /$(TGT_LUA_DIR_SUFFIX)/test $(1)/www/
 endif
 	
 	
 ### create links elsewhere in the system (autowifi)
 	
 	$(LN) -s /$(TGT_LUA_DIR_SUFFIX)/script/d3dapi $(1)/www/cgi-bin
-	$(LN) -s /$(TGT_LUA_DIR_SUFFIX)/www/wifibox $(1)/www
 	$(LN) -s /$(TGT_LUA_DIR_SUFFIX)/script/wifibox_init $(1)/etc/init.d/wifibox_init
 	
 ### install gpx utility

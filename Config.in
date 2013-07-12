@@ -7,14 +7,13 @@
 		bool "Enable development aids"
 		default n
 		help
-			Enable development features (currently a script to copy and zip all relevant
-			code for updating the git repository, and two shell aliases for convenience,
-			see /root/.profile).
+			Enable development features (currently two shell aliases for convenience,
+			see /root/.profile and a test interface for the REST API).
 
 	config WIFIBOX_AP_SSID
 		depends on PACKAGE_wifibox
 		string "AP mode SSID"
-		default "d3d-ap"
+		default "d3d-ap-%%MAC_TAIL%%"
 		help
 			The SSID the device will use when switching into access point mode.
 			Note: the Lua scripts do not actually use this yet.

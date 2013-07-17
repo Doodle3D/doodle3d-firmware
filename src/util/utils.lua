@@ -2,11 +2,14 @@ local uci = require("uci").cursor()
 
 local M = {}
 
-function string:split(sep)
-        local sep, fields = sep or ":", {}
-        local pattern = string.format("([^%s]+)", sep)
-        self:gsub(pattern, function(c) fields[#fields+1] = c end)
-        return fields
+function string:split(div)
+	local div, pos, arr = div or ":", 0, {}
+	for st,sp in function() return self:find(div, pos, true) end do
+		table.insert(arr, self:sub(pos, st - 1))
+		pos = sp + 1
+	end
+	table.insert(arr, self:sub(pos))
+	return arr
 end
 
 function M.toboolean(s)

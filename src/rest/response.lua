@@ -1,10 +1,13 @@
-local JSON = (loadfile "util/JSON.lua")()
+local JSON = require("util/JSON")
 local config = require("config")
 
 local M = {}
 M.__index = M
 
 local REQUEST_ID_ARGUMENT = "rq_id"
+
+M.httpStatusCode, M.httpStatusText = nil, nil
+
 
 setmetatable(M, {
 	__call = function(cls, ...)
@@ -16,7 +19,8 @@ setmetatable(M, {
 function M.new(requestObject)
 	local self = setmetatable({}, M)
 	
-	self.body = {status = nil, data = {}}
+	self.body = { status = nil, data = {} }
+	self:setHttpStatus(200, "OK")
 	
 	if requestObject ~= nil then
 		local rqId = requestObject:get(REQUEST_ID_ARGUMENT)
@@ -29,6 +33,11 @@ function M.new(requestObject)
 	end
 	
 	return self
+end
+
+function M:setHttpStatus(code, text)
+	if code ~= nil then self.httpStatusCode = code end
+	if text ~= nil then self.httpStatusText = text end
 end
 
 function M:setSuccess(msg)
@@ -44,6 +53,8 @@ end
 function M:setError(msg)
 	self.body.status = "error"
 	if msg ~= "" then self.body.msg = msg end
+	
+	self:addData("more_info", "http://doodle3d.nl/wiki/wiki/communication-api")
 end
 
 --NOTE: with this method, to add nested data, it is necessary to precreate the table and add it with its root key
@@ -57,6 +68,8 @@ function M:serializeAsJson()
 end
 
 function M:send()
+	io.write("Status: " .. self.httpStatusCode .. " " .. self.httpStatusText .. "\r\n")
+	io.write ("Content-type: text/plain\r\n\r\n")
 	print(self:serializeAsJson())
 end
 

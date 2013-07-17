@@ -5,7 +5,7 @@ local M = {}
 M.DEBUG_PCALLS = true
 
 --REST responses will contain 'module' and 'function' keys describing what was requested
-M.API_INCLUDE_ENDPOINT_INFO = true
+M.API_INCLUDE_ENDPOINT_INFO = false
 
 M.DEFAULT_AP_SSID = "d3d-ap-%MAC_ADDR_TAIL%"
 M.DEFAULT_AP_ADDRESS = "192.168.10.1"

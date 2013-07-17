@@ -1,3 +1,5 @@
+package.path = package.path .. ';/usr/share/lua/wifibox/?.lua'
+
 local l = require("logger")
 local RequestClass = require("rest.request")
 local ResponseClass = require("rest.response")
@@ -38,7 +40,8 @@ end
  local function main()
 	local rq = RequestClass.new(postData, config.DEBUG_PCALLS)
 	
-	l:info("received request of type " .. rq:getRequestMethod() .. " with arguments: " .. l:dump(rq:getAll()))
+	l:info("received request of type " .. rq:getRequestMethod() .. " for " .. (rq:getRequestedApiModule() or "<unknown>")
+			.. "/" .. (rq:getRealApiFunctionName() or "<unknown>") .. " with arguments: " .. l:dump(rq:getAll()))
 	if rq:getRequestMethod() ~= "CMDLINE" then
 		l:info("remote IP/port: " .. rq:getRemoteHost() .. "/" .. rq:getRemotePort())
 		l:debug("user agent: " .. rq:getUserAgent())
@@ -52,7 +55,6 @@ end
 		end
 		
 	else
-		io.write ("Content-type: text/plain\r\n\r\n")
 		local response, err = rq:handle()
 		
 		if err ~= nil then l:error(err) end

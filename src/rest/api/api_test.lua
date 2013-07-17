@@ -5,6 +5,15 @@ local M = {}
 
 M.isApi = true
 
+--empty or nil is equivalent to 'ANY', otherwise restrict to specified letters (command-line is always allowed)
+M._access = {
+	_global = "GET",
+	success = "GET", fail = "GET", error = "GET",
+	read = "GET", write = "POST", readwrite = "ANY", readwrite2 = "",
+	echo = "GET"
+}
+
+
 function M._global(request, response)
 	local ba = request:getBlankArgument()
 	
@@ -26,6 +35,13 @@ function M.error(request, response)
 	response:setError("this error has been generated on purpose")
 	response:addData("url", "http://xkcd.com/1024/")
 end
+
+
+function M.read(request, response) response:setSuccess("this endpoint can only be accessed through GET request") end
+function M.write(request, response) response:setSuccess("this endpoint can only be accessed through POST request") end
+function M.readwrite(request, response) response:setSuccess("this endpoint can only be accessed through POST request") end
+function M.readwrite2(request, response) response:setSuccess("this endpoint can only be accessed through POST request") end
+
 
 function M.echo(request, response)
 	response:setSuccess("request echo")

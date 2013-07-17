@@ -17,6 +17,7 @@ M.requestedApiFunction = nil
 M.resolvedApiFunction = nil --will contain function address, or nil
 M.realApiFunctionName = nil --will contain requested name, or global name, or nil
 M.resolutionError = nil --non-nil means function could not be resolved
+M.moduleAccessTable = nil
 
 
 local function kvTableFromUrlEncodedString(encodedText)
@@ -30,6 +31,8 @@ end
 
 local function kvTableFromArray(argArray)
 	local args = {}
+	
+	if not argArray then return args end
 	
 	for _, v in ipairs(argArray) do
 		local split = v:find("=")
@@ -45,8 +48,12 @@ end
 
 --NOTE: this function ignores empty tokens (e.g. '/a//b/' yields { [1] = a, [2] = b })
 local function arrayFromPath(pathText)
-	return pathText and pathText:split("/") or {} --FIXME: nothing returned? regardless of which sep is used
-	--return pathText:split("/")
+	return pathText and pathText:split("/") or {}
+end
+
+--returns true if acceptable is nil or empty or 'ANY' or if it contains requested
+local function matchRequestMethod(acceptable, requested)
+	return acceptable == nil or acceptable == '' or acceptable == 'ANY' or string.find(acceptable, requested)
 end
 
 
@@ -69,8 +76,11 @@ local function resolveApiModule(modname)
 	return modObj
 end
 
---returns funcobj+nil (usual), funcobj+number (global func with blank arg), or nil+errmsg (unresolvable or inaccessible)
+--returns resultData+nil (usual), or nil+errmsg (unresolvable or inaccessible)
+--resultData contains 'func', 'accessTable' and if found, also 'blankArg'
 local function resolveApiFunction(modname, funcname)
+	local resultData = {}
+	
 	if funcname and string.find(funcname, "_") == 1 then return nil, "function names starting with '_' are preserved for internal use" end
 	
 	local mod, msg = resolveApiModule(modname)
@@ -84,12 +94,17 @@ local function resolveApiFunction(modname, funcname)
 	local funcNumber = tonumber(funcname)
 	
 	if (type(f) == "function") then
-		return f
+		resultData.func = f
+		resultData.accessTable = mod._access
 	elseif funcNumber ~= nil then
-		return mod[GLOBAL_API_FUNCTION_NAME], funcNumber
+		resultData.func = mod[GLOBAL_API_FUNCTION_NAME]
+		resultData.accessTable = mod._access
+		resultData.blankArg = funcNumber
 	else
 		return nil, ("function '" .. funcname .. "' does not exist in API module '" .. modname .. "'")
 	end
+	
+	return resultData
 end
 
 
@@ -123,27 +138,24 @@ function M.new(postData, debug)
 	if debug and self.requestMethod == "CMDLINE" then
 		self.pathArgs = arrayFromPath(self.cmdLineArgs["p"])
 	end
+	table.remove(self.pathArgs, 1) --drop the first 'empty' field caused by the opening slash of the query string
 	
 	
 	if #self.pathArgs >= 1 then self.requestedApiModule = self.pathArgs[1] end
 	if #self.pathArgs >= 2 then self.requestedApiFunction = self.pathArgs[2] end
-	
---	if debug then
---		self.requestedApiModule = self.cmdLineArgs["m"] or self.requestedApiModule
---		self.requestedApiFunction = self.cmdLineArgs["f"] or self.requestedApiFunction
---	end
 	
 	if self.requestedApiModule == "" then self.requestedApiModule = nil end
 	if self.requestedApiFunction == "" then self.requestedApiFunction = nil end
 	
 	
 	-- Perform module/function resolution
-	local sfunc, sres = resolveApiFunction(self:getRequestedApiModule(), self:getRequestedApiFunction())
+	local rData, errMsg = resolveApiFunction(self:getRequestedApiModule(), self:getRequestedApiFunction())
 	
-	if sfunc ~= nil then --function (possibly the global one) could be resolved
-		self.resolvedApiFunction = sfunc
-		if sres ~= nil then --apparently it was the global one, and we received a 'blank argument'
-			self:setBlankArgument(sres)
+	if rData ~= nil and rData.func ~= nil then --function (possibly the global one) could be resolved
+		self.resolvedApiFunction = rData.func
+		self.moduleAccessTable = rData.accessTable
+		if rData.blankArg ~= nil then --apparently it was the global one, and we received a 'blank argument'
+			self:setBlankArgument(rData.blankArg)
 			self.realApiFunctionName = GLOBAL_API_FUNCTION_NAME
 		else --resolved without blank argument but still potentially the global function, hence the _or_ construction
 			if self:getRequestedApiFunction() ~= nil then
@@ -155,38 +167,19 @@ function M.new(postData, debug)
 		end
 	else
 		--instead of throwing an error, save the message for handle() which is expected to return a response anyway
-		self.resolutionError = sres
+		self.resolutionError = errMsg
 	end
 	
 	
 	return self
 end
 
---returns either GET or POST or CMDLINE
-function M:getRequestMethod()
-	return self.requestMethod
-end
-
-function M:getRequestedApiModule()
-	return self.requestedApiModule
-end
-
-function M:getRequestedApiFunction()
-	return self.requestedApiFunction
-end
-
-function M:getRealApiFunctionName()
-	return self.realApiFunctionName
-end
-
-function M:getBlankArgument()
-	return self.blankArgument
-end
-
-function M:setBlankArgument(arg)
-	self.blankArgument = arg
-end
-
+function M:getRequestMethod() return self.requestMethod end --returns either GET or POST or CMDLINE
+function M:getRequestedApiModule() return self.requestedApiModule end
+function M:getRequestedApiFunction() return self.requestedApiFunction end
+function M:getRealApiFunctionName() return self.realApiFunctionName end
+function M:getBlankArgument() return self.blankArgument end
+function M:setBlankArgument(arg) self.blankArgument = arg end
 function M:getRemoteHost() return self.remoteHost or "" end
 function M:getRemotePort() return self.remotePort or 0 end
 function M:getUserAgent() return self.userAgent or "" end
@@ -219,13 +212,19 @@ function M:getPathData()
 	return self.pathArgs
 end
 
-
 --returns either a response object+nil, or response object+errmsg
 function M:handle()
 	local modname = self:getRequestedApiModule()
 	local resp = ResponseClass.new(self)
 	
 	if (self.resolvedApiFunction ~= nil) then --we found a function (possible the global function)
+		--check access type
+		local accessText = self.moduleAccessTable[self.realApiFunctionName]
+		if not matchRequestMethod(accessText, self.requestMethod) then
+			resp:setError("function '" .. modname .. "/" .. self.realApiFunctionName .. "' requires different request method ('" .. accessText .. "')")
+			return resp, "incorrect access method (" .. accessText .. " != " .. self.requestMethod .. ")"
+		end
+		
 		--invoke the function
 		local ok, r
 		if config.DEBUG_PCALLS then ok, r = true, self.resolvedApiFunction(self, resp)

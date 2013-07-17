@@ -11,7 +11,6 @@ M.DEBUG_PCALLS = true
 M.API_INCLUDE_ENDPOINT_INFO = false
 
 
--- was: M.DEFAULT_AP_SSID = "d3d-ap-%MAC_ADDR_TAIL%"
 M.apSsid = {
 	default = 'd3d-ap-%%MAC_ADDR_TAIL%%',
 	type = 'string',
@@ -20,7 +19,6 @@ M.apSsid = {
 	max = 32
 }
 
--- was: M.DEFAULT_AP_ADDRESS = "192.168.10.1"
 M.apAddress = {
 	default = '192.168.10.1',
 	type = 'string',
@@ -28,7 +26,6 @@ M.apAddress = {
 	regex = '%d+\.%d+\.%d+\.%d+'
 }
 
--- was: M.DEFAULT_AP_NETMASK = "255.255.255.0"
 M.apNetmask = {
 	default = '255.255.255.0',
 	type = 'string',

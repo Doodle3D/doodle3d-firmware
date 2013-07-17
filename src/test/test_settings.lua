@@ -35,8 +35,8 @@ function M:test_get()
 end
 
 function M:test_set()
-	local key = 'apAddress'
-	local goodValue, badValue1, badValue2 = '10.0.0.1', '10.00.1', '10.0.0d.1'
+	local key, intKey = 'apAddress', 'temperature'
+	local intValue, goodValue, badValue1, badValue2 = 340, '10.0.0.1', '10.00.1', '10.0.0d.1'
 	
 	assert(s.get(key) == defaults.apAddress.default)
 	assert(s.isDefault(key))
@@ -53,6 +53,14 @@ function M:test_set()
 	
 	assert(s.set(key, nil))
 	assert(s.isDefault(key))
+	
+	-- test with value of int type
+	assert(s.get(intKey) == defaults.temperature.default)
+	assert(s.isDefault(intKey))
+	
+	assert(s.set(intKey, intValue))
+	assert(s.get(intKey) == intValue)
+	assert(not s.isDefault(intKey))
 end
 
 function M:test_setNonExistent()

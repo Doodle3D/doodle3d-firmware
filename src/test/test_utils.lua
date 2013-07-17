@@ -98,6 +98,7 @@ function M:test_symlink()
 	assert(false, 'not implemented')
 end
 
+-- this should test for the following condition: 'Could not rename /www to /www-regular(/www: Invalid cross-device link)'
 function M:test_symlinkInRoot()
 	assert(false, 'not implemented')
 end

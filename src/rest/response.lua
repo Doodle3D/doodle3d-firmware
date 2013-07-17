@@ -1,5 +1,5 @@
 local JSON = require("util/JSON")
-local config = require("config")
+local s = require("util.settings")
 
 local M = {}
 M.__index = M
@@ -26,7 +26,7 @@ function M.new(requestObject)
 		local rqId = requestObject:get(REQUEST_ID_ARGUMENT)
 		if rqId ~= nil then self.body[REQUEST_ID_ARGUMENT] = rqId end
 		
-		if config.API_INCLUDE_ENDPOINT_INFO == true then
+		if s.API_INCLUDE_ENDPOINT_INFO == true then
 			self.body["module"] = requestObject:getRequestedApiModule()
 			self.body["function"] = requestObject:getRealApiFunctionName() or ""
 		end

@@ -1,6 +1,7 @@
-local config = require("config")
 local u = require("util.utils")
 local l = require("util.logger")
+local s = require("util.settings")
+local wifi = require("network.wlanconfig")
 local uci = require("uci").cursor()
 
 local M = {}
@@ -95,15 +96,16 @@ end
 --[[ Add/remove access point network ]]
 function reconf.apnet_add_noreload(dirtyList) reconf.apnet_add(dirtyList, true) end
 function reconf.apnet_add(dirtyList, noReload)
+	local ourSsid = wifi.getSubstitutedSsid(s.get('apSsid'))
 	local sname = nil
 	uci:foreach("wireless", "wifi-iface", function(s)
-		if s.ssid == config.DEFAULT_AP_SSID then sname = s[".name"]; return false end
+		if s.ssid == ourSsid then sname = s[".name"]; return false end
 	end)
 	if sname == nil then sname = uci:add("wireless", "wifi-iface") end
 	
 	M.uciTableSet("wireless", sname, {
 		network = wifi.NET,
-		ssid = config.DEFAULT_AP_SSID,
+		ssid = ourSsid,
 		encryption = "none",
 		device = "radio0",
 		mode = "ap",
@@ -115,7 +117,7 @@ end
 function reconf.apnet_rm(dirtyList)
 	local sname = nil
 	uci:foreach("wireless", "wifi-iface", function(s)
-		if s.ssid == config.DEFAULT_AP_SSID then sname = s[".name"]; return false end
+		if s.ssid == wifi.getSubstitutedSsid(s.get(apSsid)) then sname = s[".name"]; return false end
 	end)
 	if sname == nil then return l:info("AP network configuration does not exist, nothing to remove") end
 	uci:delete("wireless", sname)
@@ -130,8 +132,8 @@ function reconf.staticaddr_add(dirtyList)
 	--NOTE: 'type = "bridge"' should -not- be added as this prevents defining a separate dhcp pool (http://wiki.openwrt.org/doc/recipes/routedap)
 	M.uciTableSet("network", wifi.NET, {
 		proto = "static",
-		ipaddr = config.DEFAULT_AP_ADDRESS,
-		netmask = config.DEFAULT_AP_NETMASK
+		ipaddr = s.get('apAddress'),
+		netmask = s.get('apNetmask')
 	})
 	bothBits(dirtyList, "network")
 end
@@ -178,7 +180,7 @@ end
 
 --[[ Add/remove redirecton of all DNS requests to self ]]
 function reconf.dnsredir_add(dirtyList)
-	local redirText = "/#/" .. config.DEFAULT_AP_ADDRESS
+	local redirText = "/#/" .. s.get('apAddress')
 	local sname = u.getUciSectionName("dhcp", "dnsmasq")
 	if sname == nil then return l:error("dhcp config does not contain a dnsmasq section") end
 	if uci:get("dhcp", sname, "address") ~= nil then return l:debug("DNS address redirection already in place, not re-adding", false) end
@@ -226,7 +228,7 @@ function reconf.natreflect_add(dirtyList)
 		proto = "tcp",
 		src_dport = "80",
 		dest_port = "80",
-		dest_ip = config.DEFAULT_AP_ADDRESS,
+		dest_ip = s.get('apAddress'),
 		target = "DNAT"
 	})
 	bothBits(dirtyList, "firewall")

@@ -12,6 +12,20 @@ M.NET = "wlan"
 
 local dev, dev_api
 
+-- if a substitution of baseApSsid is requested, cachedApSsid is returned if not nil
+local cachedApSsid, baseApSsid = nil, nil
+
+function M.getSubstitutedSsid(unformattedSsid)
+	if unformattedSsid == baseApSsid and cachedApSsid ~= nil then return cachedApSsid end
+	
+	local macTail = M.getMacAddress():sub(7)
+	
+	baseApSsid = unformattedSsid
+	cachedApSsid = unformattedSsid:gsub('%%%%MAC_ADDR_TAIL%%%%', macTail)
+	
+	return cachedApSsid
+end
+
 
 --- Map device mode as reported by iwinfo to device mode as required by UCI
 -- Note that this function is quite naive.

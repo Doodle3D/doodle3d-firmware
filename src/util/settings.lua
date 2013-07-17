@@ -40,12 +40,15 @@ local function isValid(value, baseTable)
 	
 	if type == 'bool' then
 		return isboolean(value) or nil,"invalid bool value"
+		
 	elseif type == 'int' or type == 'float' then
-		local ok = isnumber(value)
-		ok = ok and (type == 'float' or math.floor(value) == value)
-		if min then ok = ok and value >= min end
-		if max then ok = ok and value <= max end
-		return ok or nil,"invalid int/float value"
+		local numValue = tonumber(value)
+		local ok = numValue and true or false
+		ok = ok and (type == 'float' or math.floor(numValue) == numValue)
+		if min then ok = ok and numValue >= min end
+		if max then ok = ok and numValue <= max end
+		return ok or nil,"invalid int/float value or out of range"
+		
 	elseif type == 'string' then
 		local ok = true
 		if min then ok = ok and value:len() >= min end
@@ -69,7 +72,7 @@ function M.get(key)
 	if not base then return nil,ERR_NO_SUCH_KEY end
 	
 	local v = base.default
-	local uciV = fromUciValue(uci:get(UCI_CONFIG_NAME, UCI_CONFIG_SECTION, key))
+	local uciV = fromUciValue(uci:get(UCI_CONFIG_NAME, UCI_CONFIG_SECTION, key), base.type)
 	
 	return uciV or v
 end
@@ -95,7 +98,7 @@ function M.set(key, value)
 	
 	local current = uci:get(UCI_CONFIG_NAME, UCI_CONFIG_SECTION, key)
 	
-	if fromUciValue(current) == value then return true end
+	if fromUciValue(current, base.type) == value then return true end
 	
 	if value ~= nil then
 		local valid,m = isValid(value, base)

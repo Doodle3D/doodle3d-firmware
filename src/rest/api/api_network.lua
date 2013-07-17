@@ -1,13 +1,14 @@
-local config = require("config")
+local s = require("util.settings")
 local u = require("util.utils")
 local l = require("util.logger")
 local netconf = require("network.netconfig")
 local wifi = require("network.wlanconfig")
 local ResponseClass = require("rest.response")
 
-local M = {}
+local M = {
+	isApi = true
+}
 
-M.isApi = true
 
 function M._global(request, response)
 	response:setError("not implemented")
@@ -25,7 +26,7 @@ function M.available(request, response)
 		response:setSuccess("")
 		local netInfoList = {}
 		for _, se in ipairs(sr) do
-			if noFilter or se.mode ~= "ap" and se.ssid ~= config.DEFAULT_AP_SSID then
+			if noFilter or se.mode ~= "ap" and se.ssid ~= wifi.getSubstitutedSsid(s.get('apSsid')) then
 				local netInfo = {}
 				
 				netInfo["ssid"] = se.ssid
@@ -123,7 +124,8 @@ function M.assoc(request, response)
 	end
 	
 	wifi.activateConfig(argSsid)
-	netconf.switchConfiguration{ wifiiface="add", apnet="rm", staticaddr="rm", dhcppool="rm", wwwredir="rm", dnsredir="rm", wwwcaptive="rm", wireless="reload" }
+	--netconf.switchConfiguration{ wifiiface="add", apnet="rm", staticaddr="rm", dhcppool="rm", wwwredir="rm", dnsredir="rm", wwwcaptive="rm", wireless="reload" }
+	netconf.switchConfiguration{ wifiiface="add", apnet="rm", staticaddr="rm", dhcppool="rm", wwwredir="rm", dnsredir="rm", wireless="reload" }
 	response:setSuccess("wlan associated")
 	response:addData("ssid", argSsid)
 end
@@ -139,11 +141,13 @@ end
 --UNTESTED
 function M.openap(request, response)
 	--add AP net, activate it, deactivate all others, reload network/wireless config, add all dhcp and captive settings and reload as needed
+	local ssid = wifi.getSubstitutedSsid(s.get('apSsid'))
 	netconf.switchConfiguration{apnet="add_noreload"}
-	wifi.activateConfig(config.DEFAULT_AP_SSID)
-	netconf.switchConfiguration{ wifiiface="add", network="reload", staticaddr="add", dhcppool="add", wwwredir="add", dnsredir="add", wwwcaptive="add" }
+	wifi.activateConfig(ssid)
+	--netconf.switchConfiguration{ wifiiface="add", network="reload", staticaddr="add", dhcppool="add", wwwredir="add", dnsredir="add", wwwcaptive="add" }
+	netconf.switchConfiguration{ wifiiface="add", network="reload", staticaddr="add", dhcppool="add", wwwredir="add", dnsredir="add" }
 	response:setSuccess("switched to Access Point mode")
-	response:addData("ssid", config.DEFAULT_AP_SSID)
+	response:addData("ssid", ssid)
 end
 
 --UNTESTED

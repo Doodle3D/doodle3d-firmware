@@ -1,6 +1,6 @@
 package.path = package.path .. ';/usr/share/lua/wifibox/?.lua'
 
-local config = require('config')
+local confDefaults = require('conf_defaults')
 local u = require('util.utils')
 local l = require('util.logger')
 local wifi = require('network.wlanconfig')
@@ -19,7 +19,7 @@ local function init()
 	l:init(l.LEVEL.debug)
 	l:setStream(io.stderr)
 	
-	if config.DEBUG_PCALLS then l:info("Wifibox CGI handler started (pcall debugging enabled)")
+	if confDefaults.DEBUG_PCALLS then l:info("Wifibox CGI handler started (pcall debugging enabled)")
 	else l:info("Wifibox CGI handler started")
 	end
 	
@@ -39,7 +39,7 @@ local function init()
 end
 
  local function main()
-	local rq = RequestClass.new(postData, config.DEBUG_PCALLS)
+	local rq = RequestClass.new(postData, confDefaults.DEBUG_PCALLS)
 	
 	l:info("received request of type " .. rq:getRequestMethod() .. " for " .. (rq:getRequestedApiModule() or "<unknown>")
 			.. "/" .. (rq:getRealApiFunctionName() or "<unknown>") .. " with arguments: " .. u.dump(rq:getAll()))
@@ -48,7 +48,7 @@ end
 		l:debug("user agent: " .. rq:getUserAgent())
 	end
 	
-	if (not config.DEBUG_PCALLS and rq:getRequestMethod() == 'CMDLINE') then
+	if (not confDefaults.DEBUG_PCALLS and rq:getRequestMethod() == 'CMDLINE') then
 		if rq:get('autowifi') ~= nil then
 			setupAutoWifiMode()
 		else

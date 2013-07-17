@@ -1,16 +1,8 @@
 local l = require("util.logger")
 local ResponseClass = require("rest.response")
 
-local M = {}
-
-M.isApi = true
-
---empty or nil is equivalent to 'ANY', otherwise restrict to specified letters (command-line is always allowed)
-M._access = {
-	_global = "GET",
-	success = "GET", fail = "GET", error = "GET",
-	read = "GET", write = "POST", readwrite = "ANY", readwrite2 = "",
-	echo = "GET"
+local M = {
+	isApi = true
 }
 
 
@@ -38,9 +30,9 @@ end
 
 
 function M.read(request, response) response:setSuccess("this endpoint can only be accessed through GET request") end
-function M.write(request, response) response:setSuccess("this endpoint can only be accessed through POST request") end
-function M.readwrite(request, response) response:setSuccess("this endpoint can only be accessed through POST request") end
-function M.readwrite2(request, response) response:setSuccess("this endpoint can only be accessed through POST request") end
+function M.write_POST(request, response) response:setSuccess("this endpoint can only be accessed through POST request") end
+function M.readwrite(request, response) response:setSuccess("this endpoint can be accessed both through GET and POST request") end
+function M.readwrite2(request, response) response:setSuccess("this endpoint can be accessed both through GET and POST request") end
 
 
 function M.echo(request, response)

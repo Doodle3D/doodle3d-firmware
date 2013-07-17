@@ -1,12 +1,13 @@
-local util = require("util.utils") --required for string:split()
-local urlcode = require("util.urlcode")
-local config = require("config")
-local ResponseClass = require("rest.response")
+local util = require('util.utils') -- required for string:split()
+local urlcode = require('util.urlcode')
+local confDefaults = require('conf_defaults')
+local s = require('util.settings')
+local ResponseClass = require('rest.response')
 
 local M = {}
 M.__index = M
 
-local GLOBAL_API_FUNCTION_NAME = "_global"
+local GLOBAL_API_FUNCTION_NAME = '_global'
 
 
 --NOTE: requestedApi* contain what was extracted from the request data
@@ -17,7 +18,6 @@ M.requestedApiFunction = nil
 M.resolvedApiFunction = nil --will contain function address, or nil
 M.realApiFunctionName = nil --will contain requested name, or global name, or nil
 M.resolutionError = nil --non-nil means function could not be resolved
-M.moduleAccessTable = nil
 
 
 local function kvTableFromUrlEncodedString(encodedText)
@@ -46,26 +46,30 @@ local function kvTableFromArray(argArray)
 	return args
 end
 
---NOTE: this function ignores empty tokens (e.g. '/a//b/' yields { [1] = a, [2] = b })
+--- Create an array from the given '/'-separated path.
+-- Empty path elements are not ignored (e.g. '/a//b' yields { [1] = '', [2] = 'a', [3] = '', [4] = 'b' }).
+-- @param pathText The path to split.
+-- @return An array with the path elements.
 local function arrayFromPath(pathText)
-	return pathText and pathText:split("/") or {}
+	return pathText and pathText:split('/') or {}
 end
 
---returns true if acceptable is nil or empty or 'ANY' or if it contains requested
-local function matchRequestMethod(acceptable, requested)
-	return acceptable == nil or acceptable == '' or acceptable == 'ANY' or string.find(acceptable, requested)
-end
-
-
---returns either a module object, or nil+errmsg
+--- Resolve the given module name.
+-- Modules are searched for in the 'rest.api' path, with their name prefixed by 'api_'.
+-- e.g. if modname is 'test', then the generated 'require()' path will be 'rest.api.api_test'.
+-- Furthermore, the module must have the table key 'isApi' set to true.
+-- @param modname The basename of the module to resolve.
+-- @return Either a module object, or nil on error
+-- @return An message on error, or nil otherwise
+-- @see resolveApiFunction
 local function resolveApiModule(modname)
 	if modname == nil then return nil, "missing module name" end
-	if string.find(modname, "_") == 1 then return nil, "module names starting with '_' are preserved for internal use" end
+	if string.find(modname, '_') == 1 then return nil, "module names starting with '_' are preserved for internal use" end
 	
-	local reqModName = "rest.api.api_" .. modname
+	local reqModName = 'rest.api.api_' .. modname
 	local ok, modObj
 	
-	if config.DEBUG_PCALLS then ok, modObj = true, require(reqModName)
+	if confDefaults.DEBUG_PCALLS then ok, modObj = true, require(reqModName)
 	else ok, modObj = pcall(require, reqModName)
 	end
 	
@@ -76,9 +80,17 @@ local function resolveApiModule(modname)
 	return modObj
 end
 
---returns resultData+nil (usual), or nil+errmsg (unresolvable or inaccessible)
---resultData contains 'func', 'accessTable' and if found, also 'blankArg'
-local function resolveApiFunction(modname, funcname)
+--- Resolves a module/function name pair with appropiate access for the given request method.
+-- First, the function name suffixed with the request method, if not found the plain
+-- function name is looked up.
+-- Returned result data contains a 'func' key and if found, also 'blankArg'.
+-- @param modname Basename of the module to resolve funcname in.
+-- @param funcname Basename of the function to resolve.
+-- @param requestMethod Method by which the request was received.
+-- @return A table with resultData or nil on error.
+-- @return A message on error (unresolvable or inaccessible).
+-- @see resolveApiModule
+local function resolveApiFunction(modname, funcname, requestMethod)
 	local resultData = {}
 	
 	if funcname and string.find(funcname, "_") == 1 then return nil, "function names starting with '_' are preserved for internal use" end
@@ -90,15 +102,18 @@ local function resolveApiFunction(modname, funcname)
 	end
 	
 	if (funcname == nil or funcname == '') then funcname = GLOBAL_API_FUNCTION_NAME end --treat empty function name as nil
-	local f = mod[funcname]
+	local rqType = requestMethod == 'POST' and 'POST' or 'GET'
+	local fGeneric = mod[funcname]
+	local fWithMethod = mod[funcname .. '_' .. rqType]
 	local funcNumber = tonumber(funcname)
 	
-	if (type(f) == "function") then
-		resultData.func = f
-		resultData.accessTable = mod._access
+	if (type(fWithMethod) == 'function') then
+		resultData.func = fWithMethod
+	elseif (type(fGeneric) == 'function') then
+		resultData.func = fGeneric
 	elseif funcNumber ~= nil then
-		resultData.func = mod[GLOBAL_API_FUNCTION_NAME]
-		resultData.accessTable = mod._access
+		resultData.func = mod[GLOBAL_API_FUNCTION_NAME .. '_' .. rqType]
+		if not resultData.func then resultData.func = mod[GLOBAL_API_FUNCTION_NAME] end
 		resultData.blankArg = funcNumber
 	else
 		return nil, ("function '" .. funcname .. "' does not exist in API module '" .. modname .. "'")
@@ -116,27 +131,37 @@ setmetatable(M, {
 
 --This function initializes itself using various environment variables, the arg array and the given postData
 --NOTE: if debugging is enabled, commandline arguments 'm' and 'f' override requested module and function
-function M.new(postData, debug)
+function M.new(postData, debugEnabled)
 	local self = setmetatable({}, M)
 	
 	--NOTE: is it correct to assume that absence of REQUEST_METHOD indicates command line invocation?
-	self.requestMethod = os.getenv("REQUEST_METHOD")
+	self.requestMethod = os.getenv('REQUEST_METHOD')
 	if self.requestMethod ~= nil then
-		self.remoteHost = os.getenv("REMOTE_HOST")
-		self.remotePort = os.getenv("REMOTE_PORT")
-		self.userAgent = os.getenv("HTTP_USER_AGENT")
+		self.remoteHost = os.getenv('REMOTE_HOST')
+		self.remotePort = os.getenv('REMOTE_PORT')
+		self.userAgent = os.getenv('HTTP_USER_AGENT')
 	else
-		self.requestMethod = "CMDLINE"
+		self.requestMethod = 'CMDLINE'
 	end
 	
 	self.cmdLineArgs = kvTableFromArray(arg)
-	self.getArgs = kvTableFromUrlEncodedString(os.getenv("QUERY_STRING"))
+	self.getArgs = kvTableFromUrlEncodedString(os.getenv('QUERY_STRING'))
 	self.postArgs = kvTableFromUrlEncodedString(postData)
-	self.pathArgs = arrayFromPath(os.getenv("PATH_INFO"))
+	self.pathArgs = arrayFromPath(os.getenv('PATH_INFO'))
 	
-	--override path arguments with command line parameter if debugging is enabled
-	if debug and self.requestMethod == "CMDLINE" then
-		self.pathArgs = arrayFromPath(self.cmdLineArgs["p"])
+	-- override path arguments with command line parameter and allow to emulate GET/POST if debugging is enabled
+	if debugEnabled and self.requestMethod == 'CMDLINE' then
+		self.pathArgs = arrayFromPath(self.cmdLineArgs['p'])
+		
+		if self.cmdLineArgs['r'] == 'GET' then
+			self.requestMethod = 'GET'
+			self.getArgs = self.cmdLineArgs
+			self.getArgs.p, self.getArgs.r = nil, nil
+		elseif self.cmdLineArgs['r'] == 'POST' then
+			self.requestMethod = 'POST'
+			self.postArgs = self.cmdLineArgs
+			self.postArgs.p, self.postArgs.r = nil, nil
+		end
 	end
 	table.remove(self.pathArgs, 1) --drop the first 'empty' field caused by the opening slash of the query string
 	
@@ -144,16 +169,15 @@ function M.new(postData, debug)
 	if #self.pathArgs >= 1 then self.requestedApiModule = self.pathArgs[1] end
 	if #self.pathArgs >= 2 then self.requestedApiFunction = self.pathArgs[2] end
 	
-	if self.requestedApiModule == "" then self.requestedApiModule = nil end
-	if self.requestedApiFunction == "" then self.requestedApiFunction = nil end
+	if self.requestedApiModule == '' then self.requestedApiModule = nil end
+	if self.requestedApiFunction == '' then self.requestedApiFunction = nil end
 	
 	
 	-- Perform module/function resolution
-	local rData, errMsg = resolveApiFunction(self:getRequestedApiModule(), self:getRequestedApiFunction())
+	local rData, errMsg = resolveApiFunction(self:getRequestedApiModule(), self:getRequestedApiFunction(), self.requestMethod)
 	
 	if rData ~= nil and rData.func ~= nil then --function (possibly the global one) could be resolved
 		self.resolvedApiFunction = rData.func
-		self.moduleAccessTable = rData.accessTable
 		if rData.blankArg ~= nil then --apparently it was the global one, and we received a 'blank argument'
 			self:setBlankArgument(rData.blankArg)
 			self.realApiFunctionName = GLOBAL_API_FUNCTION_NAME
@@ -185,11 +209,11 @@ function M:getRemotePort() return self.remotePort or 0 end
 function M:getUserAgent() return self.userAgent or "" end
 
 function M:get(key)
-	if self.requestMethod == "GET" then
+	if self.requestMethod == 'GET' then
 		return self.getArgs[key]
-	elseif self.requestMethod == "POST" then
+	elseif self.requestMethod == 'POST' then
 		return self.postArgs[key]
-	elseif self.requestMethod == "CMDLINE" then
+	elseif self.requestMethod == 'CMDLINE' then
 		return self.cmdLineArgs[key]
 	else
 		return nil
@@ -197,11 +221,11 @@ function M:get(key)
 end
 
 function M:getAll()
-	if self.requestMethod == "GET" then
+	if self.requestMethod == 'GET' then
 		return self.getArgs
-	elseif self.requestMethod == "POST" then
+	elseif self.requestMethod == 'POST' then
 		return self.postArgs
-	elseif self.requestMethod == "CMDLINE" then
+	elseif self.requestMethod == 'CMDLINE' then
 		return self.cmdLineArgs
 	else
 		return nil
@@ -218,16 +242,9 @@ function M:handle()
 	local resp = ResponseClass.new(self)
 	
 	if (self.resolvedApiFunction ~= nil) then --we found a function (possible the global function)
-		--check access type
-		local accessText = self.moduleAccessTable[self.realApiFunctionName]
-		if not matchRequestMethod(accessText, self.requestMethod) then
-			resp:setError("function '" .. modname .. "/" .. self.realApiFunctionName .. "' requires different request method ('" .. accessText .. "')")
-			return resp, "incorrect access method (" .. accessText .. " != " .. self.requestMethod .. ")"
-		end
-		
 		--invoke the function
 		local ok, r
-		if config.DEBUG_PCALLS then ok, r = true, self.resolvedApiFunction(self, resp)
+		if confDefaults.DEBUG_PCALLS then ok, r = true, self.resolvedApiFunction(self, resp)
 		else ok, r = pcall(self.resolvedApiFunction, self, resp)
 		end
 		

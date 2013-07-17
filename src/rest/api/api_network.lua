@@ -1,6 +1,6 @@
 local config = require("config")
-local l = require("logger")
 local u = require("util.utils")
+local l = require("util.logger")
 local netconf = require("network.netconfig")
 local wifi = require("network.wlanconfig")
 local ResponseClass = require("rest.response")
@@ -36,7 +36,7 @@ function M.available(request, response)
 				netInfo["signal"] = se.signal
 				netInfo["quality"] = se.quality
 				netInfo["quality_max"] = se.quality_max
-				if withRaw then netInfo["_raw"] = l:dump(se) end
+				if withRaw then netInfo["_raw"] = u.dump(se) end
 				
 				table.insert(netInfoList, netInfo)
 			end
@@ -63,7 +63,7 @@ function M.known(request, response)
 			netInfo["bssid"] = net.bssid or ""
 			netInfo["channel"] = net.channel or ""
 			netInfo["encryption"] = net.encryption
-			if withRaw then netInfo["_raw"] = l:dump(net) end
+			if withRaw then netInfo["_raw"] = u.dump(net) end
 			table.insert(netInfoList, netInfo)
 		end
 	end
@@ -87,7 +87,7 @@ function M.state(request, response)
 	response:addData("txpower", ds.txpower)
 	response:addData("signal", ds.signal)
 	response:addData("noise", ds.noise)
-	if withRaw then response:addData("_raw", l:dump(ds)) end
+	if withRaw then response:addData("_raw", u.dump(ds)) end
 end
 
 --UNTESTED

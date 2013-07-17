@@ -1,0 +1,43 @@
+body {
+	width: 100%;
+}
+
+div#content {
+	width: 80%;
+	margin: auto;
+}
+
+div.module {
+	border: 1px solid #eee;
+	margin-bottom: 1em;
+}
+
+.title {
+	padding-left: 2em;
+	font-size: larger;
+	display: block;
+}
+
+.resp_success {
+	color: green;
+}
+
+.resp_status {
+	margin-right: 1em;
+}
+
+.resp_fail {
+	color: yellow;
+}
+
+.resp_error {
+	color: red;
+}
+
+.resp_unknown {
+	color: purple;
+}
+
+span.resp_msg {
+	padding-left: 1em;
+}

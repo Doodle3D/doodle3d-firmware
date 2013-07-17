@@ -1,4 +1,4 @@
-local l = require("logger")
+local l = require("util.logger")
 local ResponseClass = require("rest.response")
 
 local M = {}

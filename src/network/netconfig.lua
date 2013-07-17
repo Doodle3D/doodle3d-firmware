@@ -1,6 +1,6 @@
 local config = require("config")
 local u = require("util.utils")
-local l = require("logger")
+local l = require("util.logger")
 local uci = require("uci").cursor()
 
 local M = {}

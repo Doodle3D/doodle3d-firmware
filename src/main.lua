@@ -1,11 +1,12 @@
 package.path = package.path .. ';/usr/share/lua/wifibox/?.lua'
 
-local l = require("logger")
-local RequestClass = require("rest.request")
-local ResponseClass = require("rest.response")
-local wifi = require("network.wlanconfig")
-local netconf = require("network.netconfig")
-local config = require("config")
+local config = require('config')
+local u = require('util.utils')
+local l = require('util.logger')
+local wifi = require('network.wlanconfig')
+local netconf = require('network.netconfig')
+local RequestClass = require('rest.request')
+local ResponseClass = require('rest.response')
 
 local postData = nil
 
@@ -22,8 +23,8 @@ local function init()
 	else l:info("Wifibox CGI handler started")
 	end
 	
-	if (os.getenv("REQUEST_METHOD") == "POST") then
-		local n = tonumber(os.getenv("CONTENT_LENGTH"))
+	if (os.getenv('REQUEST_METHOD') == 'POST') then
+		local n = tonumber(os.getenv('CONTENT_LENGTH'))
 		postData = io.read(n)
 	end
 	
@@ -41,14 +42,14 @@ end
 	local rq = RequestClass.new(postData, config.DEBUG_PCALLS)
 	
 	l:info("received request of type " .. rq:getRequestMethod() .. " for " .. (rq:getRequestedApiModule() or "<unknown>")
-			.. "/" .. (rq:getRealApiFunctionName() or "<unknown>") .. " with arguments: " .. l:dump(rq:getAll()))
-	if rq:getRequestMethod() ~= "CMDLINE" then
+			.. "/" .. (rq:getRealApiFunctionName() or "<unknown>") .. " with arguments: " .. u.dump(rq:getAll()))
+	if rq:getRequestMethod() ~= 'CMDLINE' then
 		l:info("remote IP/port: " .. rq:getRemoteHost() .. "/" .. rq:getRemotePort())
 		l:debug("user agent: " .. rq:getUserAgent())
 	end
 	
-	if (not config.DEBUG_PCALLS and rq:getRequestMethod() == "CMDLINE") then
-		if rq:get("autowifi") ~= nil then
+	if (not config.DEBUG_PCALLS and rq:getRequestMethod() == 'CMDLINE') then
+		if rq:get('autowifi') ~= nil then
 			setupAutoWifiMode()
 		else
 			l:info("Nothing to do...bye.\n")

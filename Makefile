@@ -16,7 +16,7 @@ IncludeWithNewlines = $(subst ¤,$(newline),$(shell cat $1 | tr '\n' '¤'))
 # Name and release number of this package
 PKG_NAME := wifibox
 PKG_VERSION := 0.1.0
-PKG_RELEASE := 3
+PKG_RELEASE := 4
 
 # This specifies the directory where we're going to build the program.  
 # The root build directory, $(BUILD_DIR), is by default the build_mipsel 

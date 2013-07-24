@@ -16,7 +16,7 @@ IncludeWithNewlines = $(subst ¤,$(newline),$(shell cat $1 | tr '\n' '¤'))
 # Name and release number of this package
 PKG_NAME := wifibox
 PKG_VERSION := 0.1.0
-PKG_RELEASE := 4
+PKG_RELEASE := 6
 
 # This specifies the directory where we're going to build the program.  
 # The root build directory, $(BUILD_DIR), is by default the build_mipsel 
@@ -73,6 +73,7 @@ endef
 
 WIFIBOX_BASE_DIR := $(PKG_BUILD_DIR)
 GPX_BASE_DIR := $(PKG_BUILD_DIR)/util/GPX.git
+SETPORTSPEED_BASE_DIR := $(PKG_BUILD_DIR)/util/setportspeed
 TGT_LUA_DIR_SUFFIX := usr/share/lua/wifibox
 
 define Package/wifibox/install
@@ -120,6 +121,8 @@ endif
 ### install gpx utility
 	$(INSTALL_DIR) $(1)/usr/bin
 	$(INSTALL_BIN) $(GPX_BASE_DIR)/gpx $(1)/usr/bin
+
+	$(INSTALL_BIN) $(SETPORTSPEED_BASE_DIR)/setportspeed $(1)/usr/bin
 endef
 
 define Package/wifibox/postinst

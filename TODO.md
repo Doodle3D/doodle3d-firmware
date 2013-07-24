@@ -1,3 +1,54 @@
+## te doen voor werkend prototype
+- auto-update (zowel package als geheel image; <- kijken hoe luci dat doet)
+- tekenen op redelijke subset van apparaten (wat hebben beta-testers?)
+- printen (printserver; via dirpad gcode/commando's sturen en uitlezen via voortgangsbestand; zoals UltiFi; REST reageert op rq met poll-url in data waar voortgang te volgen is…eindigt met 'done')
+
+## NU MEE BEZIG
+- auto-update
+  - source-url in Makefile aanpassen (type aanpassen naar git en dan direct naar github repo)
+  - toevoegen aan /etc/opkg.conf via files in image: `src/gz wifibox http://doodle3d.com/static/wifibox-packages`
+  - of lokaal: `src/gz wifibox file:///tmp/wifibox-packages`
+  - (info) feed update-script: /Volumes/openwrt-image-10gb/update-feed-dir.sh
+  - (info) package-url: <http://doodle3d.com/static/wifibox-packages>
+  - (info) image-url: <http://doodle3d.com/static/wifibox-images>
+  
+  - API:
+  api/info/currentVersion
+  api/info/latestVersion [beta=true]
+  api/system/update
+  api/system/flash
+  * wat als wij een verkeerd package releasen waardoor de API niet meer werkt?
+  
+  - (ref) <http://wiki.openwrt.org/doc/devel/packages/opkg>
+  - (ref) <http://wiki.openwrt.org/doc/techref/opkg>
+  - (ref) <http://downloads.openwrt.org/snapshots/trunk/ar71xx/packages/>
+- waar moeten debugvlaggen etc naartoe? (run_flags.lua?)
+- require vars checken op conflicten
+- in package postinst: hostname van kastje instellen op wifibox (met mac?)
+
+- wiki bijwerken (links, structuur, API)
+- Code documenteren <http://keplerproject.github.io/luadoc/>
+- Lua programmeerstijl? (enkele quotes gebruiken behalve voor i18n)
+- zoals het nu werkt wordt het lastig om een hiërarchische api te ondersteunen zoals dit: <http://www.restapitutorial.com/lessons/restfulresourcenaming.html>
+- uhttpd ondersteunt geen PUT en DELETE, wel status codes. Beschrijving CGI-antwoorden: <http://docstore.mik.ua/orelly/linux/cgi/ch03_03.htm>
+- voor captive portal: cgi 'Location' header voor redirect naar goede url?
+
+- http statuscodes <https://blog.apigee.com/detail/restful_api_design_what_about_errors>; met relevante link in antwoord (meer: <https://blog.apigee.com/taglist/restful>)
+- proposed status handling in response.lua:
+  fucntion setStatus(code, <msg>) -> sets http status+dfl msg and optional errmsg in data
+
+## lokale notities
+- in menuconfig: enabled uhttpd-mod-lua, disabled uhttpd-mod-ubus
+- menuconfig: disable Network->6relayd and Network->odhcp6c
+  then disable Kernel modules->Network support->kmod ipv6
+- menuconfig: disable Network->ppp, then disable Kernel modules->Network support->kmod-{ppp,pppoe,pppox}
+- menuconfig: enabled Kernel Modules -> USB Support -> usb-kmod-serial -> …ftdi
+- enabled luafilesystem, luasocket (luaposix results in a build error)
+- <http://stackoverflow.com/questions/11732934/serial-connection-with-arduino-php-openwrt-bug>
+
+- versies toevoegen als eerste padelement?
+
+
 # TODO (new functionality)
  - fix init script handling as described here: http://wiki.openwrt.org/doc/devel/packages#packaging.a.service
  - implement (automated) test code where possible

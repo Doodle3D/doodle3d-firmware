@@ -1,14 +1,13 @@
-local util = require("util.utils")
-local l = require("util.logger")
-local uci = require("uci").cursor()
-local iwinfo = require("iwinfo")
+local log = require('util.logger')
+local uci = require('uci').cursor()
+local iwinfo = require('iwinfo')
 
 local M = {}
 
 --NOTE: fallback device 'radio0' is required because sometimes the wlan0 device disappears
-M.DFL_DEVICE = "wlan0"
-M.DFL_DEVICE_FALLBACK = "radio0"
-M.NET = "wlan"
+M.DFL_DEVICE = 'wlan0'
+M.DFL_DEVICE_FALLBACK = 'radio0'
+M.NET = 'wlan'
 
 local dev, dev_api
 
@@ -17,6 +16,7 @@ local cachedApSsid, baseApSsid = nil, nil
 
 function M.getSubstitutedSsid(unformattedSsid)
 	if unformattedSsid == baseApSsid and cachedApSsid ~= nil then return cachedApSsid end
+	if not unformattedSsid or type(unformattedSsid) ~= 'string' then return nil end
 	
 	local macTail = M.getMacAddress():sub(7)
 	
@@ -33,9 +33,9 @@ end
 -- @param masterIsAp	set to true to map 'Master' to 'ap' instead of 'sta' (optional)
 function M.mapDeviceMode(mode, masterIsAp)
 	local modeMap = {
-		["Master"] = masterIsAp and "ap" or "sta",
-		["Client"] = "sta",
-		["Ad-Hoc"] = "adhoc"
+		['Master'] = masterIsAp and 'ap' or 'sta',
+		['Client'] = 'sta',
+		['Ad-Hoc'] = 'adhoc'
 	}
 	return modeMap[mode] or mode
 end
@@ -45,10 +45,10 @@ end
 	- See: http://wiki.openwrt.org/doc/uci/wireless#wpa.modes
 ]]
 function M.mapEncryptionType(scanEncrTbl)
-	local wpaModeMap = { [1] = "psk", [2] = "psk2", [3] = "mixed-psk" }
+	local wpaModeMap = { [1] = 'psk', [2] = 'psk2', [3] = 'mixed-psk' }
 	
-	if scanEncrTbl.enabled == false then return "none" end
-	if scanEncrTbl.wep == true then return "wep" end
+	if scanEncrTbl.enabled == false then return 'none' end
+	if scanEncrTbl.wep == true then return 'wep' end
 	
 	return wpaModeMap[scanEncrTbl.wpa] or scanEncrTbl.description
 end
@@ -58,7 +58,7 @@ end
 -- @param device	wireless device to operate on (optional, defaults to DFL_DEVICE)
 -- @return true on success or false+error on failure
 function M.init(device)
---	iwinfo = pcall(require, "iwinfo")
+--	iwinfo = pcall(require, 'iwinfo')
 	dev = device or M.DFL_DEVICE
 	dev_api = iwinfo.type(dev)
 	if not dev_api then
@@ -79,16 +79,16 @@ end
 function M.getDeviceState()
 	local iw = iwinfo[dev_api]
 	local result = {
-		["ssid"] = iw.ssid(dev),
-		["bssid"] = iw.bssid(dev),
-		["channel"] = iw.channel(dev),
-		["mode"] = M.mapDeviceMode(iw.mode(dev), true),
-		["encryption"] = M.mapEncryptionType(iw.encryption(dev).description),
-		["quality"] = iw.quality(dev),
-		["quality_max"] = iw.quality_max(dev),
-		["txpower"] = iw.txpower(dev),
-		["signal"] = iw.signal(dev),
-		["noise"] = iw.noise(dev)
+		['ssid'] = iw.ssid(dev),
+		['bssid'] = iw.bssid(dev),
+		['channel'] = iw.channel(dev),
+		['mode'] = M.mapDeviceMode(iw.mode(dev), true),
+		['encryption'] = M.mapEncryptionType(iw.encryption(dev).description),
+		['quality'] = iw.quality(dev),
+		['quality_max'] = iw.quality_max(dev),
+		['txpower'] = iw.txpower(dev),
+		['signal'] = iw.signal(dev),
+		['noise'] = iw.noise(dev)
 	}
 	return result
 end
@@ -98,7 +98,7 @@ end
 function M.getMacAddress()
 	local iw = iwinfo[dev_api]
 	local macText = iw.bssid(dev)
-	local out = ""
+	local out = ''
 	
 	for i = 0, 5 do
 		local bt = string.sub(macText, i*3+1, i*3+2)
@@ -136,7 +136,7 @@ end
 --- Return all wireless networks configured in UCI
 function M.getConfigs()
 	local l = {}
-	uci.foreach("wireless", "wifi-iface", function(s) table.insert(l, s) end)
+	uci.foreach('wireless', 'wifi-iface', function(s) table.insert(l, s) end)
 	return l
 end
 
@@ -144,25 +144,25 @@ end
 -- @return true if successfully removed, false if no such config exists
 function M.removeConfig(ssid)
 	local rv = false
-	uci:foreach("wireless", "wifi-iface", function(s)
+	uci:foreach('wireless', 'wifi-iface', function(s)
 		if s.ssid == ssid then
-			uci:delete("wireless", s[".name"])
+			uci:delete('wireless', s['.name'])
 			rv = true
 			return false
 		end
 	end)
-	uci:commit("wireless")
+	uci:commit('wireless')
 	return rv
 end
 
 --- Activate wireless section for given SSID and disable all others
 -- @param ssid	SSID of config to enable, or nil to disable all network configs
 function M.activateConfig(ssid)
-	uci:foreach("wireless", "wifi-iface", function(s)
-		local disabled = s.ssid ~= ssid and "1" or "0"
-		uci:set("wireless", s[".name"], "disabled", disabled)
+	uci:foreach('wireless', 'wifi-iface', function(s)
+		local disabled = s.ssid ~= ssid and '1' or '0'
+		uci:set('wireless', s['.name'], 'disabled', disabled)
 	end)
-	uci:commit("wireless")
+	uci:commit('wireless')
 end
 
 --- Create a new UCI network from the given iwinfo data
@@ -176,7 +176,7 @@ function M.createConfigFromScanInfo(info, passphrase, disabled)
 
 	local apconfig = {
 		network = M.NET,
-		device = "radio0",
+		device = 'radio0',
 		ssid = info.ssid,
 		bssid = info.bssid,
 		encryption = M.mapEncryptionType(info.encryption),
@@ -185,19 +185,19 @@ function M.createConfigFromScanInfo(info, passphrase, disabled)
 	if passphrase ~= nil then apconfig.key = passphrase end
 	apconfig.disabled = disabled ~= nil and disabled and 1 or 0
 	
-	uci:foreach("wireless", "wifi-iface", function(s)
+	uci:foreach('wireless', 'wifi-iface', function(s)
 		if s.bssid == info.bssid then
-			l:debug("removing old wireless config for net '" .. s.ssid .. "(bssid: " .. s.bssid .. ")'")
-			uci:delete("wireless", s[".name"])
+			log:debug("removing old wireless config for net '" .. s.ssid .. "(bssid: " .. s.bssid .. ")'")
+			uci:delete('wireless', s['.name'])
 --			return false --keep looking, just in case multiple entries with this bssid exist
 		end
 	end)
 	
-	local sname = uci:add("wireless", "wifi-iface");
+	local sname = uci:add('wireless', 'wifi-iface');
 	for k, v in pairs(apconfig) do
-		uci:set("wireless", sname, k, v)
+		uci:set('wireless', sname, k, v)
 	end
-	uci:commit("wireless")
+	uci:commit('wireless')
 end
 
 --- Reload network config to reflect contents of config
@@ -205,11 +205,11 @@ end
 -- * Network reload only restarts interfaces which need to be restarted so no
 --   unneccesary interruptions there.
 -- * ubus does not seem to work -- local c=ubus.connect();
---   c:call("network.interface.wlan", "down"); c:call("network.interface.wlan", "up"); c:close()
+--   c:call('network.interface.wlan', 'down'); c:call('network.interface.wlan', 'up'); c:close()
 -- @param dhcpToo also reload dnsmasq if true
 function M.restart(dhcpToo)
-	os.execute("/etc/init.d/network reload") --always seems to return 0
-	if dhcpToo ~= nil and dhcpToo then os.execute("/etc/init.d/dnsmasq reload") end
+	os.execute('/etc/init.d/network reload') --always seems to return 0
+	if dhcpToo ~= nil and dhcpToo then os.execute('/etc/init.d/dnsmasq reload') end
 	return 0
 end
 

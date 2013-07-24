@@ -1,8 +1,8 @@
 package.path = package.path .. ';/usr/share/lua/wifibox/?.lua'
 
 local confDefaults = require('conf_defaults')
-local u = require('util.utils')
-local l = require('util.logger')
+local util = require('util.utils')
+local log = require('util.logger')
 local wifi = require('network.wlanconfig')
 local netconf = require('network.netconfig')
 local RequestClass = require('rest.request')
@@ -16,12 +16,18 @@ local function setupAutoWifiMode()
 end
 
 local function init()
-	l:init(l.LEVEL.debug)
-	l:setStream(io.stderr)
+	log:init(log.LEVEL.debug)
+	log:setStream(io.stderr)
 	
-	if confDefaults.DEBUG_PCALLS then l:info("Wifibox CGI handler started (pcall debugging enabled)")
-	else l:info("Wifibox CGI handler started")
+	local dbgText = ""
+	if confDefaults.DEBUG_API and confDefaults.DEBUG_PCALLS then dbgText = "pcall and api"
+	elseif confDefaults.DEBUG_API then dbgText = "api"
+	elseif confDefaults.DEBUG_PCALL then dbgText = "pcall"
 	end
+	
+	if dbgText ~= "" then dbgText = " (" .. dbgText .. " debugging enabled)" end
+	
+	log:info("Wifibox CGI handler started" .. dbgText)
 	
 	if (os.getenv('REQUEST_METHOD') == 'POST') then
 		local n = tonumber(os.getenv('CONTENT_LENGTH'))
@@ -39,27 +45,24 @@ local function init()
 end
 
  local function main()
-	local rq = RequestClass.new(postData, confDefaults.DEBUG_PCALLS)
+	local rq = RequestClass.new(postData, confDefaults.DEBUG_API)
 	
-	l:info("received request of type " .. rq:getRequestMethod() .. " for " .. (rq:getRequestedApiModule() or "<unknown>")
-			.. "/" .. (rq:getRealApiFunctionName() or "<unknown>") .. " with arguments: " .. u.dump(rq:getAll()))
+	log:info("received request of type " .. rq:getRequestMethod() .. " for " .. (rq:getRequestedApiModule() or "<unknown>")
+			.. "/" .. (rq:getRealApiFunctionName() or "<unknown>") .. " with arguments: " .. util.dump(rq:getAll()))
 	if rq:getRequestMethod() ~= 'CMDLINE' then
-		l:info("remote IP/port: " .. rq:getRemoteHost() .. "/" .. rq:getRemotePort())
-		l:debug("user agent: " .. rq:getUserAgent())
+		log:info("remote IP/port: " .. rq:getRemoteHost() .. "/" .. rq:getRemotePort())
+		log:debug("user agent: " .. rq:getUserAgent())
 	end
 	
-	if (not confDefaults.DEBUG_PCALLS and rq:getRequestMethod() == 'CMDLINE') then
-		if rq:get('autowifi') ~= nil then
-			setupAutoWifiMode()
-		else
-			l:info("Nothing to do...bye.\n")
-		end
-		
-	else
+	if rq:getRequestMethod() == 'CMDLINE' and rq:get('autowifi') ~= nil then
+		setupAutoWifiMode()
+	elseif rq:getRequestMethod() ~= 'CMDLINE' or confDefaults.DEBUG_API then
 		local response, err = rq:handle()
 		
-		if err ~= nil then l:error(err) end
+		if err ~= nil then log:error(err) end
 		response:send()
+	else
+		log:info("Nothing to do...bye.\n")
 	end
 end
 
@@ -72,7 +75,7 @@ if s == false then
 	resp:setError("initialization failed" .. errSuffix)
 	io.write ("Content-type: text/plain\r\n\r\n")
 	resp:send()
-	l:error("initialization failed" .. errSuffix) --NOTE: this assumes the logger has been inited properly, despite init() having failed
+	log:error("initialization failed" .. errSuffix) --NOTE: this assumes the logger has been inited properly, despite init() having failed
 	
 	os.exit(1)
 else

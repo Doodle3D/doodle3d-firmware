@@ -1,15 +1,17 @@
 local log = require('util.logger')
+local utils = require('util.utils')
 local uci = require('uci').cursor()
 local iwinfo = require('iwinfo')
 
 local M = {}
 
---NOTE: fallback device 'radio0' is required because sometimes the wlan0 device disappears
+-- NOTE: fallback device 'radio0' is required because sometimes the wlan0 device disappears
 M.DFL_DEVICE = 'wlan0'
 M.DFL_DEVICE_FALLBACK = 'radio0'
 M.NET = 'wlan'
 
-local dev, dev_api
+-- NOTE: deviceApi is returned by iwinfo.tpe(deviceName)
+local deviceName, deviceApi
 
 -- if a substitution of baseApSsid is requested, cachedApSsid is returned if not nil
 local cachedApSsid, baseApSsid = nil, nil
@@ -58,17 +60,17 @@ end
 -- @param device	wireless device to operate on (optional, defaults to DFL_DEVICE)
 -- @return true on success or false+error on failure
 function M.init(device)
---	iwinfo = pcall(require, 'iwinfo')
-	dev = device or M.DFL_DEVICE
-	dev_api = iwinfo.type(dev)
-	if not dev_api then
-		--TODO: warn about missing dev here?
-		local devInitial = dev
-		dev = M.DFL_DEVICE_FALLBACK
-		dev_api = iwinfo.type(dev)
+	deviceName = device or M.DFL_DEVICE
+	deviceApi = iwinfo.type(deviceName)
+	if not deviceApi then
+		local devInitial = deviceName
+		deviceName = M.DFL_DEVICE_FALLBACK
+		deviceApi = iwinfo.type(deviceName)
 		
-		if not dev_api then
-			return false, "No such wireless device: '" .. devInitial .. "' (and fallback '" .. dev .. "' does not exist either)"
+		log:info("wireless device '" .. devInitial .. "' not found, trying fallback '" .. deviceName .. "'")
+		
+		if not deviceApi then
+			return false, "No such wireless device: '" .. devInitial .. "' (and fallback '" .. deviceName .. "' does not exist either)"
 		end
 	end
 
@@ -77,18 +79,19 @@ end
 
 
 function M.getDeviceState()
-	local iw = iwinfo[dev_api]
+	local iw = iwinfo[deviceApi]
+	local encDescription = type(iw.encryption) == 'function' and iw.encryption(deviceName) or '<unknown>'
 	local result = {
-		['ssid'] = iw.ssid(dev),
-		['bssid'] = iw.bssid(dev),
-		['channel'] = iw.channel(dev),
-		['mode'] = M.mapDeviceMode(iw.mode(dev), true),
-		['encryption'] = M.mapEncryptionType(iw.encryption(dev).description),
-		['quality'] = iw.quality(dev),
-		['quality_max'] = iw.quality_max(dev),
-		['txpower'] = iw.txpower(dev),
-		['signal'] = iw.signal(dev),
-		['noise'] = iw.noise(dev)
+		['ssid'] = iw.ssid(deviceName),
+		['bssid'] = iw.bssid(deviceName),
+		['channel'] = iw.channel(deviceName),
+		['mode'] = M.mapDeviceMode(iw.mode(deviceName), true),
+		['encryption'] = M.mapEncryptionType(encDescription),
+		['quality'] = iw.quality(deviceName),
+		['quality_max'] = iw.quality_max(deviceName),
+		['txpower'] = iw.txpower(deviceName),
+		['signal'] = iw.signal(deviceName),
+		['noise'] = iw.noise(deviceName)
 	}
 	return result
 end
@@ -96,8 +99,7 @@ end
 --returns the wireless device's MAC address (as string, without colons)
 --(lua numbers on openWrt seem to be 32bit so they cannot represent a MAC address as one number)
 function M.getMacAddress()
-	local iw = iwinfo[dev_api]
-	local macText = iw.bssid(dev)
+	local macText = utils.readFile('/sys/class/net/' .. deviceName .. '/address')
 	local out = ''
 	
 	for i = 0, 5 do
@@ -105,15 +107,19 @@ function M.getMacAddress()
 		out = out .. bt
 	end
 	
-	return out
+	return out:upper()
+end
+
+function M.getDeviceName()
+	return deviceName
 end
 
 --- Return one or all available wifi networks resulting from an iwinfo scan
 -- @param ssid	return data for given SSID or for all networks if SSID not given
 -- @return data for all or requested network; false+error on failure or nil when requested network not found
 function M.getScanInfo(ssid)
-	local iw = iwinfo[dev_api]
-	local sr = iw.scanlist(dev)
+	local iw = iwinfo[deviceApi]
+	local sr = iw.scanlist(deviceName)
 	local si, se
 
 	if ssid == nil then

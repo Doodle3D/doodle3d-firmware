@@ -75,4 +75,14 @@ function M.symlink(from, to)
 	return os.execute(x)
 end
 
+function M.readFile(filePath)
+	local f, msg, nr = io.open(filePath, 'r')
+	if not f then return nil,msg,nr end
+	
+	local res = f:read('*all')
+	f:close()
+	
+	return res
+end
+
 return M

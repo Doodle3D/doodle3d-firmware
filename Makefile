@@ -32,7 +32,7 @@ define Package/wifibox
 #	DEFAULT:=y
 	TITLE:=Doodle3D WifiBox firmware
 	URL:=http://www.doodle3d.com/wifibox
-	DEPENDS:=+lua +libuci-lua +libiwinfo-lua +uhttpd +kmod-usb-acm
+	DEPENDS:=+lua +libuci-lua +libiwinfo-lua +uhttpd +kmod-usb-acm +kmod-usb-serial-ftdi
 endef
 
 define Package/wifibox/description

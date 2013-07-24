@@ -17,8 +17,11 @@ end
 
 function M.test_getMacAddress()
 	local reportedMac = wlanconfig.getMacAddress()
-	local output = captureCommandOutput('ifconfig wlan0')
-	local actualMac = output:match('HWaddr (%w%w:%w%w:%w%w:%w%w:%w%w:%w%w)'):gsub(':', ''):upper()
+	local f = io.open('/sys/class/net/wlan0/address')
+	assert(f)
+	local output = f:read('*all')
+	f:close()
+	local actualMac = output:match('(%w%w:%w%w:%w%w:%w%w:%w%w:%w%w)'):gsub(':', ''):upper()
 	
 	assert(reportedMac == actualMac)
 end

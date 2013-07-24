@@ -5,7 +5,7 @@ LOGGER="logger -s -t autowifi -p 6"
 
 boot() {
 	$LOGGER "dummy boot"
-	#/www/cgi-bin/wfcf op=auto
+	/usr/share/lua/wifibox/script/d3dapi autowifi
 }
 
 start() {

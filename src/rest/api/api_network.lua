@@ -16,7 +16,7 @@ end
 
 --accepts API argument 'nofilter'(bool) to disable filtering of APs and 'self'
 --accepts with_raw(bool) to include raw table dump
-function M.available(request, response)
+function M.scan(request, response)
 	local noFilter = u.toboolean(request:get("nofilter"))
 	local withRaw = u.toboolean(request:get("with_raw"))
 	local sr = wifi.getScanInfo()
@@ -73,7 +73,7 @@ function M.known(request, response)
 end
 
 --accepts with_raw(bool) to include raw table dump
-function M.state(request, response)
+function M.status(request, response)
 	local withRaw = u.toboolean(request:get("with_raw"))
 	local ds = wifi.getDeviceState()
 	
@@ -93,7 +93,7 @@ end
 
 --UNTESTED
 --requires ssid(string), accepts phrase(string), recreate(bool)
-function M.assoc(request, response)
+function M.associate_POST(request, response)
 	local argSsid = request:get("ssid")
 	local argPhrase = request:get("phrase")
 	local argRecreate = request:get("recreate")
@@ -131,7 +131,7 @@ function M.assoc(request, response)
 end
 
 --UNTESTED
-function M.disassoc(request, response)
+function M.disassociate_POST(request, response)
 	wifi.activateConfig()
 	local rv = wifi.restart()
 	response:setSuccess("all wireless networks deactivated")
@@ -139,12 +139,10 @@ function M.disassoc(request, response)
 end
 
 --UNTESTED
-function M.openap(request, response)
-	--add AP net, activate it, deactivate all others, reload network/wireless config, add all dhcp and captive settings and reload as needed
+function M.openap_POST(request, response)
 	local ssid = wifi.getSubstitutedSsid(s.get('apSsid'))
 	netconf.switchConfiguration{apnet="add_noreload"}
 	wifi.activateConfig(ssid)
-	--netconf.switchConfiguration{ wifiiface="add", network="reload", staticaddr="add", dhcppool="add", wwwredir="add", dnsredir="add", wwwcaptive="add" }
 	netconf.switchConfiguration{ wifiiface="add", network="reload", staticaddr="add", dhcppool="add", wwwredir="add", dnsredir="add" }
 	response:setSuccess("switched to Access Point mode")
 	response:addData("ssid", ssid)
@@ -152,7 +150,7 @@ end
 
 --UNTESTED
 --requires ssid(string)
-function M.rm(request, response)
+function M.remove_POST(request, response)
 	local argSsid = request:get("ssid")
 	
 	if argSsid == nil or argSsid == "" then

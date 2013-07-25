@@ -49,7 +49,11 @@ EOM
 fi
 
 ### Add some convenience functionality to root's profile
-grep '^# DO NOT MODIFY.*wifibox package.$' /root/.profile >/dev/null 2>&1
+ROOT_PROFILE=/root/.profile
+if [ ! -f $ROOT_PROFILE ]; then
+	touch $ROOT_PROFILE
+fi
+grep '^# DO NOT MODIFY.*wifibox package.$' $ROOT_PROFILE >/dev/null 2>&1
 if [ $? -eq 1 ]; then
 		cat <<-EOM >> /root/.profile
 		
@@ -70,9 +74,11 @@ if [ -z "$IPKG_INSTROOT" ]; then
 	echo "Adding network interface 'wlan'..."
 	uci set network.wlan=interface; uci commit network; /etc/init.d/network reload
 
-	/etc/init.d/wifibox_init enable
+	/etc/init.d/wifibox enable
 else
+	ADDR_LINE=`cat $IPKG_INSTROOT/etc/config/network | grep ipaddr`
 	echo "WARNING: WiFiBox network configuration can only be prepared when installing on real device"
+	echo "network config address line:"
 fi
 
 exit 0

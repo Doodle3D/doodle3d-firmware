@@ -8,13 +8,14 @@ INDEX_FILE=Packages
 INDEX_GZ_FILE=Packages.gz
 
 if [ "x$1" == "x-h" ]; then
-	echo "This script creates a directory with wifibox ipk files found in the openWrt build environment."
+	echo "This script creates a directory with wifibox and ultifi ipk files found in the openWrt build environment."
 	echo "If specified, the -z option also compresses the result."
 	exit
 fi
 
 if [ ! -d $PKG_DEST_DIR ]; then mkdir $PKG_DEST_DIR; fi
 cp $PKG_SRC_DIR/wifibox*.ipk $PKG_DEST_DIR
+cp $PKG_SRC_DIR/ultifi*.ipk $PKG_DEST_DIR
 cd $PKG_DEST_DIR
 rm -f $INDEX_FILE
 rm -f $INDEX_GZ_FILE

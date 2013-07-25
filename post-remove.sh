@@ -12,7 +12,6 @@ rmdir /usr/share/lua/wifibox/script
 rmdir /usr/share/lua/wifibox/util
 rmdir /usr/share/lua/wifibox
 rmdir /usr/share/lua
-rm /www/wifibox
 
 echo "The wifibox banner has been removed. Changes to the root profile however, have"
 echo "not been reverted, as haven't the wlan firewall zone and the radio0 device state."

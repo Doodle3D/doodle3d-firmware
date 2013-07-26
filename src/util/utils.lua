@@ -12,6 +12,13 @@ function string:split(div)
 	return arr
 end
 
+function M.fileSize(file)
+	local current = file:seek()
+	local size = file:seek('end')
+	file:seek('set', current)
+	return size
+end
+
 function M.toboolean(s)
 	if not s then return false end
 	

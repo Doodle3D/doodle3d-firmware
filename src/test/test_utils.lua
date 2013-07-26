@@ -94,6 +94,25 @@ function M:test_create()
 	assert(actualContents == testContents)
 end
 
+function M:test_size()
+	local tempFile = '/tmp/132uytjhgfr24e'
+	local text = 'Why is a raven like a writing-desk?'
+	
+	local f = io.open(tempFile, 'w')
+	f:write(text)
+	f:close()
+	
+	local f = io.open(tempFile, 'r')
+	assert(f:seek() == 0)
+	assert(utils.fileSize(f) == text:len())
+	assert(f:seek() == 0)
+	f:read(4)
+	assert(utils.fileSize(f) == text:len())
+	assert(f:seek() == 4)
+	f:close()
+	os.remove(tempFile)
+end
+
 function M:test_symlink()
 	assert(false, 'not implemented')
 end

@@ -1,5 +1,6 @@
 local JSON = require('util/JSON')
-local s = require('util.settings')
+local settings = require('util.settings')
+local defaults = require('conf_defaults')
 
 local M = {}
 M.__index = M
@@ -28,7 +29,7 @@ function M.new(requestObject)
 		local rqId = requestObject:get(REQUEST_ID_ARGUMENT)
 		if rqId ~= nil then self.body[REQUEST_ID_ARGUMENT] = rqId end
 		
-		if s.API_INCLUDE_ENDPOINT_INFO == true then
+		if settings.API_INCLUDE_ENDPOINT_INFO == true then
 			self.body['module'] = requestObject:getRequestedApiModule()
 			self.body['function'] = requestObject:getRealApiFunctionName() or ''
 		end
@@ -60,13 +61,19 @@ function M:setError(msg)
 	self.body.status = 'error'
 	if msg ~= '' then self.body.msg = msg end
 	
-	self:addData('more_info', 'http://doodle3d.nl/wiki/wiki/communication-api')
+	self:addData('more_info', 'http://' .. defaults.API_BASE_URL_PATH .. '/wiki/wiki/communication-api')
 end
 
 --NOTE: with this method, to add nested data, it is necessary to precreate the table and add it with its root key
 --(e.g.: response:addData('data', {f1=3, f2='x'}))
 function M:addData(k, v)
 	self.body.data[k] = v
+end
+
+function M:apiURL(mod, func)
+	if not mod then return nil end
+	if func then func = '/' .. func else func = "" end
+	return 'http://' .. defaults.API_BASE_URL_PATH .. '/cgi-bin/d3dapi/' .. mod .. func
 end
 
 function M:serializeAsJson()

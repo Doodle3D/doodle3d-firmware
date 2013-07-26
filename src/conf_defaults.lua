@@ -16,7 +16,7 @@ local M = {}
 
 --NOTE: pcall protects from invocation exceptions, which is what we need except
 --during debugging. This flag replaces them with a normal call so we can inspect stack traces.
-M.DEBUG_PCALLS = true
+M.DEBUG_PCALLS = false
 
 --This enables debugging of the REST API from the command-line, specify the path and optionally the request method as follows: 'p=/mod/func rq=POST'
 M.DEBUG_API = true
@@ -24,6 +24,7 @@ M.DEBUG_API = true
 --REST responses will contain 'module' and 'function' keys describing what was requested
 M.API_INCLUDE_ENDPOINT_INFO = false
 
+M.API_BASE_URL_PATH = 'doodle3d.com' -- includes any base path if necessary (e.g. 'localhost/~user')
 
 M.network_ap_ssid = {
 	default = 'd3d-ap-%%MAC_ADDR_TAIL%%',

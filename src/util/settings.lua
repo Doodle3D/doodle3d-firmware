@@ -27,7 +27,15 @@ local ERR_NO_SUCH_KEY = "key does not exist"
 -- @return The substituted key, or the key parameter itself if it is not of type 'string'.
 local function replaceDots(key)
 	if type(key) ~= 'string' then return key end
-	return key:gsub('%.', '_')
+	local r = key:gsub('%.', '_')
+	return r
+end
+
+-- The inverse of replaceDots()
+local function replaceUnderscores(key)
+	if type(key) ~= 'string' then return key end
+	local r = key:gsub('_', '%.')
+	return r
 end
 
 local function toUciValue(v, vType)
@@ -95,6 +103,17 @@ function M.get(key)
 	if uciV ~= nil then actualV = uciV end
 	
 	return actualV
+end
+
+function M.getAll()
+	local result = {}
+	for k,_ in pairs(baseconfig) do
+		if not k:match('^[A-Z_]*$') then --TEMP: skip 'constants', which should be moved anyway
+			local key = replaceUnderscores(k)
+			result[key] = M.get(key)
+		end
+	end
+	return result
 end
 
 function M.exists(key)

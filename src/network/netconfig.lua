@@ -96,7 +96,7 @@ end
 --[[ Add/remove access point network ]]
 function reconf.apnet_add_noreload(dirtyList) reconf.apnet_add(dirtyList, true) end
 function reconf.apnet_add(dirtyList, noReload)
-	local ourSsid = wifi.getSubstitutedSsid(settings.get('apSsid'))
+	local ourSsid = wifi.getSubstitutedSsid(settings.get('network.ap.ssid'))
 	local sname = nil
 	uci:foreach('wireless', 'wifi-iface', function(s)
 		if s.ssid == ourSsid then sname = s['.name']; return false end
@@ -117,7 +117,7 @@ end
 function reconf.apnet_rm(dirtyList)
 	local sname = nil
 	uci:foreach('wireless', 'wifi-iface', function(s)
-		if s.ssid == wifi.getSubstitutedSsid(settings.get('apSsid')) then sname = s['.name']; return false end
+		if s.ssid == wifi.getSubstitutedSsid(settings.get('network.ap.ssid')) then sname = s['.name']; return false end
 	end)
 	if sname == nil then return log:info("AP network configuration does not exist, nothing to remove") end
 	uci:delete('wireless', sname)
@@ -132,8 +132,8 @@ function reconf.staticaddr_add(dirtyList)
 	--NOTE: 'type = "bridge"' should -not- be added as this prevents defining a separate dhcp pool (http://wiki.openwrt.org/doc/recipes/routedap)
 	M.uciTableSet('network', wifi.NET, {
 		proto = 'static',
-		ipaddr = settings.get('apAddress'),
-		netmask = settings.get('apNetmask')
+		ipaddr = settings.get('network.ap.address'),
+		netmask = settings.get('network.ap.netmask')
 	})
 	bothBits(dirtyList, 'network')
 end
@@ -180,7 +180,7 @@ end
 
 --[[ Add/remove redirecton of all DNS requests to self ]]
 function reconf.dnsredir_add(dirtyList)
-	local redirText = '/#/' .. settings.get('apAddress')
+	local redirText = '/#/' .. settings.get('network.ap.address')
 	local sname = utils.getUciSectionName('dhcp', 'dnsmasq')
 	if sname == nil then return log:error("dhcp config does not contain a dnsmasq section") end
 	if uci:get('dhcp', sname, 'address') ~= nil then return log:debug("DNS address redirection already in place, not re-adding", false) end
@@ -228,7 +228,7 @@ function reconf.natreflect_add(dirtyList)
 		proto = 'tcp',
 		src_dport = '80',
 		dest_port = '80',
-		dest_ip = settings.get('apAddress'),
+		dest_ip = settings.get('network.ap.address'),
 		target = 'DNAT'
 	})
 	bothBits(dirtyList, 'firewall')

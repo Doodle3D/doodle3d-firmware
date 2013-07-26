@@ -47,8 +47,10 @@ end
  local function main()
 	local rq = RequestClass.new(postData, confDefaults.DEBUG_API)
 	
+--	log:info("received request of type " .. rq:getRequestMethod() .. " for " .. (rq:getRequestedApiModule() or "<unknown>")
+--			.. "/" .. (rq:getRealApiFunctionName() or "<unknown>") .. " with arguments: " .. util.dump(rq:getAll()))
 	log:info("received request of type " .. rq:getRequestMethod() .. " for " .. (rq:getRequestedApiModule() or "<unknown>")
-			.. "/" .. (rq:getRealApiFunctionName() or "<unknown>") .. " with arguments: " .. util.dump(rq:getAll()))
+			.. "/" .. (rq:getRealApiFunctionName() or "<unknown>"))
 	if rq:getRequestMethod() ~= 'CMDLINE' then
 		log:info("remote IP/port: " .. rq:getRemoteHost() .. "/" .. rq:getRemotePort())
 		log:debug("user agent: " .. rq:getUserAgent())

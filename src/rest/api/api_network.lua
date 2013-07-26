@@ -1,6 +1,5 @@
-local s = require("util.settings")
-local u = require("util.utils")
-local l = require("util.logger")
+local settings = require("util.settings")
+local utils = require("util.utils")
 local netconf = require("network.netconfig")
 local wifi = require("network.wlanconfig")
 local ResponseClass = require("rest.response")
@@ -17,8 +16,8 @@ end
 --accepts API argument 'nofilter'(bool) to disable filtering of APs and 'self'
 --accepts with_raw(bool) to include raw table dump
 function M.scan(request, response)
-	local noFilter = u.toboolean(request:get("nofilter"))
-	local withRaw = u.toboolean(request:get("with_raw"))
+	local noFilter = utils.toboolean(request:get("nofilter"))
+	local withRaw = utils.toboolean(request:get("with_raw"))
 	local sr = wifi.getScanInfo()
 	local si, se
 	
@@ -26,7 +25,7 @@ function M.scan(request, response)
 		response:setSuccess("")
 		local netInfoList = {}
 		for _, se in ipairs(sr) do
-			if noFilter or se.mode ~= "ap" and se.ssid ~= wifi.getSubstitutedSsid(s.get('apSsid')) then
+			if noFilter or se.mode ~= "ap" and se.ssid ~= wifi.getSubstitutedSsid(settings.get('network.ap.ssid')) then
 				local netInfo = {}
 				
 				netInfo["ssid"] = se.ssid
@@ -37,7 +36,7 @@ function M.scan(request, response)
 				netInfo["signal"] = se.signal
 				netInfo["quality"] = se.quality
 				netInfo["quality_max"] = se.quality_max
-				if withRaw then netInfo["_raw"] = u.dump(se) end
+				if withRaw then netInfo["_raw"] = utils.dump(se) end
 				
 				table.insert(netInfoList, netInfo)
 			end
@@ -52,8 +51,8 @@ end
 --accepts API argument 'nofilter'(bool) to disable filtering of APs and 'self'
 --accepts with_raw(bool) to include raw table dump
 function M.known(request, response)
-	local noFilter = u.toboolean(request:get("nofilter"))
-	local withRaw = u.toboolean(request:get("with_raw"))
+	local noFilter = utils.toboolean(request:get("nofilter"))
+	local withRaw = utils.toboolean(request:get("with_raw"))
 	
 	response:setSuccess()
 	local netInfoList = {}
@@ -64,7 +63,7 @@ function M.known(request, response)
 			netInfo["bssid"] = net.bssid or ""
 			netInfo["channel"] = net.channel or ""
 			netInfo["encryption"] = net.encryption
-			if withRaw then netInfo["_raw"] = u.dump(net) end
+			if withRaw then netInfo["_raw"] = utils.dump(net) end
 			table.insert(netInfoList, netInfo)
 		end
 	end
@@ -74,7 +73,7 @@ end
 
 --accepts with_raw(bool) to include raw table dump
 function M.status(request, response)
-	local withRaw = u.toboolean(request:get("with_raw"))
+	local withRaw = utils.toboolean(request:get("with_raw"))
 	local ds = wifi.getDeviceState()
 	
 	response:setSuccess()
@@ -88,10 +87,9 @@ function M.status(request, response)
 	response:addData("txpower", ds.txpower)
 	response:addData("signal", ds.signal)
 	response:addData("noise", ds.noise)
-	if withRaw then response:addData("_raw", u.dump(ds)) end
+	if withRaw then response:addData("_raw", utils.dump(ds)) end
 end
 
---UNTESTED
 --requires ssid(string), accepts phrase(string), recreate(bool)
 function M.associate_POST(request, response)
 	local argSsid = request:get("ssid")
@@ -138,9 +136,8 @@ function M.disassociate_POST(request, response)
 	response:addData("wifi_restart_result", rv)
 end
 
---UNTESTED
 function M.openap_POST(request, response)
-	local ssid = wifi.getSubstitutedSsid(s.get('apSsid'))
+	local ssid = wifi.getSubstitutedSsid(settings.get('network.ap.ssid'))
 	netconf.switchConfiguration{apnet="add_noreload"}
 	wifi.activateConfig(ssid)
 	netconf.switchConfiguration{ wifiiface="add", network="reload", staticaddr="add", dhcppool="add", wwwredir="add", dnsredir="add" }

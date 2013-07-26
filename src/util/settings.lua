@@ -1,12 +1,15 @@
 --[[
-	This settings interface reads and writes its configuration using UCI.
+	The settings interface reads and writes its configuration using UCI.
 	The corresponding config file is /etc/config/wifibox. To have an initial
 	set of reasonable settings (and allow users to easily return to them),
 	any key not found in the UCI configuration is looked up in the (immutable)
 	'base configuration' (base_config.lua). This file also contains constraints
 	to check if newly set values are valid.
+	
+	By the way, returning correct values in get()/fromUciValue() for booleans has been fixed at a
+	relatively convenient time purely thanks to the unit tests...just to indicate they are useful. :)
 ]]--
-local u = require('util.utils')
+local utils = require('util.utils')
 local baseconfig = require('conf_defaults')
 local uci = require('uci').cursor()
 
@@ -19,15 +22,25 @@ local UCI_CONFIG_SECTION = 'general' -- the section name that will be used in UC
 local ERR_NO_SUCH_KEY = "key does not exist"
 
 
-local function toUciValue(v, type)
-	if type == 'bool' then return v and '1' or '0' end
+--- Returns the given key with all periods ('.') replaced by underscores ('_').
+-- @param key The key for which to substitute dots.
+-- @return The substituted key, or the key parameter itself if it is not of type 'string'.
+local function replaceDots(key)
+	if type(key) ~= 'string' then return key end
+	return key:gsub('%.', '_')
+end
+
+local function toUciValue(v, vType)
+	if vType == 'bool' then return v and '1' or '0' end
 	return tostring(v)
 end
 
-local function fromUciValue(v, type)
-	if type == 'bool' then
+local function fromUciValue(v, vType)
+	if v == nil then return nil end
+	
+	if vType == 'bool' then
 		return (v == '1') and true or false
-	elseif type == 'float' or type == 'int' then
+	elseif vType == 'float' or vType == 'int' then
 		return tonumber(v)
 	else
 		return v
@@ -36,20 +49,20 @@ local function fromUciValue(v, type)
 end
 
 local function isValid(value, baseTable)
-	local type, min, max, regex = baseTable.type, baseTable.min, baseTable.max, baseTable.regex
+	local varType, min, max, regex = baseTable.type, baseTable.min, baseTable.max, baseTable.regex
 	
-	if type == 'bool' then
-		return isboolean(value) or nil,"invalid bool value"
+	if varType == 'bool' then
+		return type(value) == 'boolean' or nil,"invalid bool value"
 		
-	elseif type == 'int' or type == 'float' then
+	elseif varType == 'int' or varType == 'float' then
 		local numValue = tonumber(value)
 		local ok = numValue and true or false
-		ok = ok and (type == 'float' or math.floor(numValue) == numValue)
+		ok = ok and (varType == 'float' or math.floor(numValue) == numValue)
 		if min then ok = ok and numValue >= min end
 		if max then ok = ok and numValue <= max end
 		return ok or nil,"invalid int/float value or out of range"
 		
-	elseif type == 'string' then
+	elseif varType == 'string' then
 		local ok = true
 		if min then ok = ok and value:len() >= min end
 		if max then ok = ok and value:len() <= max end
@@ -66,7 +79,11 @@ local function getBaseKeyTable(key)
 end
 
 
+--- Returns the value of the requested key if it exists.
+-- @param key The key to return the associated value for.
+-- @return The associated value, beware (!) that this may be boolean false for keys of 'bool' type.
 function M.get(key)
+	key = replaceDots(key)
 	local base = getBaseKeyTable(key)
 	
 	if not base then return nil,ERR_NO_SUCH_KEY end
@@ -74,21 +91,27 @@ function M.get(key)
 	local v = base.default
 	local uciV = fromUciValue(uci:get(UCI_CONFIG_NAME, UCI_CONFIG_SECTION, key), base.type)
 	
-	return uciV or v
+	local actualV = v
+	if uciV ~= nil then actualV = uciV end
+	
+	return actualV
 end
 
 function M.exists(key)
+	key = replaceDots(key)
 	return getBaseKeyTable(key) ~= nil
 end
 
 function M.isDefault(key)
+	key = replaceDots(key)
 	if not M.exists(key) then return nil,ERR_NO_SUCH_KEY end
 	return uci:get(UCI_CONFIG_NAME, UCI_CONFIG_SECTION, key) == nil
 end
 
 -- pass nil as value to restore default
 function M.set(key, value)
-	local r = u.create(UCI_CONFIG_FILE)
+	key = replaceDots(key)
+	local r = utils.create(UCI_CONFIG_FILE)
 	uci:set(UCI_CONFIG_NAME, UCI_CONFIG_SECTION, UCI_CONFIG_TYPE)
 	
 	local base = getBaseKeyTable(key)

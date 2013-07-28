@@ -1,4 +1,5 @@
---[[
+--[[--
+	TODO: finish documentation
 	This file contains all valid configuration keys, their default values and optional constraints.
 	The table names are used as configuration key names, where underscores ('_') may be used to denote semi-categories.
 	The settings interface replaces periods ('.') by underscores so for instance 'network.ap.address' will
@@ -105,13 +106,13 @@ M.printer_useSubLayers = {
 
 M.printer_firstLayerSlow = {
 	default = true,
-	type = 'float',
+	type = 'bool',
 	description = 'Print the first layer slowly to get a more stable start',
 }
 
 M.printer_autoWarmUp = {
 	default = true,
-	type = 'float',
+	type = 'bool',
 	description = '',
 }
 

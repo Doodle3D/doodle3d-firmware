@@ -1,6 +1,10 @@
-local uci = require('uci').cursor()
+--[[--
+	TODO: finish documentation
+	The unavoidable collection of utility functions.
+]]
 
 local M = {}
+
 
 function string:split(div)
 	local div, pos, arr = div or ':', 0, {}
@@ -42,7 +46,14 @@ function M.dump(o)
 	end
 end
 
+--- Returns the name of a section in a UCI config.
+-- This name is necessary to be able to refer to the corresponding section and
+-- the UCI library does not provide a way to look it up.
+-- @tparam string config Name of the UCI config to search through.
+-- @tparam string type UCI type of the section to find.
+-- @treturn string Name of the section matching the parameters, or nil if it could not be found.
 function M.getUciSectionName(config, type)
+	local uci = require('uci').cursor()
 	local sname = nil
 	uci:foreach(config, type, function(s) sname = s['.name'] end)
 	return sname

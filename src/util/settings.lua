@@ -1,29 +1,39 @@
---[[
-	The settings interface reads and writes its configuration using UCI.
-	The corresponding config file is /etc/config/wifibox. To have an initial
-	set of reasonable settings (and allow users to easily return to them),
-	any key not found in the UCI configuration is looked up in the (immutable)
-	'base configuration' (base_config.lua). This file also contains constraints
-	to check if newly set values are valid.
+--[[--
+	The settings interface reads and writes configuration keys using UCI.
+	All keys have pre-defined defaults in @{conf_defaults} which will be used
+	if no value is stored in the UCI config. The UCI config file is
+	'/etc/config/wifibox'.
+	The default values guarantee there will always be a set of reasonable settings
+	to use and provide a clear overview of all existing configuration keys as well.
 	
-	By the way, returning correct values in get()/fromUciValue() for booleans has been fixed at a
-	relatively convenient time purely thanks to the unit tests...just to indicate they are useful. :)
-]]--
+	By the way, returning correct values in get()/fromUciValue() for booleans has
+	been fixed at a relatively convenient time purely thanks to the unit tests...
+	just to indicate how useful they are. :)
+]]
+local uci = require('uci').cursor()
 local utils = require('util.utils')
 local baseconfig = require('conf_defaults')
-local uci = require('uci').cursor()
 
 local M = {}
 
-local UCI_CONFIG_NAME = 'wifibox' -- the file under /etc/config
+
+--- UCI config name (i.e. file under /etc/config)
+local UCI_CONFIG_NAME = 'wifibox'
+
+--- Absolute path to the UCI config file
 local UCI_CONFIG_FILE = '/etc/config/' .. UCI_CONFIG_NAME
-local UCI_CONFIG_TYPE = 'settings' -- the section type that will be used in UCI_CONFIG_FILE
-local UCI_CONFIG_SECTION = 'general' -- the section name that will be used in UCI_CONFIG_FILE
+
+--- Section type that will be used in UCI\_CONFIG\_FILE
+local UCI_CONFIG_TYPE = 'settings'
+
+--- Section name that will be used in UCI\_CONFIG\_FILE
+local UCI_CONFIG_SECTION = 'general'
+
 local ERR_NO_SUCH_KEY = "key does not exist"
 
 
---- Returns the given key with all periods ('.') replaced by underscores ('_').
--- @param key The key for which to substitute dots.
+--- Returns a key with all periods ('.') replaced by underscores ('_').
+-- @tparam string key The key for which to substitute dots.
 -- @return The substituted key, or the key parameter itself if it is not of type 'string'.
 local function replaceDots(key)
 	if type(key) ~= 'string' then return key end
@@ -31,18 +41,33 @@ local function replaceDots(key)
 	return r
 end
 
--- The inverse of replaceDots()
+--- Returns a key with all underscores ('_') replaced by periods ('.').
+-- @tparam string key The key for which to substitute underscores.
+-- @return The substituted key, or the key parameter itself if it is not of type 'string'.
 local function replaceUnderscores(key)
 	if type(key) ~= 'string' then return key end
 	local r = key:gsub('_', '%.')
 	return r
 end
 
+--- Converts a lua value to equivalent representation for UCI.
+-- Boolean values are converted to '1' and '0', everything else is converted to a string.
+--
+-- @param v The value to convert.
+-- @param vType The type of the given value.
+-- @return A value usable to write to UCI.
 local function toUciValue(v, vType)
 	if vType == 'bool' then return v and '1' or '0' end
 	return tostring(v)
 end
 
+--- Converts a value read from UCI to a correctly typed lua value.
+-- For boolean, '1' is converted to true and everything else to false. Floats
+-- and ints are converted to numbers and everything else will be returned as is.
+--
+-- @param v The value to convert.
+-- @param vType The type of the given value.
+-- @return A lua value typed correctly with regard to the vType parameter.
 local function fromUciValue(v, vType)
 	if v == nil then return nil end
 	
@@ -56,6 +81,10 @@ local function fromUciValue(v, vType)
 	
 end
 
+--- Reports whether a value is valid given the constraints specified in a base table.
+-- @param value The value to test.
+-- @tparam table baseTable The base table to use constraint data from (min,max,regex).
+-- @treturn bool Returns true if the value is valid, false if it is not.
 local function isValid(value, baseTable)
 	local varType, min, max, regex = baseTable.type, baseTable.min, baseTable.max, baseTable.regex
 	
@@ -81,6 +110,9 @@ local function isValid(value, baseTable)
 	return true
 end
 
+--- Looks up the table in conf_defaults.lua corresponding to a key.
+-- @tparam string key The key for which to return the base table.
+-- @treturn table The base table for key, or nil if it does not exist.
 local function getBaseKeyTable(key)
 	local base = baseconfig[key]
 	return type(base) == 'table' and base.default ~= nil and base or nil
@@ -105,6 +137,8 @@ function M.get(key)
 	return actualV
 end
 
+--- Returns all configuration keys with their current values.
+-- @treturn table A table containing a key/value pair for each configuration key.
 function M.getAll()
 	local result = {}
 	for k,_ in pairs(baseconfig) do
@@ -116,18 +150,32 @@ function M.getAll()
 	return result
 end
 
+--- Reports whether or not a key exists.
+-- @tparam string key The key to find.
+-- @treturn bool True if the key exists, false if not.
 function M.exists(key)
 	key = replaceDots(key)
 	return getBaseKeyTable(key) ~= nil
 end
 
+--- Reports whether or not a key is at its default value.
+-- 'Default' in this regard means that no UCI value is defined. This means that
+-- if for instance, the default is 'abc', and UCI contains a configured value of
+-- 'abc' as well, that key is _not_ a default value.
+--
+-- @tparam string key The key to report about.
+-- @treturn bool True if the key is currently at its default value, false if not.
 function M.isDefault(key)
 	key = replaceDots(key)
 	if not M.exists(key) then return nil,ERR_NO_SUCH_KEY end
 	return uci:get(UCI_CONFIG_NAME, UCI_CONFIG_SECTION, key) == nil
 end
 
--- pass nil as value to restore default
+--- Sets a key to a new value or reverts it to the default value.
+-- @tparam string key The key to set.
+-- @param value The value or set, or nil to revert key to its default value.
+-- @treturn bool|nil True if everything went well, nil in case of error.
+-- @treturn ?string Error message in case first return value is nil (invalid key).
 function M.set(key, value)
 	key = replaceDots(key)
 	local r = utils.create(UCI_CONFIG_FILE)
@@ -139,6 +187,13 @@ function M.set(key, value)
 	if M.isDefault(key) and value == nil then return true end -- key is default already
 	
 	local current = uci:get(UCI_CONFIG_NAME, UCI_CONFIG_SECTION, key)
+
+-- TODO: test if this fixes setting bools (and does not break settings the other types)	
+--	if base.type == 'bool' then
+--		value = utils.toboolean(value)
+--	elseif base.type == 'int' or base.type == 'float' then
+--		value = tonumber(value)
+--	end
 	
 	if fromUciValue(current, base.type) == value then return true end
 	

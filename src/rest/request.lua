@@ -81,14 +81,17 @@ local function resolveApiModule(modname)
 end
 
 --- Resolves a module/function name pair with appropiate access for the given request method.
--- First, the function name suffixed with the request method, if not found the plain
+-- First, the function name suffixed with the request method is looked up, if not found the plain
 -- function name is looked up.
--- Returned result data contains a 'func' key and if found, also 'blankArg'.
--- @param modname Basename of the module to resolve funcname in.
--- @param funcname Basename of the function to resolve.
--- @param requestMethod Method by which the request was received.
--- @return A table with resultData or nil on error.
--- @return A message on error (unresolvable or inaccessible).
+-- The returned table contains a 'func' key if resolution was successful.
+-- A key 'accessType' will also be included indicating valid access methods (GET, POST or ANY), except of course when the function does not exist at all.
+-- If present, a key 'blankArg' will also be included.
+-- Finally, the key 'notfound' will be set to true if no function (even of invalid access type) could be found.
+--
+-- @tparam string modname Basename of the module to resolve funcname in.
+-- @tparam string funcname Basename of the function to resolve.
+-- @tparam string requestMethod Method by which the request was received.
+-- @treturn table A table with resultData.
 -- @see resolveApiModule
 local function resolveApiFunction(modname, funcname, requestMethod)
 	local resultData = {}
@@ -109,14 +112,33 @@ local function resolveApiFunction(modname, funcname, requestMethod)
 	
 	if (type(fWithMethod) == 'function') then
 		resultData.func = fWithMethod
+		resultData.accessType = rqType
+		
 	elseif (type(fGeneric) == 'function') then
 		resultData.func = fGeneric
+		resultData.accessType = 'ANY'
+		
 	elseif funcNumber ~= nil then
 		resultData.func = mod[GLOBAL_API_FUNCTION_NAME .. '_' .. rqType]
-		if not resultData.func then resultData.func = mod[GLOBAL_API_FUNCTION_NAME] end
+		resultData.accessType = rqType
+		
+		if not resultData.func then
+			resultData.func = mod[GLOBAL_API_FUNCTION_NAME]
+			resultData.accessType = 'ANY'
+		end
+		
 		resultData.blankArg = funcNumber
+		
 	else
-		return nil, ("function '" .. funcname .. "' does not exist in API module '" .. modname .. "'")
+		local otherRqType = rqType == 'POST' and 'GET' or 'POST'
+		local fWithOtherMethod = mod[funcname .. '_' .. otherRqType]
+		if (type(fWithOtherMethod) == 'function') then
+			-- error is indicated by leaving out 'func' key
+			resultData.accessType = otherRqType
+		else
+			-- error is indicated by leaving out 'func' key and adding 'notfound'=true
+			resultData.notfound = true
+		end
 	end
 	
 	return resultData
@@ -174,9 +196,9 @@ function M.new(postData, debugEnabled)
 	
 	
 	-- Perform module/function resolution
-	local rData, errMsg = resolveApiFunction(self:getRequestedApiModule(), self:getRequestedApiFunction(), self.requestMethod)
+	local rData = resolveApiFunction(self:getRequestedApiModule(), self:getRequestedApiFunction(), self.requestMethod)
 	
-	if rData ~= nil and rData.func ~= nil then --function (possibly the global one) could be resolved
+	if rData.func ~= nil then --function (possibly the global one) could be resolved
 		self.resolvedApiFunction = rData.func
 		if rData.blankArg ~= nil then --apparently it was the global one, and we received a 'blank argument'
 			self:setBlankArgument(rData.blankArg)
@@ -189,11 +211,11 @@ function M.new(postData, debugEnabled)
 				self.realApiFunctionName = GLOBAL_API_FUNCTION_NAME
 			end
 		end
+	elseif rData.notfound == true then
+		self.resolutionError = "module/function '" .. self:getRequestedApiModule() .. "/" .. self:getRequestedApiFunction() .. "' does not exist"
 	else
-		--instead of throwing an error, save the message for handle() which is expected to return a response anyway
-		self.resolutionError = errMsg
+		self.resolutionError = "module/function '" .. self:getRequestedApiModule() .. "/" .. self:getRequestedApiFunction() .. "' can only be accessed with the " .. rData.accessType .. " method"
 	end
-	
 	
 	return self
 end
@@ -256,8 +278,8 @@ function M:handle()
 			return resp, ("calling function '" .. self.realApiFunctionName .. "' in API module '" .. modname .. "' somehow failed ('" .. r .. "')")
 		end
 	else
-		resp:setError("function or module unknown '" .. (modname or "<empty>") .. "/" .. (self:getRequestedApiFunction() or "<empty>") .. "'")
-		return resp, ("could not resolve requested API function ('" .. self.resolutionError .. "')")
+		resp:setError("cannot call function or module '" .. (modname or "<empty>") .. "/" .. (self:getRequestedApiFunction() or "<empty>") .. "' ('" .. self.resolutionError .. "')")
+		return resp, ("cannot call requested API function ('" .. self.resolutionError .. "')")
 	end
 	
 	return resp

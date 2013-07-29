@@ -10,7 +10,7 @@ M.DFL_DEVICE = 'wlan0'
 M.DFL_DEVICE_FALLBACK = 'radio0'
 M.NET = 'wlan'
 
--- NOTE: deviceApi is returned by iwinfo.tpe(deviceName)
+-- NOTE: deviceApi is returned by iwinfo.type(deviceName)
 local deviceName, deviceApi
 
 -- if a substitution of baseApSsid is requested, cachedApSsid is returned if not nil

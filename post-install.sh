@@ -60,6 +60,7 @@ if [ $? -eq 1 ]; then
 		# DO NOT MODIFY - this block of lines has been added by the wifibox package.
 		alias d3dapi='/usr/share/lua/wifibox/script/d3dapi'
 		alias encore='ulimit -c unlimited'
+		alias wopkg='opkg -f /usr/share/lua/wifibox/opkg.conf'
 EOM
 fi
 

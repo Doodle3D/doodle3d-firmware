@@ -72,7 +72,10 @@ local function addToGcodeFile(gcode)
 	
 	log:debug("appending " .. gcode:len() .. " bytes of gcode to " .. GCODE_TMP_FILE)
 	gcf:write(gcode)
+	gcf:write("\n")
 	gcf:close()
+	
+	return true
 end
 
 -- assumes printerPath exists, returns true if successful, false if command file already exists and is non-empty (i.e. printer busy),
@@ -210,7 +213,7 @@ function M.print_POST(request, response)
 		response:addData('msg', msg)
 		return
 	else
-		response:addData('gcode_append',gcode:len())
+		response:addData('gcode_append',argGcode:len())
 	end
 	
 	if argIsLast == true then

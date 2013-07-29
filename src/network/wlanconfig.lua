@@ -102,6 +102,9 @@ function M.getMacAddress()
 	local macText = utils.readFile('/sys/class/net/' .. deviceName .. '/address')
 	local out = ''
 	
+	-- Hack to prevent failure in case the MAC address could not be obtained.
+	if not macText or macText == '' then return "000000000000" end
+	
 	for i = 0, 5 do
 		local bt = string.sub(macText, i*3+1, i*3+2)
 		out = out .. bt

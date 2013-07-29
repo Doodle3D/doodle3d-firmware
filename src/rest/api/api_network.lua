@@ -124,11 +124,16 @@ function M.associate_POST(request, response)
 	wifi.activateConfig(argSsid)
 	--netconf.switchConfiguration{ wifiiface="add", apnet="rm", staticaddr="rm", dhcppool="rm", wwwredir="rm", dnsredir="rm", wwwcaptive="rm", wireless="reload" }
 	netconf.switchConfiguration{ wifiiface="add", apnet="rm", staticaddr="rm", dhcppool="rm", wwwredir="rm", dnsredir="rm", wireless="reload" }
-	response:setSuccess("wlan associated")
+	
+	local status = wifi.getDeviceState()
 	response:addData("ssid", argSsid)
+	if status.ssid and status.ssid ==  argSsid then
+		response:setSuccess("wlan associated")
+	else
+		response:setFail("could not associate with network (incorrect pass phrase?)")
+	end
 end
 
---UNTESTED
 function M.disassociate_POST(request, response)
 	wifi.activateConfig()
 	local rv = wifi.restart()
@@ -145,7 +150,6 @@ function M.openap_POST(request, response)
 	response:addData("ssid", ssid)
 end
 
---UNTESTED
 --requires ssid(string)
 function M.remove_POST(request, response)
 	local argSsid = request:get("ssid")

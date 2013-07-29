@@ -11,7 +11,7 @@ function M._global_GET(request, response)
 	for k,v in pairs(request:getAll()) do
 		local r,m = settings.get(k)
 		
-		if r then response:addData(k, r)
+		if r ~= nil then response:addData(k, r)
 		else response:addData(k, "could not read key ('" .. m .. "')")
 		end
 	end

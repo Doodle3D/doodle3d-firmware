@@ -187,13 +187,16 @@ function M.set(key, value)
 	if M.isDefault(key) and value == nil then return true end -- key is default already
 	
 	local current = uci:get(UCI_CONFIG_NAME, UCI_CONFIG_SECTION, key)
-
--- TODO: test if this fixes setting bools (and does not break settings the other types)	
---	if base.type == 'bool' then
---		value = utils.toboolean(value)
---	elseif base.type == 'int' or base.type == 'float' then
---		value = tonumber(value)
---	end
+	
+	if base.type == 'bool' then
+		if value ~= "" then
+			value = utils.toboolean(value)
+		else
+			value = nil
+		end
+	elseif base.type == 'int' or base.type == 'float' then
+		value = tonumber(value)
+	end
 	
 	if fromUciValue(current, base.type) == value then return true end
 	

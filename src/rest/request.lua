@@ -37,7 +37,7 @@ local function kvTableFromArray(argArray)
 	for _, v in ipairs(argArray) do
 		local split = v:find("=")
 		if split ~= nil then
-			args[v:sub(1, split - 1)] = v:sub(split + 1)
+			args[v:sub(1, split - 1)] = urlcode.unescape(v:sub(split + 1))
 		else
 			args[v] = true
 		end
@@ -101,7 +101,10 @@ local function resolveApiFunction(modname, funcname, requestMethod)
 	local mod, msg = resolveApiModule(modname)
 	
 	if mod == nil then
-		return nil, msg
+		-- error is indicated by leaving out 'func' key and adding 'notfound'=true
+		resultData.notfound = true
+		resultData.msg = msg
+		return resultData
 	end
 	
 	if (funcname == nil or funcname == '') then funcname = GLOBAL_API_FUNCTION_NAME end --treat empty function name as nil
@@ -175,7 +178,7 @@ function M.new(postData, debugEnabled)
 	if debugEnabled and self.requestMethod == 'CMDLINE' then
 		self.pathArgs = arrayFromPath(self.cmdLineArgs['p'])
 		
-		if self.cmdLineArgs['r'] == 'GET' then
+		if self.cmdLineArgs['r'] == 'GET' or self.cmdLineArgs['r'] == nil then
 			self.requestMethod = 'GET'
 			self.getArgs = self.cmdLineArgs
 			self.getArgs.p, self.getArgs.r = nil, nil
@@ -197,6 +200,7 @@ function M.new(postData, debugEnabled)
 	
 	-- Perform module/function resolution
 	local rData = resolveApiFunction(self:getRequestedApiModule(), self:getRequestedApiFunction(), self.requestMethod)
+	local modFuncInfo = self:getRequestedApiModule() or "<>" .. "/" .. self:getRequestedApiFunction() or "<>"
 	
 	if rData.func ~= nil then --function (possibly the global one) could be resolved
 		self.resolvedApiFunction = rData.func
@@ -212,9 +216,9 @@ function M.new(postData, debugEnabled)
 			end
 		end
 	elseif rData.notfound == true then
-		self.resolutionError = "module/function '" .. self:getRequestedApiModule() .. "/" .. self:getRequestedApiFunction() .. "' does not exist"
+		self.resolutionError = "module/function '" .. modFuncInfo .. "' does not exist"
 	else
-		self.resolutionError = "module/function '" .. self:getRequestedApiModule() .. "/" .. self:getRequestedApiFunction() .. "' can only be accessed with the " .. rData.accessType .. " method"
+		self.resolutionError = "module/function '" .. modFuncInfo .. "' can only be accessed with the " .. rData.accessType .. " method"
 	end
 	
 	return self

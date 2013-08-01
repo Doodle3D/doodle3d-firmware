@@ -34,11 +34,11 @@ addFirewallNet() {
 
 
 ### Replace the banner with a custom one
-if [ ! -f /etc/banner.default ]; then
-	mv /etc/banner /etc/banner.default
-	cat <<-'EOM' > /etc/banner
+if [ ! -f $IPKG_INSTROOT/etc/banner.default ]; then
+	mv $IPKG_INSTROOT/etc/banner $IPKG_INSTROOT/etc/banner.default
+	cat <<-'EOM' > $IPKG_INSTROOT/etc/banner
 		........D o o d l e 3 D
-		.......________     _____  _____  v $(PACKAGE_VERSION) 
+		.......________     _____  _____  v \$(PACKAGE_VERSION) 
 		....../  /  /  |__ /  __/ /  - /___ __
 		...../  /  /  /--//  _|-//  --| . /v /
 		..../________/__//__/__//____/___/_^_\
@@ -48,14 +48,11 @@ if [ ! -f /etc/banner.default ]; then
 EOM
 fi
 
-### Add some convenience functionality to root's profile
-ROOT_PROFILE=/root/.profile
-if [ ! -f $ROOT_PROFILE ]; then
-	touch $ROOT_PROFILE
-fi
-grep '^# DO NOT MODIFY.*wifibox package.$' $ROOT_PROFILE >/dev/null 2>&1
-if [ $? -eq 1 ]; then
-		cat <<-EOM >> /root/.profile
+### Add some convenience aliases to root's profile
+mkdir $IPKG_INSTROOT/root
+grep '^# DO NOT MODIFY.*wifibox package.$' $IPKG_INSTROOT/root/.profile >/dev/null 2>&1
+if [ $? -gt 0 ]; then
+		cat <<-EOM >> $IPKG_INSTROOT/root/.profile
 		
 		# DO NOT MODIFY - this block of lines has been added by the wifibox package.
 		alias d3dapi='/usr/share/lua/wifibox/script/d3dapi'
@@ -76,10 +73,20 @@ if [ -z "$IPKG_INSTROOT" ]; then
 	uci set network.wlan=interface; uci commit network; /etc/init.d/network reload
 
 	/etc/init.d/wifibox enable
+	
 else
-	ADDR_LINE=`cat $IPKG_INSTROOT/etc/config/network | grep ipaddr`
-	echo "WARNING: WiFiBox network configuration can only be prepared when installing on real device"
-	echo "network config address line:"
+	# Create a script to setup the system as wifibox, it will be deleted after it has been run, except if it returns > 0
+	cat <<-EOM >> $IPKG_INSTROOT/etc/uci-defaults/setup-wifibox.sh
+	uci set system.@system[0].hostname=wifibox
+	uci set network.lan.ipaddr=192.168.5.1
+	echo -e "beta\nbeta" | passwd root
+	
+	uci set wireless.@wifi-device[0].disabled=0
+	# TODO: add firewall net
+	uci set network.wlan=interface
+EOM
+	
+	echo "WARNING: WiFiBox network configuration can only be fully prepared when installing on real device"
 fi
 
 exit 0

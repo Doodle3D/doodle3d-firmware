@@ -200,7 +200,7 @@ function M.new(postData, debugEnabled)
 	
 	-- Perform module/function resolution
 	local rData = resolveApiFunction(self:getRequestedApiModule(), self:getRequestedApiFunction(), self.requestMethod)
-	local modFuncInfo = self:getRequestedApiModule() or "<>" .. "/" .. self:getRequestedApiFunction() or "<>"
+	local modFuncInfo = (self:getRequestedApiModule() or "<>") .. "/" .. (self:getRequestedApiFunction() or "<>")
 	
 	if rData.func ~= nil then --function (possibly the global one) could be resolved
 		self.resolvedApiFunction = rData.func

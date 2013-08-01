@@ -213,6 +213,7 @@ function M.print_POST(request, response)
 		response:addData('msg', msg)
 		return
 	else
+		--NOTE: this does not report the number of lines, but only the block which has just been added
 		response:addData('gcode_append',argGcode:len())
 	end
 	

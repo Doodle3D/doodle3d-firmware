@@ -137,6 +137,12 @@ M.printer_simplify_minDistance = {
 	min = 0
 }
 
+M.printer_retraction_enabled = {
+	default = true,
+	type = 'bool',
+	description = ''
+}
+
 M.printer_retraction_speed = {
 	default = 50,
 	type = 'int',

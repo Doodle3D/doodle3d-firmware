@@ -1,17 +1,3 @@
-- chroma kleur
-- size() mag alleen getallen voor export?
-- fullscreen via osc
-
-- animata
-(- lijstje vakantie: spuitbus deo, kortingsbon Bever (tentje kopen?), Schotland pakken, andere tas ohm?)
-(- issue aanmaken voor clementine:
- * mogelijk gerelateerd aan unicode (volgens lahwran op irc)
- * mogelijk gerelateerd: <http://code.google.com/p/clementine-player/issues/detail?id=1898&q=type%3DDefect%20crash&colspec=ID%20Type%20Status%20Priority%20Milestone%20Owner%20Summary%20Stars>
- * mp3 niet opnemen in issue maar aanbieden voor download op persoonlijke aanvraag
- * crash log: <http://pastebin.com/dbu9SS7Z>
- * bestand uit het album dat het wss veroorzaakt: <http://lsof.nl/temp/01%20Chemical%20Brothers%20-%20Come%20With%20Us.mp3>
-)
-
 ## te doen voor werkend prototype (beta testers)
 - (testen) server logging
 - (testen/verder implementeren) stopknop
@@ -60,7 +46,7 @@
 - printerExists: ook nagaan of basispad ultifi bestaat?
 
 
-## NU MEE BEZIG
+## OOK MEE BEZIG
 - in AP mode, things like 'somewhere.org/asdsfd' still results in 'Not found'
 - behalve /dev/ttyACM* kan het voor FTDI dus ook /dev/ttyUSB* zijn
 - config API: anders inrichten (misschien toch 1 key per keer instellen zodat response 'fail' kan zijn?)
@@ -105,20 +91,6 @@
 - http statuscodes <https://blog.apigee.com/detail/restful_api_design_what_about_errors>; met relevante link in antwoord (meer: <https://blog.apigee.com/taglist/restful>)
 - proposed status handling in response.lua:
   fucntion setStatus(code, <msg>) -> sets http status+dfl msg and optional errmsg in data
-
-## lokale notities
-- in menuconfig: enabled uhttpd-mod-lua, disabled uhttpd-mod-ubus
-- menuconfig: disable Network->6relayd and Network->odhcp6c
-  then disable Kernel modules->Network support->kmod ipv6
-- menuconfig: disable Network->ppp, then disable Kernel modules->Network support->kmod-{ppp,pppoe,pppox}
-- menuconfig: enabled Kernel Modules -> USB Support -> usb-kmod-serial -> …ftdi
-- enabled luafilesystem, luasocket (luaposix results in a build error)
-- <http://stackoverflow.com/questions/11732934/serial-connection-with-arduino-php-openwrt-bug>
-- over baud rates: <https://github.com/ErikZalm/Marlin/issues/205>
-- versies toevoegen als eerste padelement?
-- overig leesvoer
-  * <https://github.com/stevedonovan/Penlight>
-
 
 # TODO (new functionality)
  - fix init script handling as described here: http://wiki.openwrt.org/doc/devel/packages#packaging.a.service
@@ -172,12 +144,14 @@
 
 
 # Bugs
- - in captive portal mode, https is not redirected
+ - (captive portal mode) https is not redirected
+ - (captive portal mode) .local domains are not redirected
+ - (captive portal mode) any urls with text after the root domain are not redirected
  - using iwinfo with interface name 'radio0' yields very little 'info' output while wlan0 works fine.
    However, sometimes wlan0 disappears (happened after trying to associate with non-existing network)...why?
  - protect dump function against reference loops (see <http://lua-users.org/wiki/TableSerialization>, json also handles this well)
  - relocatabilty of package (take root prefix into consideration everywhere)
-- openap vanuit assocmode gaf tenminste 1x nil in getMacAddress (daarna niet meer)
+ - disabling all wireless networks breaks the current method of obtaining the mac address, thus openap must be called twice before it is properly set up
 
 
 # Logos
@@ -204,57 +178,3 @@ Check <http://geon.github.io/Programming/2012/04/25/ascii-art-signatures-in-the-
     ../  /  /  |__ /  __/ /  - /___ __
     ./  '  '  /--//  _|-//  - | . /v /
     /________/__//__/__//____/___/_^_\
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# CONFIG KEYS overzicht (wel/niet in firmware opgenomen)
---[[
-	hop=0
-?	minScale=.3
-?	maxScale=1
-	shape=%		-- one of: / | \ # $ % ^ *
-?	twists=0
-??	debug=false
-??	loglevel=2
-?	zOffset=0
--	server.port=8888
-	autoLoadImage=hand.txt
-	loadOffset=0,0
-	showWarmUp=true
-	loopAlways=false
-	useSubpathColors=false
-	maxObjectHeight=150
-	maxScaleDifference=.1
-	frameRate=60
-	quitOnEscape=true
-	screenToMillimeterScale=.3
-	targetTemperature=230
-	side.is3D=true
-	side.visible=true
-	side.bounds=900,210,131,390
-	side.border=880,169,2,471
-	checkTemperatureInterval=3
-	autoWarmUpDelay=3
-]]--
-
-# voor volgende keer
-- Greenhopper (Atlassian)? (en JIRA?)
-  * <http://www.codinginahurry.com/categories/agile/>
-- toch anders plannen, meer rekening houden met onvoorspelbaarheden (aka subtaken)
-  * zie de 2 dagen voor geplande betarelease…dat lukte niet omdat er meer mankracht nodig was, veel dingen extra tijd kostten (bv gcode maken en sercomm), en eindeloos veel kleine 'hejadatmoetooknogeven'-dingen (die in de 'x2' van de planning moeten vallen maar eerder 'x5' oid lijken)…en dan nog blijft het documenteren liggen
-- te weinig gedaan: daily standups -> planning aanpassen
-- meer continuïteit nodig?
-- meer tijd…
-- duidelijker kunnen volgen wat gepland is en wat echt gebeurd (icm met standups)

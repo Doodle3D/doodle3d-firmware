@@ -107,7 +107,7 @@ M.printer_useSubLayers = {
 M.printer_firstLayerSlow = {
 	default = true,
 	type = 'bool',
-	description = 'Print the first layer slowly to get a more stable start',
+	description = 'Print the first layer slowly to get a more stable start'
 }
 
 M.printer_autoWarmUp = {

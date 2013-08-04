@@ -1,16 +1,79 @@
-## te doen voor werkend prototype
+- chroma kleur
+- size() mag alleen getallen voor export?
+- fullscreen via osc
+
+- animata
+(- lijstje vakantie: spuitbus deo, kortingsbon Bever (tentje kopen?), Schotland pakken, andere tas ohm?)
+(- issue aanmaken voor clementine:
+ * mogelijk gerelateerd aan unicode (volgens lahwran op irc)
+ * mogelijk gerelateerd: <http://code.google.com/p/clementine-player/issues/detail?id=1898&q=type%3DDefect%20crash&colspec=ID%20Type%20Status%20Priority%20Milestone%20Owner%20Summary%20Stars>
+ * mp3 niet opnemen in issue maar aanbieden voor download op persoonlijke aanvraag
+ * crash log: <http://pastebin.com/dbu9SS7Z>
+ * bestand uit het album dat het wss veroorzaakt: <http://lsof.nl/temp/01%20Chemical%20Brothers%20-%20Come%20With%20Us.mp3>
+)
+
+## te doen voor werkend prototype (beta testers)
+- (testen) server logging
+- (testen/verder implementeren) stopknop
+- volgorde chunks (en vaker voorkomen?): elke chunk naar los bestand en op het laatst samenvoegen
+- (client) autopreheat wanneer er een printer aanwezig is
+- (fw) temp gcode pad veranderen naar device-specifiek (i.e. /tmp/UltiFi/ttyACM?/combined.gc)
+- (fw) bij (her)initialisatie printer altijd alle state weggooien (i.e. /dev/UtliFi/ttyACM?)
+- client feedback
+  * voor ontwikkeling: debugoverlay
+  * vaker op 'print' drukken moet niet kunnen (knop disablen en op basis van polling (isPrinting?) status up-to-date houden)
+    -> maar! de firmware moet geen nieuwe printopdrachten accepteren wanneer er al een print bezig is
+  * temperatuurindicatie (alleen wanneer temperatuuruitlezing via api mogelijk is) -> dus ook indicatie van draaiende printserver
+- (misschien?) verticale shape aanpassen
+- preheaten voor het starten van een print
+  * (fw) wachten op targettemperatuur - 20 graden (hoe om te gaan met afkoelen?)
+  * (client) in config bij temperatuurinstelling: opmerking dat de printer gaat printen vanaf lagere temperatuur (bv. -20)
+
+## te den voor final release 
+- start/end-codes configureerbaar maken (via los endpoint) (duplicate)
+- printerlijst opvragen
+  * data: per printer: {id, path, type}
+- gcode: printer busy rapporteren vanaf moment dat gcode wordt verzameld, niet pas bij begin printen (of gcode verzamelen per remote host?)
+- op wiki over openwrt/osx svn checkout veranderen naar git clone
+- image met alles erin
+  * in postinst op kastje: ook wifibox start doen (enable doet dat niet) (ook voor ultifi)
+  * firewall net wordt nog niet aangemaakt in 'Y'-mode
+- nadenken over loggen (procedure voor testers hoe ze problemen kunnen rapporteren zodat wij ze kunnen reproduceren)
+  * verzamelen+zippen van logread output (of uci system.@system[0].log_file?) + /tmp/wifibox.conf + printserver log
+- na /network/disassociate is wifi uitgeschakeld -> kan geen macadres opvragen -> openap bv. 2x nodig om weer goed macadres te vinden
+- client: netwerkkeuze toevoegen?
+- herstart van uhttpd en reboot uitstellen tot na sturen van response (closure queue in response.lua)
+- consistentie REST API
+- code documenteren
+- codedocs uitwerken naar apidocs
+- optie voor loggen toevoegen aan printmanager
+- AP en client tegelijk (VAP / multi-ssid?)
+  * toegang altijd via AP, clientmode alleen voor updaten en internet ook via kastje (dan moet wel de portalmodus uit)
+  * dns forward: list 'dhcp_option' '6,10.0.0.1,192.168.178.1' (<http://wiki.openwrt.org/doc/howto/dhcp.dnsmasq#configuring.dnsmasq.to.broadcast.external.dns.server.information>)
 - auto-update (zowel package als geheel image; <- kijken hoe luci dat doet)
-- tekenen op redelijke subset van apparaten (wat hebben beta-testers?)
-- printen (printserver; via dirpad gcode/commando's sturen en uitlezen via voortgangsbestand; zoals UltiFi; REST reageert op rq met poll-url in data waar voortgang te volgen is…eindigt met 'done')
+- serieel:
+  * 115k2? -> Peter zei iets over instabiele connectie op 250k?
+  * fallback lijkt niet te werken (zelfde probleem als bij poort opnieuw openen?)
+  * mss helpt arduino reset triggeren om port opnieuw te kunnen openen?
+  * 3e manier baudrate zetten? <http://stackoverflow.com/questions/4968529/how-to-set-baud-rate-to-307200-on-linux>
+- initscript testen (lijkt vaker dan eens te worden uitgevoerd)
+- printerExists: ook nagaan of basispad ultifi bestaat?
+
 
 ## NU MEE BEZIG
+- in AP mode, things like 'somewhere.org/asdsfd' still results in 'Not found'
+- behalve /dev/ttyACM* kan het voor FTDI dus ook /dev/ttyUSB* zijn
+- config API: anders inrichten (misschien toch 1 key per keer instellen zodat response 'fail' kan zijn?)
+
 - auto-update
   - source-url in Makefile aanpassen (type aanpassen naar git en dan direct naar github repo)
   - toevoegen aan /etc/opkg.conf via files in image: `src/gz wifibox http://doodle3d.com/static/wifibox-packages`
   - of lokaal: `src/gz wifibox file:///tmp/wifibox-packages`
-  - (info) feed update-script: /Volumes/openwrt-image-10gb/update-feed-dir.sh
-  - (info) package-url: <http://doodle3d.com/static/wifibox-packages>
-  - (info) image-url: <http://doodle3d.com/static/wifibox-images>
+  - (info) feed update-script: <wifibox_git_root>/extra/create-packages-dir.sh
+    uitvoeren vanuit pad waar wifibox_packages terecht moet komen (bv. ~/Sites)
+  - (info) package-url: <http://doodle3d.com/static/wifibox/packages>
+  - (info) image-url: <http://doodle3d.com/static/wifibox/images>
+  - later: printerprofielen
   
   - API:
   api/info/currentVersion
@@ -23,10 +86,16 @@
   - (ref) <http://wiki.openwrt.org/doc/techref/opkg>
   - (ref) <http://downloads.openwrt.org/snapshots/trunk/ar71xx/packages/>
 - waar moeten debugvlaggen etc naartoe? (run_flags.lua?)
-- require vars checken op conflicten
 - in package postinst: hostname van kastje instellen op wifibox (met mac?)
 
+- tijdens openwrt make:
+  '* satisfy_dependencies_for: Cannot satisfy the following dependencies for kmod-ath9k-common:
+  '*      kmod-crypto-hash *
 - wiki bijwerken (links, structuur, API)
+- ook in wiki, luadoc installeren:
+  * !! (beter vervangen door?) <http://stevedonovan.github.io/ldoc/topics/doc.md.html>
+  * ongeveer volgens <http://www.hobsie.com/mark/archives/33>, maar! :
+  * luasocket apart installeren met `sudo luarocks install https://raw.github.com/diegonehab/luasocket/master/luasocket-scm-0.rockspec`
 - Code documenteren <http://keplerproject.github.io/luadoc/>
 - Lua programmeerstijl? (enkele quotes gebruiken behalve voor i18n)
 - zoals het nu werkt wordt het lastig om een hiërarchische api te ondersteunen zoals dit: <http://www.restapitutorial.com/lessons/restfulresourcenaming.html>
@@ -45,8 +114,10 @@
 - menuconfig: enabled Kernel Modules -> USB Support -> usb-kmod-serial -> …ftdi
 - enabled luafilesystem, luasocket (luaposix results in a build error)
 - <http://stackoverflow.com/questions/11732934/serial-connection-with-arduino-php-openwrt-bug>
-
+- over baud rates: <https://github.com/ErikZalm/Marlin/issues/205>
 - versies toevoegen als eerste padelement?
+- overig leesvoer
+  * <https://github.com/stevedonovan/Penlight>
 
 
 # TODO (new functionality)
@@ -106,6 +177,7 @@
    However, sometimes wlan0 disappears (happened after trying to associate with non-existing network)...why?
  - protect dump function against reference loops (see <http://lua-users.org/wiki/TableSerialization>, json also handles this well)
  - relocatabilty of package (take root prefix into consideration everywhere)
+- openap vanuit assocmode gaf tenminste 1x nil in getMacAddress (daarna niet meer)
 
 
 # Logos
@@ -132,3 +204,57 @@ Check <http://geon.github.io/Programming/2012/04/25/ascii-art-signatures-in-the-
     ../  /  /  |__ /  __/ /  - /___ __
     ./  '  '  /--//  _|-//  - | . /v /
     /________/__//__/__//____/___/_^_\
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# CONFIG KEYS overzicht (wel/niet in firmware opgenomen)
+--[[
+	hop=0
+?	minScale=.3
+?	maxScale=1
+	shape=%		-- one of: / | \ # $ % ^ *
+?	twists=0
+??	debug=false
+??	loglevel=2
+?	zOffset=0
+-	server.port=8888
+	autoLoadImage=hand.txt
+	loadOffset=0,0
+	showWarmUp=true
+	loopAlways=false
+	useSubpathColors=false
+	maxObjectHeight=150
+	maxScaleDifference=.1
+	frameRate=60
+	quitOnEscape=true
+	screenToMillimeterScale=.3
+	targetTemperature=230
+	side.is3D=true
+	side.visible=true
+	side.bounds=900,210,131,390
+	side.border=880,169,2,471
+	checkTemperatureInterval=3
+	autoWarmUpDelay=3
+]]--
+
+# voor volgende keer
+- Greenhopper (Atlassian)? (en JIRA?)
+  * <http://www.codinginahurry.com/categories/agile/>
+- toch anders plannen, meer rekening houden met onvoorspelbaarheden (aka subtaken)
+  * zie de 2 dagen voor geplande betarelease…dat lukte niet omdat er meer mankracht nodig was, veel dingen extra tijd kostten (bv gcode maken en sercomm), en eindeloos veel kleine 'hejadatmoetooknogeven'-dingen (die in de 'x2' van de planning moeten vallen maar eerder 'x5' oid lijken)…en dan nog blijft het documenteren liggen
+- te weinig gedaan: daily standups -> planning aanpassen
+- meer continuïteit nodig?
+- meer tijd…
+- duidelijker kunnen volgen wat gepland is en wat echt gebeurd (icm met standups)

@@ -94,6 +94,23 @@ local function printGcodeFile(printerPath)
 	return true
 end
 
+--UNTESTED
+-- assumes printerPath exists, returns true if successful, false if command file already exists and is non-empty (i.e. printer busy),
+-- nil+err if file could not be opened
+local function stopGcodeFile(printerPath)
+	local cmdPath = printerPath .. '/' .. COMMAND_FILE
+	local cmdf,msg = io.open(cmdPath, 'a+') -- 'a+' is important, do not overwrite current contents in any case
+	
+	if not cmdf then return nil,msg end
+	if utils.fileSize(cmdf) > 0 then return false end
+	
+	log:debug("stopping print of gcode")
+	cmdf:write('(CANCELFILE')
+	cmdf:close()
+	
+	return true
+end
+
 local function isBusy(printerPath)
 	local cmdPath = printerPath .. '/' .. COMMAND_FILE
 	
@@ -173,6 +190,24 @@ function M.heatup_POST(request, response)
 	local gcode = settings.get('printer.autoWarmUpCommand')
 	local rv,msg = sendGcode(ultipath, gcode)
 	
+	if rv then
+		response:setSuccess()
+	elseif rv == false then
+		response:setFail("printer is busy")
+	else
+		response:setError("could not send gcode")
+		response:addData('msg', msg)
+	end
+end
+
+--UNTESTED
+--requires id(int)
+function M.stop_POST(request, response)
+	local argId,devpath,ultipath = getPrinterDataOrFail(request, response)
+	if argId == nil then return end
+
+	rv,msg = stopGcodeFile(ultipath)
+
 	if rv then
 		response:setSuccess()
 	elseif rv == false then

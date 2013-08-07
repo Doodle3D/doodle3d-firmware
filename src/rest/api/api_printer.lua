@@ -152,10 +152,7 @@ function M.temperature(request, response)
 	f:close()
 	
 	local hotend, hotendTarget, bed, bedTarget = tempText:match('T:(.*)%s+/(.*)%s+B:(.*)%s/(.*)%s+@.*')
-	log:debug("  hotend: ")
-	log:debug(hotend)
-
-
+	
 	response:setSuccess()
 	if withRaw then response:addData('raw', tempText) end
 

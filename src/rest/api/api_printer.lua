@@ -164,9 +164,6 @@ function M.temperature(request, response)
 	-- T:204.5 E:0 W:?
 	if(hotend == nil) then 
 		local hotend = tempText:match('T:([%d%.]*).*')
-		log:debug("  >hotend: ")
-		log:debug(hotend)
-
 		response:addData('hotend', hotend)
 	else 
 		response:addData('hotend', hotend)
@@ -178,6 +175,7 @@ function M.temperature(request, response)
 	-- get last modified time
 	local file_attr = lfs.attributes(ultipath .. '/' .. TEMPERATURE_FILE)
 	local last_mod = file_attr.modification
+	local last_mod = os.difftime (os.time(),last_mod)
 	response:addData('last_mod', last_mod)
 
 end

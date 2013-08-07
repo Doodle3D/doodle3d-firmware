@@ -1,3 +1,4 @@
+local lfs = require('lfs')
 local log = require('util.logger')
 local utils = require('util.utils')
 local settings = require('util.settings')
@@ -151,13 +152,34 @@ function M.temperature(request, response)
 	f:close()
 	
 	local hotend, hotendTarget, bed, bedTarget = tempText:match('T:(.*)%s+/(.*)%s+B:(.*)%s/(.*)%s+@.*')
-	
+	log:debug("  hotend: ")
+	log:debug(hotend)
+
+
 	response:setSuccess()
 	if withRaw then response:addData('raw', tempText) end
-	response:addData('hotend', hotend)
-	response:addData('bed', bed)
-	response:addData('hotend_target', hotendTarget)
-	response:addData('bed_target', bedTarget)
+
+	-- After pressing print it waits until it's at the right temperature. 
+	-- it then stores temperature in the following format
+	-- T:204.5 E:0 W:?
+	if(hotend == nil) then 
+		local hotend = tempText:match('T:([%d%.]*).*')
+		log:debug("  >hotend: ")
+		log:debug(hotend)
+
+		response:addData('hotend', hotend)
+	else 
+		response:addData('hotend', hotend)
+		response:addData('bed', bed)
+		response:addData('hotend_target', hotendTarget)
+		response:addData('bed_target', bedTarget)
+	end
+
+	-- get last modified time
+	local file_attr = lfs.attributes(ultipath .. '/' .. TEMPERATURE_FILE)
+	local last_mod = file_attr.modification
+	response:addData('last_mod', last_mod)
+
 end
 
 --requires id(int)

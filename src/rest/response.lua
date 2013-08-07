@@ -82,7 +82,9 @@ end
 
 function M:send()
 	io.write("Status: " .. self.httpStatusCode .. " " .. self.httpStatusText .. "\r\n")
-	io.write ("Content-type: " .. self.contentType .. "\r\n\r\n")
+	io.write("Content-type: " .. self.contentType .. "\r\n")
+	io.write("Access-Control-Allow-Origin: *\r\n\r\n")
+
 	print(self:serializeAsJson())
 end
 

@@ -10,6 +10,7 @@ local M = {
 
 local ULTIFI_BASE_PATH = '/tmp/UltiFi'
 local TEMPERATURE_FILE = 'temp.out'
+local PROGRESS_FILE = 'progress2.out'
 local COMMAND_FILE = 'command.in'
 local GCODE_TMP_FILE = '/tmp/UltiFi/combined.gc'
 
@@ -171,6 +172,42 @@ function M.temperature(request, response)
 
 	-- get last modified time
 	local file_attr = lfs.attributes(ultipath .. '/' .. TEMPERATURE_FILE)
+	local last_mod = file_attr.modification
+	local last_mod = os.difftime (os.time(),last_mod)
+	response:addData('last_mod', last_mod)
+
+end
+
+--requires id(int)
+function M.progress(request, response)
+	local argId,devpath,ultipath = getPrinterDataOrFail(request, response)
+	if argId == nil then return end
+	
+	local f = io.open(ultipath .. '/' .. PROGRESS_FILE)
+	
+	if not f then
+		response:setError("could not open progress file")
+		response:addData('id', argId)
+		return
+	end
+	
+	local tempText = f:read('*all')
+	f:close()
+
+	local currentLine,numLines = tempText:match('(%d+)/(%d+)')
+	
+	response:setSuccess()
+
+	if(currentLine == nil) then
+		response:addData('printing', false)
+	else 
+		response:addData('printing', true)
+		response:addData('current_line', currentLine)
+		response:addData('num_lines', numLines)
+	end
+
+	-- get last modified time
+	local file_attr = lfs.attributes(ultipath .. '/' .. PROGRESS_FILE)
 	local last_mod = file_attr.modification
 	local last_mod = os.difftime (os.time(),last_mod)
 	response:addData('last_mod', last_mod)

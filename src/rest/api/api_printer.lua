@@ -12,7 +12,7 @@ local ULTIFI_BASE_PATH = '/tmp/UltiFi'
 local TEMPERATURE_FILE = 'temp.out'
 local PROGRESS_FILE = 'progress2.out'
 local COMMAND_FILE = 'command.in'
-local GCODE_TMP_FILE = '/tmp/UltiFi/combined.gc'
+local GCODE_TMP_FILE = 'combined.gc'
 
 -- returns full path + ultifi path or nil
 local function printerExists(id)
@@ -66,13 +66,15 @@ local function sendGcode(printerPath, gcode)
 	return true
 end
 
-local function addToGcodeFile(gcode)
+local function addToGcodeFile(printerPath, gcode)
 	if not gcode or type(gcode) ~= 'string' then return nil,"missing gcode data" end
 	
-	local gcf,msg = io.open(GCODE_TMP_FILE, 'a+')
+	local gtFile = printerPath .. '/' .. GCODE_TMP_FILE
+	
+	local gcf,msg = io.open(gtFile, 'a+')
 	if not gcf then return nil,msg end
 	
-	log:debug("appending " .. gcode:len() .. " bytes of gcode to " .. GCODE_TMP_FILE)
+	log:debug("appending " .. gcode:len() .. " bytes of gcode to " .. gtFile)
 	gcf:write(gcode)
 	gcf:write("\n")
 	gcf:close()
@@ -83,14 +85,15 @@ end
 -- assumes printerPath exists, returns true if successful, false if command file already exists and is non-empty (i.e. printer busy),
 -- nil+err if file could not be opened
 local function printGcodeFile(printerPath)
+	local gtFile = printerPath .. '/' .. GCODE_TMP_FILE
 	local cmdPath = printerPath .. '/' .. COMMAND_FILE
 	local cmdf,msg = io.open(cmdPath, 'a+') -- 'a+' is important, do not overwrite current contents in any case
 	
 	if not cmdf then return nil,msg end
 	if utils.fileSize(cmdf) > 0 then return false end
 	
-	log:debug("starting print of gcode in " .. GCODE_TMP_FILE)
-	cmdf:write('(SENDFILE=' .. GCODE_TMP_FILE)
+	log:debug("starting print of gcode in " .. gtFile)
+	cmdf:write('(SENDFILE=' .. gtFile)
 	cmdf:close()
 	
 	return true
@@ -277,6 +280,8 @@ end
 --accepts: last(bool) (chunks will be concatenated and only when this argument is true will printing be started)
 function M.print_POST(request, response)
 	local argId,devpath,ultipath = getPrinterDataOrFail(request, response)
+	local gtFile = ultipath .. '/' .. GCODE_TMP_FILE
+	
 	if argId == nil then return end
 
 	local argGcode = request:get("gcode")
@@ -289,14 +294,14 @@ function M.print_POST(request, response)
 	end
 	
 	if argIsFirst == true then
-		log:debug("clearing all gcode in " .. GCODE_TMP_FILE)
+		log:debug("clearing all gcode in " .. gtFile)
 		response:addData('gcode_clear',true)
-		os.remove(GCODE_TMP_FILE)
+		os.remove(gtFile)
 	end
 	
 	local rv,msg
 	
-	rv,msg = addToGcodeFile(argGcode)
+	rv,msg = addToGcodeFile(ultipath, argGcode)
 	if rv == nil then
 		response:setError("could not add gcode")
 		response:addData('msg', msg)

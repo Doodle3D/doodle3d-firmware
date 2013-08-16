@@ -127,7 +127,7 @@ local function isBusy(printerPath)
 	local size = utils.fileSize(f)
 	f:close()
 	
-	return f > 0
+	return size > 0
 end
 
 

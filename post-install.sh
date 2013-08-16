@@ -78,12 +78,16 @@ else
 	# Create a script to setup the system as wifibox, it will be deleted after it has been run, except if it returns > 0
 	cat <<-EOM >> $IPKG_INSTROOT/etc/uci-defaults/setup-wifibox.sh
 	uci set system.@system[0].hostname=wifibox
+	uci set system.@system[0].log_size=64
 	uci set network.lan.ipaddr=192.168.5.1
 	echo -e "beta\nbeta" | passwd root
 	
 	uci set wireless.@wifi-device[0].disabled=0
 	# TODO: add firewall net
 	uci set network.wlan=interface
+	
+	#TEMP: quick hack to automatically configure AP mode
+	/usr/share/lua/wifibox/script/d3dapi r=POST p=/network/openap
 EOM
 	
 	echo "WARNING: WiFiBox network configuration can only be fully prepared when installing on real device"

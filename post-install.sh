@@ -63,6 +63,8 @@ fi
 
 ### Finally make sure basic configuration is set correctly
 
+/etc/init.d/wifibox enable
+
 if [ -z "$IPKG_INSTROOT" ]; then
 	echo "Enabling wifi device..."
 	uci set wireless.@wifi-device[0].disabled=0; uci commit wireless; wifi
@@ -71,8 +73,6 @@ if [ -z "$IPKG_INSTROOT" ]; then
 
 	echo "Adding network interface 'wlan'..."
 	uci set network.wlan=interface; uci commit network; /etc/init.d/network reload
-
-	/etc/init.d/wifibox enable
 	
 else
 	# Create a script to setup the system as wifibox, it will be deleted after it has been run, except if it returns > 0

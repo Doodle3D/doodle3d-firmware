@@ -150,7 +150,7 @@ end
 
 --[[ Add/remove DHCP pool for wireless net ]]
 function reconf.dhcppool_add(dirtyList)
-	uci:set('dhcp', wifi.getDeviceName(), 'dhcp') --create section
+	uci:set('dhcp', wifi.NET, 'dhcp') --create section
 	M.uciTableSet('dhcp', wifi.NET, {
 		interface = wifi.NET,
 		start = '100',

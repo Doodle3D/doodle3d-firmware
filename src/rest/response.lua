@@ -8,6 +8,11 @@ M.__index = M
 local REQUEST_ID_ARGUMENT = 'rq_id'
 
 M.httpStatusCode, M.httpStatusText, M.contentType = nil, nil, nil
+M.binaryData, M.binarySavename = nil, nil
+
+local function printHeaderLine(headerType, headerValue)
+	io.write(headerType .. ": " .. headerValue .. "\r\n")
+end
 
 
 setmetatable(M, {
@@ -68,6 +73,7 @@ end
 --(e.g.: response:addData('data', {f1=3, f2='x'}))
 function M:addData(k, v)
 	self.body.data[k] = v
+	self.binaryData = nil
 end
 
 function M:apiURL(mod, func)
@@ -81,11 +87,34 @@ function M:serializeAsJson()
 end
 
 function M:send()
-	io.write("Status: " .. self.httpStatusCode .. " " .. self.httpStatusText .. "\r\n")
-	io.write("Content-type: " .. self.contentType .. "\r\n")
-	io.write("Access-Control-Allow-Origin: *\r\n\r\n")
+	printHeaderLine("Status", self.httpStatusCode .. " " .. self.httpStatusText)
+	printHeaderLine("Content-type", self.contentType)
+	printHeaderLine("Access-Control-Allow-Origin", "*")
 
-	print(self:serializeAsJson())
+	if self.binaryData == nil then
+		io.write("\r\n")
+		print(self:serializeAsJson())
+	else
+		printHeaderLine("content-disposition", "attachment;filename=" .. self.binarySavename)
+		io.write("\r\n")
+		io.write(self.binaryData)
+	end
+end
+
+function M:setBinaryFileData(rFile, saveName, contentType)
+	if type(rFile) ~= 'string' or rFile:len() == 0 then return false end
+	
+	local f,msg = io.open(rFile, "rb")
+	
+	if not f then return nil,msg end
+	
+	self.binaryData = f:read("*all")
+	f:close()
+	
+	self.binarySavename = saveName
+	self:setContentType(contentType)
+	
+	return true
 end
 
 return M

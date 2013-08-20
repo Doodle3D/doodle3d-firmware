@@ -174,8 +174,8 @@ function M.new(postData, debugEnabled)
 	self.postArgs = kvTableFromUrlEncodedString(postData)
 	self.pathArgs = arrayFromPath(os.getenv('PATH_INFO'))
 	
-	-- override path arguments with command line parameter and allow to emulate GET/POST if debugging is enabled
-	if debugEnabled and self.requestMethod == 'CMDLINE' then
+	-- override path arguments with command line parameter and allow to emulate GET/POST if debugging is enabled *and* if the autowifi special command wasn't mentioned
+	if debugEnabled and self.requestMethod == 'CMDLINE' and self:get('autowifi') == nil then
 		self.pathArgs = arrayFromPath(self.cmdLineArgs['p'])
 		
 		if self.cmdLineArgs['r'] == 'GET' or self.cmdLineArgs['r'] == nil then

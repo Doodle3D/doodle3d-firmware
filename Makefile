@@ -16,7 +16,7 @@ IncludeWithNewlines = $(subst ¤,$(newline),$(shell cat $1 | tr '\n' '¤'))
 # Name and release number of this package
 PKG_NAME := wifibox
 PKG_VERSION := 0.1.0
-PKG_RELEASE := 6
+PKG_RELEASE := 7
 
 # This specifies the directory where we're going to build the program.  
 # The root build directory, $(BUILD_DIR), is by default the build_mipsel 
@@ -85,7 +85,6 @@ define Package/wifibox/install
 	$(INSTALL_DIR) $(1)/$(TGT_LUA_DIR_SUFFIX)/rest/api
 	$(INSTALL_DIR) $(1)/$(TGT_LUA_DIR_SUFFIX)/script
 	$(INSTALL_DIR) $(1)/$(TGT_LUA_DIR_SUFFIX)/util
-	$(INSTALL_DIR) $(1)/$(TGT_LUA_DIR_SUFFIX)/www
 	$(INSTALL_DIR) $(1)/etc/init.d
 	$(INSTALL_DIR) $(1)/www/cgi-bin
 	
@@ -98,11 +97,12 @@ define Package/wifibox/install
 	$(CP) $(WIFIBOX_BASE_DIR)/rest/api/*.lua $(1)/$(TGT_LUA_DIR_SUFFIX)/rest/api/
 	$(CP) $(WIFIBOX_BASE_DIR)/util/*.lua $(1)/$(TGT_LUA_DIR_SUFFIX)/util/
 	
-	$(INSTALL_BIN) $(WIFIBOX_BASE_DIR)/script/wifibox_init $(1)/$(TGT_LUA_DIR_SUFFIX)/script
+	$(INSTALL_BIN) $(WIFIBOX_BASE_DIR)/script/wifibox_init $(1)/etc/init.d/wifibox  # copy directly to init dir (required for post-inst enabling)
 	$(INSTALL_BIN) $(WIFIBOX_BASE_DIR)/script/d3dapi $(1)/$(TGT_LUA_DIR_SUFFIX)/script
 
+#	$(INSTALL_DIR) $(1)/$(TGT_LUA_DIR_SUFFIX)/www
 #	$(CP) $(WIFIBOX_BASE_DIR)/www/* $(1)/$(TGT_LUA_DIR_SUFFIX)/www/
-	$(CP) $(WIFIBOX_BASE_DIR)/www/* $(1)/www/ #copy www files directly to /www
+	$(CP) $(WIFIBOX_BASE_DIR)/www/* $(1)/www/  #copy www files directly to /www
 
 ifeq ($(CONFIG_WIFIBOX_DEVEL_PACKAGE),y)
 #	$(INSTALL_DIR) $(1)/$(TGT_LUA_DIR_SUFFIX)/misc
@@ -115,9 +115,7 @@ endif
 	
 	
 ### create links elsewhere in the system (autowifi)
-	
 	$(LN) -s /$(TGT_LUA_DIR_SUFFIX)/script/d3dapi $(1)/www/cgi-bin
-	$(LN) -s /$(TGT_LUA_DIR_SUFFIX)/script/wifibox_init $(1)/etc/init.d/wifibox
 	
 ### install gpx utility
 	$(INSTALL_DIR) $(1)/usr/bin

@@ -1,7 +1,5 @@
 #!/bin/sh
 
-if [ -z "$$IPKG_INSTROOT" ]; then
-	/etc/init.d/wifibox disable
-fi
+$IPKG_INSTROOT/etc/init.d/wifibox disable
 
 exit 0

@@ -1,8 +1,9 @@
 package.path = package.path .. ';/usr/share/lua/wifibox/?.lua'
 
 local confDefaults = require('conf_defaults')
-local util = require('util.utils')
 local log = require('util.logger')
+local settings = require('util.settings')
+local util = require('util.utils')
 local wifi = require('network.wlanconfig')
 local netconf = require('network.netconfig')
 local RequestClass = require('rest.request')
@@ -11,8 +12,66 @@ local ResponseClass = require('rest.response')
 local postData = nil
 
 
+-- expects list with tables containing 'ssid' key as values and returns index key if found or nil if not found
+local function findSsidInList(list, name)
+	for k,v in ipairs(list) do
+		if v.ssid == name then return k end
+	end
+	return nil
+end
+
 local function setupAutoWifiMode()
-	io.write("--TODO: join known network if present, fall back to access point otherwise\n")
+	local wifiState = wifi.getDeviceState()
+	local netName, netMode = wifiState.ssid, wifiState.mode
+	
+	local apSsid = wifi.getSubstitutedSsid(settings.get('network.ap.ssid'))
+	local apMode = (apSsid == netName) and netMode == 'ap'
+	
+	local scanList,msg = wifi.getScanInfo()
+	local knownSsids = wifi.getConfigs()
+	
+	if not scanList then
+		return nil, "autowifi: could not scan wifi networks (" .. msg .. ")"
+	end
+	
+	-- START TEMP -- mode should be ap or sta
+	print("wifi name: " .. netName .. ", wifi mode: " .. netMode .. ", expected AP ssid: " .. apSsid .. ", apmode: " .. (apMode and "yes" or "no"))
+	for _,sn in ipairs(scanList) do
+		print("avl net: " .. sn.ssid)
+	end
+	for _,kn in ipairs(knownSsids) do
+		print("known net: " .. kn.ssid .. " (mode: " .. kn.mode .. ")")
+	end
+	-- END TEMP
+	
+	-- if the currently active network is client mode and is also visible, do nothing since it will connect automatically further along the boot process
+	if netMode == 'sta' and findSsidInList(scanList, netName) then
+		return true, "autowifi: no action - existing configuration found for currently wifi visible network (" .. netName .. ")"
+	end
+	
+	-- try to find a known network which is also visible (ordered by known network definitions)
+	local connectWith = nil
+	for _,kn in ipairs(knownSsids) do
+		if findSsidInList(scanList, kn.ssid) then
+			connectWith = kn.ssid
+			break
+		end
+	end
+	
+	if connectWith then
+		print("connectWith: " .. connectWith) --TEMP
+		-- TODO: refactor connect stuff into network:connect() function and adapt api_network_associate as well (and others?)
+		-- TODO: connect with network
+		-- return true, "autowifi: associated -- client mode with ssid '" .. connectWith .. "'"
+	elseif netMode ~= 'ap' then
+		print("shouldBeAp") --TEMP
+		-- TODO: setup AP (refactor into network like with client connect)
+		-- return true, "autowifi: configured as access point with ssid '" .. apSsid .. "'"
+	else
+		return true, "autowifi: no action - no known networks found, already in access point mode"
+	end
+	
+	return nil, "autowifi: uh oh - bad situation in autowifi function"
 end
 
 local function init()
@@ -57,7 +116,14 @@ end
 	end
 	
 	if rq:getRequestMethod() == 'CMDLINE' and rq:get('autowifi') ~= nil then
-		setupAutoWifiMode()
+		log:info("running in autowifi mode")
+		local rv,msg = setupAutoWifiMode()
+		
+		if rv then
+			log:info("autowifi setup done (" .. msg .. ")")
+		else
+			log:error("autowifi setup failed (" .. msg .. ")")
+		end
 	elseif rq:getRequestMethod() ~= 'CMDLINE' or confDefaults.DEBUG_API then
 		local response, err = rq:handle()
 		

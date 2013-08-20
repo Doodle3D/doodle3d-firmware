@@ -49,7 +49,7 @@ EOM
 fi
 
 ### Add some convenience aliases to root's profile
-mkdir $IPKG_INSTROOT/root
+mkdir -p $IPKG_INSTROOT/root
 grep '^# DO NOT MODIFY.*wifibox package.$' $IPKG_INSTROOT/root/.profile >/dev/null 2>&1
 if [ $? -gt 0 ]; then
 		cat <<-EOM >> $IPKG_INSTROOT/root/.profile
@@ -63,7 +63,7 @@ fi
 
 ### Finally make sure basic configuration is set correctly
 
-/etc/init.d/wifibox enable
+$IPKG_INSTROOT/etc/init.d/wifibox enable
 
 if [ -z "$IPKG_INSTROOT" ]; then
 	echo "Enabling wifi device..."

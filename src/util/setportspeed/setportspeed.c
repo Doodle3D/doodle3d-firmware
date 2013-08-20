@@ -10,7 +10,7 @@
 #include <string.h>
 #include <unistd.h>
 
-/* these includes are for ioctl() and cfmakeraw() but disabled to avoid conflicts with asm/* includes */
+//these includes are for ioctl() and cfmakeraw() but disabled to avoid conflicts with asm/* includes
 //#include <sys/ioctl.h>
 //#include <termios.h>
 

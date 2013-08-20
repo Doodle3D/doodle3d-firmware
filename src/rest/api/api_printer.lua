@@ -244,7 +244,7 @@ function M.heatup_POST(request, response)
 	local argId,devpath,ultipath = getPrinterDataOrFail(request, response)
 	if argId == nil then return end
 	
-	local gcode = settings.get('printer.autoWarmUpCommand').."\n";
+	local gcode = settings.get('printer.autoWarmUpCommand') .. "\n"
 	local rv,msg = sendGcode(ultipath, gcode)
 	
 	if rv then
@@ -257,7 +257,6 @@ function M.heatup_POST(request, response)
 	end
 end
 
---UNTESTED
 --requires id(int)
 function M.stop_POST(request, response)
 	local argId,devpath,ultipath = getPrinterDataOrFail(request, response)
@@ -280,9 +279,9 @@ end
 --accepts: last(bool) (chunks will be concatenated and only when this argument is true will printing be started)
 function M.print_POST(request, response)
 	local argId,devpath,ultipath = getPrinterDataOrFail(request, response)
-	local gtFile = ultipath .. '/' .. GCODE_TMP_FILE
-	
 	if argId == nil then return end
+	
+	local gtFile = ultipath .. '/' .. GCODE_TMP_FILE
 
 	local argGcode = request:get("gcode")
 	local argIsFirst = utils.toboolean(request:get("first"))

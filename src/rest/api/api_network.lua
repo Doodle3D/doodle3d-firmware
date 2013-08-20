@@ -145,7 +145,9 @@ function M.openap_POST(request, response)
 	local ssid = wifi.getSubstitutedSsid(settings.get('network.ap.ssid'))
 	netconf.switchConfiguration{apnet="add_noreload"}
 	wifi.activateConfig(ssid)
-	netconf.switchConfiguration{ wifiiface="add", network="reload", staticaddr="add", dhcppool="add", wwwredir="add", dnsredir="add" }
+	-- NOTE: dnsmasq must be reloaded after network or it will be unable to serve IP addresses
+	netconf.switchConfiguration{ wifiiface="add", network="reload", staticaddr="add", dhcppool="add_noreload", wwwredir="add", dnsredir="add" }
+	netconf.switchConfiguration{dhcp="reload"}
 	response:setSuccess("switched to Access Point mode")
 	response:addData("ssid", ssid)
 end

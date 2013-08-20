@@ -86,6 +86,9 @@ function reconf.network_reload(dirtyList) reloadBit(dirtyList, 'network') end
 --[[ Issue '/etc/init.d/wireless reload' command ]]
 function reconf.wireless_reload(dirtyList) reloadBit(dirtyList, 'wireless') end
 
+--[[ Issue '/etc/init.d/dnsmasq reload' command ]]
+function reconf.dhcp_reload(dirtyList) reloadBit(dirtyList, 'dnsmasq') end
+
 --[[ Add wlan interface declaration to /etc/config/network ]]
 function reconf.wifiiface_add(dirtyList)
 	uci:set('network', wifi.NET, 'interface')
@@ -149,7 +152,8 @@ end
 
 
 --[[ Add/remove DHCP pool for wireless net ]]
-function reconf.dhcppool_add(dirtyList)
+function reconf.dhcppool_add_noreload(dirtyList) reconf.dhcppool_add(dirtyList, true) end
+function reconf.dhcppool_add(dirtyList, noReload)
 	uci:set('dhcp', wifi.NET, 'dhcp') --create section
 	M.uciTableSet('dhcp', wifi.NET, {
 		interface = wifi.NET,
@@ -157,7 +161,8 @@ function reconf.dhcppool_add(dirtyList)
 		limit = '150',
 		leasetime = '12h',
 	})
-	commitBit(dirtyList, 'dhcp'); reloadBit(dirtyList, 'dnsmasq')
+	commitBit(dirtyList, 'dhcp');
+	if noReload == nil or noReload == false then reloadBit(dirtyList, 'dnsmasq') end
 end
 function reconf.dhcppool_rm(dirtyList)
 	uci:delete('dhcp', wifi.NET)

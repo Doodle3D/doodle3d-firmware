@@ -244,7 +244,7 @@ function M.heatup_POST(request, response)
 	local argId,devpath,ultipath = getPrinterDataOrFail(request, response)
 	if argId == nil then return end
 	
-	local gcode = settings.get('printer.autoWarmUpCommand')
+	local gcode = settings.get('printer.autoWarmUpCommand').."\n";
 	local rv,msg = sendGcode(ultipath, gcode)
 	
 	if rv then

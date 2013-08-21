@@ -156,23 +156,23 @@ setmetatable(M, {
 
 --This function initializes itself using various environment variables, the arg array and the given postData
 --NOTE: if debugging is enabled, commandline arguments 'm' and 'f' override requested module and function
-function M.new(postData, debugEnabled)
+function M.new(environment, postData, debugEnabled)
 	local self = setmetatable({}, M)
 	
 	--NOTE: is it correct to assume that absence of REQUEST_METHOD indicates command line invocation?
-	self.requestMethod = os.getenv('REQUEST_METHOD')
-	if self.requestMethod ~= nil then
-		self.remoteHost = os.getenv('REMOTE_HOST')
-		self.remotePort = os.getenv('REMOTE_PORT')
-		self.userAgent = os.getenv('HTTP_USER_AGENT')
+	self.requestMethod = environment['REQUEST_METHOD']
+	if type(self.requestMethod) == 'string' and self.requestMethod:len() > 0 then
+		self.remoteHost = environment['REMOTE_HOST']
+		self.remotePort = environment['REMOTE_PORT']
+		self.userAgent = environment['HTTP_USER_AGENT']
 	else
 		self.requestMethod = 'CMDLINE'
 	end
 	
 	self.cmdLineArgs = kvTableFromArray(arg)
-	self.getArgs = kvTableFromUrlEncodedString(os.getenv('QUERY_STRING'))
+	self.getArgs = kvTableFromUrlEncodedString(environment['QUERY_STRING'])
 	self.postArgs = kvTableFromUrlEncodedString(postData)
-	self.pathArgs = arrayFromPath(os.getenv('PATH_INFO'))
+	self.pathArgs = arrayFromPath(environment['PATH_INFO'])
 	
 	-- override path arguments with command line parameter and allow to emulate GET/POST if debugging is enabled *and* if the autowifi special command wasn't mentioned
 	if debugEnabled and self.requestMethod == 'CMDLINE' and self:get('autowifi') == nil then

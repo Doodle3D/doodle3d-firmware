@@ -74,7 +74,7 @@ local function setupAutoWifiMode()
 	return nil, "autowifi: uh oh - bad situation in autowifi function"
 end
 
-local function init()
+local function init(environment)
 	log:init(log.LEVEL.debug)
 	log:setStream(io.stderr)
 	
@@ -88,8 +88,8 @@ local function init()
 	
 	log:info("Wifibox CGI handler started" .. dbgText)
 	
-	if (os.getenv('REQUEST_METHOD') == 'POST') then
-		local n = tonumber(os.getenv('CONTENT_LENGTH'))
+	if (environment['REQUEST_METHOD'] == 'POST') then
+		local n = tonumber(environment['CONTENT_LENGTH'])
 		postData = io.read(n)
 	end
 	
@@ -103,8 +103,8 @@ local function init()
 	return true
 end
 
- local function main()
-	local rq = RequestClass.new(postData, confDefaults.DEBUG_API)
+ local function main(environment)
+	local rq = RequestClass.new(environment, postData, confDefaults.DEBUG_API)
 	
 --	log:info("received request of type " .. rq:getRequestMethod() .. " for " .. (rq:getRequestedApiModule() or "<unknown>")
 --			.. "/" .. (rq:getRealApiFunctionName() or "<unknown>") .. " with arguments: " .. util.dump(rq:getAll()))
@@ -134,19 +134,27 @@ end
 	end
 end
 
----'entry point'---
-local s, msg = init()
-if s == false then
-	local resp = ResponseClass.new()
-	local errSuffix = msg and " (" .. msg .. ")" or ""
+
+--- Main firmware entry point.
+-- This is either used by uhttp-mod-lua directly, or by the d3dapi cgi-bin wrapper
+-- script which builds the env table from the shell environment. The wrapper script
+-- also handles command-line invocation.
+-- @tparam table The CGI environment table.
+-- @treturn number A Z+ return value suitable to return from wrapper script. Note that this value is ignored by uhttpd-mod-lua.
+function handle_request(env)
+	local s, msg = init(env)
 	
-	resp:setError("initialization failed" .. errSuffix)
-	io.write ("Content-type: text/plain\r\n\r\n")
-	resp:send()
-	log:error("initialization failed" .. errSuffix) --NOTE: this assumes the logger has been inited properly, despite init() having failed
-	
-	os.exit(1)
-else
-	main()
-	os.exit(0)
+	if s == false then
+		local resp = ResponseClass.new()
+		local errSuffix = msg and " (" .. msg .. ")" or ""
+		
+		resp:setError("initialization failed" .. errSuffix)
+		resp:send()
+		log:error("initialization failed" .. errSuffix) --NOTE: this assumes the logger has been initialized properly, despite init() having failed
+		
+		return 1
+	else
+		main(env)
+		return 0
+	end
 end

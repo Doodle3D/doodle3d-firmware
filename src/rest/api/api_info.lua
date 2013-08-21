@@ -38,6 +38,8 @@ function M.logfiles(request, response)
 	local rv,msg = lfs.mkdir(LOG_COLLECT_DIR)
 	local rv,msg = lfs.chdir(TMP_DIR)
 	
+	local ultip,msg = lfs.attributes(ULTIFI_PATH, 'mode')
+	
 	
 	--[[ create temporary files ]]--
 	
@@ -45,11 +47,13 @@ function M.logfiles(request, response)
 	
 	local rv,sig,code = os.execute('logread > ' .. LOG_COLLECT_DIR .. '/' .. SYSLOG_FILENAME)
 	
-	for file in lfs.dir(ULTIFI_PATH) do
-		if file ~= '.' and file ~= '..' then
-			local srcLogFile = ULTIFI_PATH .. '/' .. file .. '/' .. ULTIFI_LOG_FILENAME
-			local tgtLogFile = LOG_COLLECT_DIR .. '/' .. file .. '-' .. ULTIFI_LOG_FILENAME
-			local rv,sig,code = redirectedExecute('cp ' .. srcLogFile .. ' ' .. tgtLogFile)
+	if ultip and ultip == 'directory' then
+		for file in lfs.dir(ULTIFI_PATH) do
+			if file ~= '.' and file ~= '..' then
+				local srcLogFile = ULTIFI_PATH .. '/' .. file .. '/' .. ULTIFI_LOG_FILENAME
+				local tgtLogFile = LOG_COLLECT_DIR .. '/' .. file .. '-' .. ULTIFI_LOG_FILENAME
+				local rv,sig,code = redirectedExecute('cp ' .. srcLogFile .. ' ' .. tgtLogFile)
+			end
 		end
 	end
 	
@@ -68,10 +72,12 @@ function M.logfiles(request, response)
 	
 	--[[ remove temporary files ]]--
 	
-	for file in lfs.dir(ULTIFI_PATH) do
-		if file ~= '.' and file ~= '..' then
-			local tgtLogFile = LOG_COLLECT_DIR .. '/' .. file .. '-' .. ULTIFI_LOG_FILENAME
-			local rv,sig,code = redirectedExecute('rm ' .. tgtLogFile)
+	if ultip and ultip == 'directory' then
+		for file in lfs.dir(ULTIFI_PATH) do
+			if file ~= '.' and file ~= '..' then
+				local tgtLogFile = LOG_COLLECT_DIR .. '/' .. file .. '-' .. ULTIFI_LOG_FILENAME
+				local rv,sig,code = redirectedExecute('rm ' .. tgtLogFile)
+			end
 		end
 	end
 	

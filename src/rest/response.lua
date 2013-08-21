@@ -88,14 +88,14 @@ end
 
 function M:send()
 	printHeaderLine("Status", self.httpStatusCode .. " " .. self.httpStatusText)
-	printHeaderLine("Content-type", self.contentType)
+	printHeaderLine("Content-Type", self.contentType)
 	printHeaderLine("Access-Control-Allow-Origin", "*")
 
 	if self.binaryData == nil then
 		io.write("\r\n")
 		print(self:serializeAsJson())
 	else
-		printHeaderLine("content-disposition", "attachment;filename=" .. self.binarySavename)
+		printHeaderLine("Content-Disposition", "attachment; filename=" .. self.binarySavename)
 		io.write("\r\n")
 		io.write(self.binaryData)
 	end

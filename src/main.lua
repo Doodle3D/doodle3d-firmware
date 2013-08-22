@@ -34,15 +34,16 @@ local function setupAutoWifiMode()
 		return nil, "autowifi: could not scan wifi networks (" .. msg .. ")"
 	end
 	
-	-- START TEMP -- mode should be ap or sta
-	print("wifi name: " .. netName .. ", wifi mode: " .. netMode .. ", expected AP ssid: " .. apSsid .. ", apmode: " .. (apMode and "yes" or "no"))
+	log:info("current wifi name/mode: " .. (netName or "<nil>") .. "/" .. netMode .. ", ssid of self: " .. apSsid)
+	local visNet, knownNet = {}, {}
 	for _,sn in ipairs(scanList) do
-		print("avl net: " .. sn.ssid)
+		table.insert(visNet, sn.ssid)
 	end
 	for _,kn in ipairs(knownSsids) do
-		print("known net: " .. kn.ssid .. " (mode: " .. kn.mode .. ")")
+		table.insert(knownNet, kn.ssid .. "/" .. kn.mode)
 	end
-	-- END TEMP
+	log:info("visible networks: " .. table.concat(visNet, ", "))
+	log:info("known networks: " .. table.concat(knownNet, ", "))
 	
 	-- if the currently active network is client mode and is also visible, do nothing since it will connect automatically further along the boot process
 	if netMode == 'sta' and findSsidInList(scanList, netName) then
@@ -60,13 +61,19 @@ local function setupAutoWifiMode()
 	
 	if connectWith then
 		print("connectWith: " .. connectWith) --TEMP
-		-- TODO: refactor connect stuff into network:connect() function and adapt api_network_associate as well (and others?)
-		-- TODO: connect with network
-		-- return true, "autowifi: associated -- client mode with ssid '" .. connectWith .. "'"
-	elseif netMode ~= 'ap' then
-		print("shouldBeAp") --TEMP
-		-- TODO: setup AP (refactor into network like with client connect)
-		-- return true, "autowifi: configured as access point with ssid '" .. apSsid .. "'"
+		local rv,msg = netconf.associateSsid(connectWith)
+		if rv then
+			return true, "autowifi: associated -- client mode with ssid '" .. connectWith .. "'"
+		else
+			return nil, "autowifi: could not associate with ssid '" .. connectWith .. "' (" .. msg .. ")"
+		end
+	elseif netMode ~= 'ap' or netName ~= apSsid then
+		local rv,msg = netconf.setupAccessPoint(apSsid)
+		if rv then
+			return true, "autowifi: configured as access point with ssid '" .. apSsid .. "'"
+		else
+			return nil, "autowifi: failed to configure as access point with ssid '" .. apSsid .. "' (" .. msg .. ")"
+		end
 	else
 		return true, "autowifi: no action - no known networks found, already in access point mode"
 	end

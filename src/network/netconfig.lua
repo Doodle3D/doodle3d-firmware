@@ -243,4 +243,61 @@ function reconf.natreflect_rm(dirtyList)
 	bothBits(dirtyList, 'firewall')
 end
 
+--- Sets up access point mode.
+-- Note: this function might belong in the wlanconfig module but that would introduce
+-- a circular dependency, easiest solution is to place the function here.
+-- @tparam string ssid The SSID to use for the access point.
+-- @return True on success or nil+msg on error.
+function M.setupAccessPoint(ssid)
+	M.switchConfiguration{apnet="add_noreload"}
+	wifi.activateConfig(ssid)
+	-- NOTE: dnsmasq must be reloaded after network or it will be unable to serve IP addresses
+	M.switchConfiguration{ wifiiface="add", network="reload", staticaddr="add", dhcppool="add_noreload", wwwredir="add", dnsredir="add" }
+	M.switchConfiguration{dhcp="reload"}
+	
+	return true
+end
+
+--- Associates wlan device as client with the given SSID.
+-- Note: this function might belong in the wlanconfig module but that would introduce
+-- a circular dependency, easiest solution is to place the function here.
+-- @tparam string ssid The SSID to associate with.
+-- @tparam string passphrase The passphrase (if any) to use, may be left out if a UCI configuration exists.
+-- @tparam boolean recreate If true, a new UCI configuration based on scan data will always be created, otherwise an attempt will be made to use an existing configuration.
+-- @return True on success or nil+msg on error.
+function M.associateSsid(ssid, passphrase, recreate)
+	-- see if previously configured network for given ssid exists
+	local cfg = nil
+	for _, net in ipairs(wifi.getConfigs()) do
+		if net.mode ~= "ap" and net.ssid == ssid then
+			cfg = net
+			break
+		end
+	end
+	
+	-- if not, or if newly created configuration is requested, create a new configuration
+	if cfg == nil or recreate ~= nil then
+		local scanResult = wifi.getScanInfo(ssid)
+		if scanResult ~= nil then
+			wifi.createConfigFromScanInfo(scanResult, passphrase)
+		else
+			--check for error
+			return nil,"no wireless network with requested SSID is available"
+		end
+	end
+	
+	-- try to associate with the network
+	wifi.activateConfig(ssid)
+	--M.switchConfiguration{ wifiiface="add", apnet="rm", staticaddr="rm", dhcppool="rm", wwwredir="rm", dnsredir="rm", wwwcaptive="rm", wireless="reload" }
+	M.switchConfiguration{ wifiiface="add", apnet="rm", staticaddr="rm", dhcppool="rm", wwwredir="rm", dnsredir="rm", wireless="reload" }
+	
+	-- check if we are actually associated
+	local status = wifi.getDeviceState()
+	if not status.ssid or status.ssid ~= ssid then
+		return nil,"could not associate with network (incorrect passphrase?)"
+	end
+	
+	return true
+end
+
 return M

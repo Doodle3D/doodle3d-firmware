@@ -1,8 +1,8 @@
-local settings = require("util.settings")
-local utils = require("util.utils")
-local netconf = require("network.netconfig")
-local wifi = require("network.wlanconfig")
-local ResponseClass = require("rest.response")
+local settings = require('util.settings')
+local utils = require('util.utils')
+local netconf = require('network.netconfig')
+local wifi = require('network.wlanconfig')
+local ResponseClass = require('rest.response')
 
 local M = {
 	isApi = true
@@ -101,36 +101,13 @@ function M.associate_POST(request, response)
 		return
 	end
 
-	local cfg = nil
-	for _, net in ipairs(wifi.getConfigs()) do
-		if net.mode ~= "ap" and net.ssid == argSsid then
-			cfg = net
-			break
-		end
-	end
+	local rv,msg = netconf.associateSsid(argSsid, argPhrase, argRecreate)
 	
-	if cfg == nil or argRecreate ~= nil then
-		local scanResult = wifi.getScanInfo(argSsid)
-		if scanResult ~= nil then
-			wifi.createConfigFromScanInfo(scanResult, argPhrase)
-		else
-			--check for error
-			response:setFail("no wireless network with requested SSID is available")
-			response:addData("ssid", argSsid)
-			return
-		end
-	end
-	
-	wifi.activateConfig(argSsid)
-	--netconf.switchConfiguration{ wifiiface="add", apnet="rm", staticaddr="rm", dhcppool="rm", wwwredir="rm", dnsredir="rm", wwwcaptive="rm", wireless="reload" }
-	netconf.switchConfiguration{ wifiiface="add", apnet="rm", staticaddr="rm", dhcppool="rm", wwwredir="rm", dnsredir="rm", wireless="reload" }
-	
-	local status = wifi.getDeviceState()
 	response:addData("ssid", argSsid)
-	if status.ssid and status.ssid ==  argSsid then
+	if rv then
 		response:setSuccess("wlan associated")
 	else
-		response:setFail("could not associate with network (incorrect pass phrase?)")
+		response:setFail(msg)
 	end
 end
 
@@ -143,13 +120,15 @@ end
 
 function M.openap_POST(request, response)
 	local ssid = wifi.getSubstitutedSsid(settings.get('network.ap.ssid'))
-	netconf.switchConfiguration{apnet="add_noreload"}
-	wifi.activateConfig(ssid)
-	-- NOTE: dnsmasq must be reloaded after network or it will be unable to serve IP addresses
-	netconf.switchConfiguration{ wifiiface="add", network="reload", staticaddr="add", dhcppool="add_noreload", wwwredir="add", dnsredir="add" }
-	netconf.switchConfiguration{dhcp="reload"}
-	response:setSuccess("switched to Access Point mode")
+	local rv,msg = netconf.setupAccessPoint(ssid)
+	
 	response:addData("ssid", ssid)
+	if rv then
+		response:setSuccess("switched to Access Point mode")
+	else
+		response:setFail("could not switch to Access Point mode")
+		response:addData("msg", msg)
+	end
 end
 
 --requires ssid(string)

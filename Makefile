@@ -86,6 +86,7 @@ define Package/wifibox/install
 	$(INSTALL_DIR) $(1)/$(TGT_LUA_DIR_SUFFIX)/script
 	$(INSTALL_DIR) $(1)/$(TGT_LUA_DIR_SUFFIX)/util
 	$(INSTALL_DIR) $(1)/etc/init.d
+	$(INSTALL_DIR) $(1)/etc/config
 	$(INSTALL_DIR) $(1)/www/cgi-bin
 	
 ### create all files in /usr/share/lua/autowifi (autowifi)
@@ -99,6 +100,8 @@ define Package/wifibox/install
 	
 	$(INSTALL_BIN) $(WIFIBOX_BASE_DIR)/script/wifibox_init $(1)/etc/init.d/wifibox  # copy directly to init dir (required for post-inst enabling)
 	$(INSTALL_BIN) $(WIFIBOX_BASE_DIR)/script/d3dapi $(1)/$(TGT_LUA_DIR_SUFFIX)/script
+	
+	$(CP) $(WIFIBOX_BASE_DIR)/script/wifibox.uci.config $(1)/etc/config/wifibox  # copy base configuration to uci config dir
 
 #	$(INSTALL_DIR) $(1)/$(TGT_LUA_DIR_SUFFIX)/www
 #	$(CP) $(WIFIBOX_BASE_DIR)/www/* $(1)/$(TGT_LUA_DIR_SUFFIX)/www/

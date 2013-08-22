@@ -81,9 +81,59 @@ local function setupAutoWifiMode()
 	return nil, "autowifi: uh oh - bad situation in autowifi function"
 end
 
+local function setupLogger()
+	local logStream = io.stderr -- use stderr as hard-coded default target
+	local logLevel = log.LEVEL.debug -- use debug logging as hard-coded default level
+	
+	local logTargetSetting = settings.getSystemKey('logfile')
+	local logLevelSetting = settings.getSystemKey('loglevel')
+	local logTargetError, logLevelError = nil, nil
+	
+	if type(logTargetSetting) == 'string' then
+		local specialTarget = logTargetSetting:match('^<(.*)>$')
+		if specialTarget then
+			if specialTarget == 'stdout' then logStream = io.stdout
+			elseif specialTarget == 'stderr' then logStream = io.stderr
+			end
+		elseif logTargetSetting:sub(1, 1) == '/' then
+			local f,msg = io.open(logTargetSetting, 'a+')
+			
+			if f then logStream = f
+			else logTargetError = msg
+			end
+		end
+	end
+	
+	if type(logLevelSetting) == 'string' and logLevelSetting:len() > 0 then
+		local valid = false
+		for idx,lvl in ipairs(log.LEVEL) do
+			if logLevelSetting == lvl then
+				logLevel = idx
+				valid = true
+			end
+		end
+		if not valid then logLevelError = true end
+	end
+	
+	log:init(logLevel)
+	log:setStream(logStream)
+	
+	local rv = true
+	if logTargetError then
+		log:error("could not open logfile '" .. logTargetSetting .. "', using stderr as fallback (" .. logTargetError .. ")")
+		rv = false
+	end
+	
+	if logLevelError then
+		log:error("uci config specifies invalid log level '" .. logLevelSetting .. "', using debug level as fallback")
+		rv = false
+	end
+	
+	return rv
+end
+
 local function init(environment)
-	log:init(log.LEVEL.debug)
-	log:setStream(io.stderr)
+	setupLogger()
 	
 	local dbgText = ""
 	if confDefaults.DEBUG_API and confDefaults.DEBUG_PCALLS then dbgText = "pcall and api"

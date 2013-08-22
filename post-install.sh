@@ -82,6 +82,9 @@ else
 	uci set network.lan.ipaddr=192.168.5.1
 	echo -e "beta\nbeta" | passwd root
 	
+	uci set uhttpd.main.lua_handler='/usr/share/lua/wifibox/main.lua'
+	uci set uhttpd.main.lua_prefix='/d3dapi'
+	
 	uci set wireless.@wifi-device[0].disabled=0
 	# TODO: add firewall net
 	uci set network.wlan=interface

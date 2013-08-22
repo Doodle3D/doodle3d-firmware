@@ -26,8 +26,11 @@ local UCI_CONFIG_FILE = '/etc/config/' .. UCI_CONFIG_NAME
 --- Section type that will be used in UCI\_CONFIG\_FILE
 local UCI_CONFIG_TYPE = 'settings'
 
---- Section name that will be used in UCI\_CONFIG\_FILE
+--- Section name that will be used for 'public' settings (as predefined in conf_defaults.lua) in UCI\_CONFIG\_FILE
 local UCI_CONFIG_SECTION = 'general'
+
+--- Section name that will be used for 'firmware-local' settings in UCI\_CONFIG\_FILE
+local UCI_CONFIG_SYSTEM_SECTION = 'system'
 
 local ERR_NO_SUCH_KEY = "key does not exist"
 
@@ -212,6 +215,33 @@ function M.set(key, value)
 	end
 	
 	uci:commit(UCI_CONFIG_NAME)
+	return true
+end
+
+--- Returns a UCI configuration key from the system section.
+-- @tparam string key The key for which to return the value, must be non-empty.
+-- @return Requested value or false if it does not exist or nil on invalid key.
+function M.getSystemKey(key)
+	if type(key) ~= 'string' or key:len() == 0 then return nil end
+	local v = uci:get(UCI_CONFIG_NAME, UCI_CONFIG_SYSTEM_SECTION, key)
+	return v or false
+end
+
+--- Sets the given key to the given value.
+-- Note that unlike the public settings, system keys are untyped and value must
+-- be of type string; UCI generally uses '1' and '0' for boolean values.
+-- @tparam string key The key to set, must be non-empty.
+-- @tparam string value The value to set key to.
+-- @return True on success or false if key or value arguments are invalid.
+function M.setSystemKey(key, value)
+	if type(key) ~= 'string' or key:len() == 0 then return nil end
+	if type(value) ~= 'string' then return nil end
+	
+	local r = utils.create(UCI_CONFIG_FILE) -- make sure the file exists for uci to write to
+	uci:set(UCI_CONFIG_NAME, UCI_CONFIG_SYSTEM_SECTION, UCI_CONFIG_TYPE)
+	uci:set(UCI_CONFIG_NAME, UCI_CONFIG_SYSTEM_SECTION, key, value)
+	uci:commit(UCI_CONFIG_NAME)
+	
 	return true
 end
 

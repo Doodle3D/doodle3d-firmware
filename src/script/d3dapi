@@ -1,5 +1,7 @@
 #!/bin/sh
-#chmod 755 /www/cgi-bin/d3dapi
+
+# NOTE: redirection to $LOG_FILE is not required anymore, it is configurable now.
+# It is left in just as a precaution for a badly configured firmware invocation.
 
 LUA=lua
 SCRIPT_PATH=/usr/share/lua/wifibox

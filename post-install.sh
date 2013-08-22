@@ -88,9 +88,6 @@ else
 	uci set wireless.@wifi-device[0].disabled=0
 	# TODO: add firewall net
 	uci set network.wlan=interface
-	
-	#TEMP: quick hack to automatically configure AP mode
-	/usr/share/lua/wifibox/script/d3dapi r=POST p=/network/openap
 EOM
 	
 	echo "WARNING: WiFiBox network configuration can only be fully prepared when installing on real device"

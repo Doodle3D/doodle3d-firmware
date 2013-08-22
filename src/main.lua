@@ -12,15 +12,15 @@ local ResponseClass = require('rest.response')
 local postData = nil
 
 
--- expects list with tables containing 'ssid' key as values and returns index key if found or nil if not found
-local function findSsidInList(list, name)
-	for k,v in ipairs(list) do
-		if v.ssid == name then return k end
-	end
-	return nil
-end
-
 local function setupAutoWifiMode()
+	-- expects list with tables containing 'ssid' key as values and returns index key if found or nil if not found
+	local function findSsidInList(list, name)
+		for k,v in ipairs(list) do
+			if v.ssid == name then return k end
+		end
+		return nil
+	end
+	
 	local wifiState = wifi.getDeviceState()
 	local netName, netMode = wifiState.ssid, wifiState.mode
 	
@@ -46,7 +46,7 @@ local function setupAutoWifiMode()
 	log:info("known networks: " .. table.concat(knownNet, ", "))
 	
 	-- if the currently active network is client mode and is also visible, do nothing since it will connect automatically further along the boot process
-	if netMode == 'sta' and findSsidInList(scanList, netName) then
+	if netMode == 'sta' and netName ~= nil and netName ~= "" and findSsidInList(scanList, netName) then
 		return true, "autowifi: no action - existing configuration found for currently wifi visible network (" .. netName .. ")"
 	end
 	
@@ -60,7 +60,6 @@ local function setupAutoWifiMode()
 	end
 	
 	if connectWith then
-		print("connectWith: " .. connectWith) --TEMP
 		local rv,msg = netconf.associateSsid(connectWith)
 		if rv then
 			return true, "autowifi: associated -- client mode with ssid '" .. connectWith .. "'"
@@ -163,15 +162,6 @@ end
  local function main(environment)
 	local rq = RequestClass.new(environment, postData, confDefaults.DEBUG_API)
 	
---	log:info("received request of type " .. rq:getRequestMethod() .. " for " .. (rq:getRequestedApiModule() or "<unknown>")
---			.. "/" .. (rq:getRealApiFunctionName() or "<unknown>") .. " with arguments: " .. util.dump(rq:getAll()))
-	log:info("received request of type " .. rq:getRequestMethod() .. " for " .. (rq:getRequestedApiModule() or "<unknown>")
-			.. "/" .. (rq:getRealApiFunctionName() or "<unknown>"))
-	if rq:getRequestMethod() ~= 'CMDLINE' then
-		log:info("remote IP/port: " .. rq:getRemoteHost() .. "/" .. rq:getRemotePort())
-		log:debug("user agent: " .. rq:getUserAgent())
-	end
-	
 	if rq:getRequestMethod() == 'CMDLINE' and rq:get('autowifi') ~= nil then
 		log:info("running in autowifi mode")
 		local rv,msg = setupAutoWifiMode()
@@ -182,6 +172,15 @@ end
 			log:error("autowifi setup failed (" .. msg .. ")")
 		end
 	elseif rq:getRequestMethod() ~= 'CMDLINE' or confDefaults.DEBUG_API then
+	--	log:info("received request of type " .. rq:getRequestMethod() .. " for " .. (rq:getRequestedApiModule() or "<unknown>")
+	--			.. "/" .. (rq:getRealApiFunctionName() or "<unknown>") .. " with arguments: " .. util.dump(rq:getAll()))
+		log:info("received request of type " .. rq:getRequestMethod() .. " for " .. (rq:getRequestedApiModule() or "<unknown>")
+				.. "/" .. (rq:getRealApiFunctionName() or "<unknown>"))
+		if rq:getRequestMethod() ~= 'CMDLINE' then
+			log:info("remote IP/port: " .. rq:getRemoteHost() .. "/" .. rq:getRemotePort())
+			log:debug("user agent: " .. rq:getUserAgent())
+		end
+		
 		local response, err = rq:handle()
 		
 		if err ~= nil then log:error(err) end

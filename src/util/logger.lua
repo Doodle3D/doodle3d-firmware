@@ -35,8 +35,11 @@ local function log(level, msg, verbose)
 		local name = i.name or "(nil)"
 		local vVal = 'nil'
 		local m = (type(msg) == 'string') and msg or utils.dump(msg)
+		
 		if v then logStream:write(now .. " (" .. M.LEVEL[level] .. ")     " .. m .. "  [" .. name .. "@" .. i.short_src .. ":" .. i.linedefined .. "]\n")
 		else logStream:write(now .. " (" .. M.LEVEL[level] .. ")     " .. m .. "\n") end
+		
+		logStream:flush()
 	end
 end
 

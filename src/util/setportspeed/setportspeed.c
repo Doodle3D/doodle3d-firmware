@@ -1,4 +1,6 @@
 /*
+ * USB serial connectivity tester
+ *
  * based on: http://lists.uclibc.org/pipermail/uclibc/2008-January/039683.html
  * see: http://marc.info/?l=linux-serial&m=120661887111805&w=2
  */
@@ -10,88 +12,102 @@
 #include <string.h>
 #include <unistd.h>
 
-//these includes are for ioctl() and cfmakeraw() but disabled to avoid conflicts with asm/* includes
-//#include <sys/ioctl.h>
-//#include <termios.h>
+#include <linux/serial.h>
+#include <linux/termios.h>
 
-#include <asm/ioctls.h>
-#include <asm/termios.h>
+static int serial_fd;
+static char* serial_dev;
+static int baud_rate;
+
+typedef enum SET_SPEED_RESULT {
+	SSR_OK = 0, SSR_IO_GET, SSR_IO_SET, SSR_IO_MGET, SSR_IO_MSET1, SSR_IO_MSET2
+} SET_SPEED_RESULT;
+
+/* based on setSerialSpeed in UltiFi */
+static int setPortSpeed(int fd, int speed) {
+	int rv;
+	struct termios2 options;
+	int modemBits;
+
+	if (ioctl(fd, TCGETS2, &options) < 0) return SSR_IO_GET;
+
+	cfmakeraw(&options);
+
+	// Enable the receiver
+	options.c_cflag |= CREAD;
+
+	// Clear handshake, parity, stopbits and size
+	options.c_cflag &= ~CLOCAL;
+	options.c_cflag &= ~CRTSCTS;
+	options.c_cflag &= ~PARENB;
+	options.c_cflag &= ~CSTOPB;
+	options.c_cflag &= ~CSIZE;
+
+	//set speed
+	options.c_ospeed = options.c_ispeed = speed;
+	options.c_cflag &= ~CBAUD;
+	options.c_cflag |= BOTHER;
+
+	options.c_cflag |= CS8;
+	options.c_cflag |= CLOCAL;
+
+	if (ioctl(fd, TCSETS2, &options) < 0) return SSR_IO_SET;
+
+	//toggle DTR
+	if (ioctl(fd, TIOCMGET, &modemBits) < 0) return SSR_IO_MGET);
+	modemBits |= TIOCM_DTR;
+	if (ioctl(fd, TIOCMSET, &modemBits) < 0) return SSR_IO_MSET1);
+	usleep(100 * 1000);
+	modemBits &=~TIOCM_DTR;
+	if (ioctl(fd, TIOCMSET, &modemBits) < 0) return SSR_IO_MSET2);
+
+	return SSR_OK;
+}
 
 int main(int argc, char** argv) {
-	struct termios2 options2;
-	int modemBits;
-	int serialfd = -1;
-	int ultiFiEnabled = 0;
-	int r;
-	const char* portname = NULL;
-	int baudrate = -1;
+	SET_SPEED_RESULT spdResult;
 
-	if (argc < 3) {
-		fprintf(stderr, "%s: please supply a port name followed by the port speed, optionally followed by '-ultifi'\n", argv[0]);
+	if (argc < 2) {
+		fprintf(stderr, "%s: please supply a port name, optionally followed by the port speed\n", argv[0]);
 		exit(1);
 	}
 
-	portname = argv[1];
-	baudrate = strtol(argv[2], NULL, 10);
+	serial_dev = argv[1];
 
-	if (argc >= 4 && strcmp(argv[3], "-ultifi") == 0) {
-		ultiFiEnabled = 1;
-		printf("%s: UltiFi-like bits will be set\n", argv[0]);
+	if (argc >= 3) {
+		baud_rate = strtol(argv[2], NULL, 10);
+	} else {
+		baud_rate = 115200;
 	}
 
-	serialfd = open(portname, O_RDWR);
-	if (serialfd == -1) {
+	serial_fd = open(serial_dev, O_RDWR);
+	if (serial_fd == -1) {
 		fprintf(stderr, "%s: could not open port %s (%s)\n", argv[0], portname, strerror(errno));
 		exit(2);
 	}
 
-	r = ioctl(serialfd, TCGETS2, &options2);
+	printf("using port %s with speed %i\n", serial_dev, baud_rate);
 
-	if (r == -1) {
-		fprintf(stderr, "%s: ioctl error on port %s (%s)\n", argv[0], portname, strerror(errno));
-		close(serialfd);
+	spdResult = setPortSpeed(baud_rate);
+	switch (spdResult) {
+	case SSR_OK:
+		printf("port opened ok\n");
+		break;
+	case SSR_IO_GET: fprintf(stderr, "ioctl error in setPortSpeed() on TCGETS2 (%s)\n", strerror(errno));
+	case SSR_IO_SET: fprintf(stderr, "ioctl error in setPortSpeed() on TCSETS2 (%s)\n", strerror(errno));
+	case SSR_IO_MGET: fprintf(stderr, "ioctl error in setPortSpeed() on TIOCMGET (%s)\n", strerror(errno));
+	case SSR_IO_MSET1: fprintf(stderr, "ioctl error in setPortSpeed() on TIOCMSET1 (%s)\n", strerror(errno));
+	case SSR_IO_MSET2: fprintf(stderr, "ioctl error in setPortSpeed() on TIOCMSET2 (%s)\n", strerror(errno));
+
+		exit(1);
+		break;
 	}
 
-	/***** START from UltiFi *****/
-	if (ultiFiEnabled == 1) {
-		//tcgetattr(fd, &options); //done using ioctl() above
-		cfmakeraw(&options2);
+	//TODO: rename this program to something like 'usb_serial_tester' (also change in Makefile etc.)
+	//TODO: make existing code above compile and behave as intended
+	//TODO: (maybe): add timing messages to detect how long everything takes and when (if) things get stuck
+	//TODO: periodically send message and check if it is returned (by tiny program on arduino which echoes everything back)
 
-		// Enable the receiver
-		options2.c_cflag |= CREAD;
-		// Clear handshake, parity, stopbits and size
-		options2.c_cflag &= ~CLOCAL;
-		options2.c_cflag &= ~CRTSCTS;
-		options2.c_cflag &= ~PARENB;
-		options2.c_cflag &= ~CSTOPB;
-		options2.c_cflag &= ~CSIZE;
-
-		options2.c_cflag |= CS8;
-		options2.c_cflag |= CLOCAL;
-	}
-	/***** END from UltiFi *****/
-
-	options2.c_ospeed = options2.c_ispeed = baudrate;
-	options2.c_cflag &= ~CBAUD;
-	options2.c_cflag |= BOTHER;
-	r = ioctl(serialfd, TCSETS2, &options2);
-
-	if (r == -1) {
-		fprintf(stderr, "%s: ioctl error on port %s (%s)\n", argv[0], portname, strerror(errno));
-		close(serialfd);
-	}
-
-	/***** START from UltiFi *****/
-	if (ultiFiEnabled == 1) {
-		ioctl(serialfd, TIOCMGET, &modemBits);
-		modemBits |= TIOCM_DTR;
-		ioctl(serialfd, TIOCMSET, &modemBits);
-		usleep(100 * 1000);
-		modemBits &= ~TIOCM_DTR;
-		ioctl(serialfd, TIOCMSET, &modemBits);
-	}
-	/***** END from UltiFi *****/
-
-	close(serialfd);
+	close(serial_fd);
 	exit(0);
 }

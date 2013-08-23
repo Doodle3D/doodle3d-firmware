@@ -8,6 +8,7 @@ SCRIPT_PATH=/usr/share/lua/wifibox
 LOG_FILE=/tmp/wifibox.log
 
 cd $SCRIPT_PATH
+echo "CGI invocation" >> $LOG_FILE
 $LUA ./cmdmain.lua $@ 2>> $LOG_FILE
 
 exit $?

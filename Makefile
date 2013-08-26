@@ -27,7 +27,7 @@ include $(INCLUDE_DIR)/package.mk
 
 define Package/wifibox
 	SECTION:=mods
-	CATEGORY:=Miscellaneous
+	CATEGORY:=Doodle3D
 	MENU:=1
 #	DEFAULT:=y
 	TITLE:=Doodle3D WifiBox firmware
@@ -73,7 +73,6 @@ endef
 
 WIFIBOX_BASE_DIR := $(PKG_BUILD_DIR)
 GPX_BASE_DIR := $(PKG_BUILD_DIR)/util/GPX.git
-SETPORTSPEED_BASE_DIR := $(PKG_BUILD_DIR)/util/setportspeed
 TGT_LUA_DIR_SUFFIX := usr/share/lua/wifibox
 
 define Package/wifibox/install
@@ -123,8 +122,6 @@ endif
 ### install gpx utility
 	$(INSTALL_DIR) $(1)/usr/bin
 	$(INSTALL_BIN) $(GPX_BASE_DIR)/gpx $(1)/usr/bin
-
-	$(INSTALL_BIN) $(SETPORTSPEED_BASE_DIR)/setportspeed $(1)/usr/bin
 endef
 
 define Package/wifibox/postinst

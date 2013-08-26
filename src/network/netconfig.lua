@@ -172,7 +172,7 @@ end
 
 --[[ Add/remove webserver 404 redirection and denial of dirlisting ]]
 function reconf.wwwredir_add(dirtyList)
-	uci:set('uhttpd', 'main', 'error_page', '/www/index.html')
+	uci:set('uhttpd', 'main', 'error_page', '/redirect.html')
 	uci:set('uhttpd', 'main', 'no_dirlist', '1')
 	bothBits(dirtyList, 'uhttpd')
 end

@@ -9,7 +9,8 @@ LOG_FILE=/tmp/wifibox.log
 
 cd $SCRIPT_PATH
 echo "CGI invocation" >> $LOG_FILE
-strace - /tmp/trace-$$.log $LUA ./cmdmain.lua $@ 2>> $LOG_FILE
+#strace -o /tmp/trace-$$.log -ff $LUA ./cmdmain.lua $@ 2>> $LOG_FILE
+$LUA ./cmdmain.lua $@ 2>> $LOG_FILE
 
 exit $?
 

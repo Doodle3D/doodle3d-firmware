@@ -19,7 +19,6 @@ end
 
 function M._global_POST(request, response)
 	response:setSuccess()
-	
 	for k,v in pairs(request:getAll()) do
 		local r,m = settings.set(k, v)
 		
@@ -30,6 +29,7 @@ function M._global_POST(request, response)
 end
 
 function M.all_GET(request, response)
+	response:setSuccess()
 	for k,v in pairs(settings.getAll()) do
 		response:addData(k,v)
 	end

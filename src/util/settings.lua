@@ -16,7 +16,6 @@ local baseconfig = require('conf_defaults')
 
 local M = {}
 
-
 --- UCI config name (i.e. file under /etc/config)
 local UCI_CONFIG_NAME = 'wifibox'
 
@@ -61,6 +60,10 @@ end
 -- @return A value usable to write to UCI.
 local function toUciValue(v, vType)
 	if vType == 'bool' then return v and '1' or '0' end
+	if(vType == 'string') then 
+		v = v:gsub('[\n\r]', '\\n') 
+	end
+
 	return tostring(v)
 end
 
@@ -78,6 +81,9 @@ local function fromUciValue(v, vType)
 		return (v == '1') and true or false
 	elseif vType == 'float' or vType == 'int' then
 		return tonumber(v)
+	elseif vType == 'string' then
+		v = v:gsub('\\n', '\n') 
+		return v
 	else
 		return v
 	end
@@ -133,7 +139,7 @@ function M.get(key)
 	
 	local v = base.default
 	local uciV = fromUciValue(uci:get(UCI_CONFIG_NAME, UCI_CONFIG_SECTION, key), base.type)
-	
+
 	local actualV = v
 	if uciV ~= nil then actualV = uciV end
 	
@@ -200,9 +206,9 @@ function M.set(key, value)
 	elseif base.type == 'int' or base.type == 'float' then
 		value = tonumber(value)
 	end
-	
+
 	if fromUciValue(current, base.type) == value then return true end
-	
+
 	if value ~= nil then
 		local valid,m = isValid(value, base)
 		if (valid) then

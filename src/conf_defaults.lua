@@ -49,17 +49,24 @@ M.network_ap_netmask = {
 	regex = '%d+\.%d+\.%d+\.%d+'
 }
 
+M.printer_type = {
+	default = 'ultimaker',
+	type = 'string',
+	description = '',
+	regex = 'rigidbot|ultimaker|makerbot_replicator2|makerbot_thingomatic|printrbot|bukobot|cartesio|cyrus|delta_rostockmax|deltamaker|eventorbot|felix|gigabot|kossel|leapfrog_creatr|lulzbot_aO-101|makergear_m2|makergear_prusa|makibox|orca_0_3|ord_bot_hadron|printxel_3d|prusa_i3|prusa_iteration_2|rapman|reprappro_huxley|reprappro_mendel|robo_3d_printer|shapercube|tantillus|vision_3d_printer|'
+}
+
+M.printer_baudrate = {
+	default = '115200',
+	type = 'int',
+	description = '',
+	regex = '115200|2500000'
+}
+
 M.printer_temperature = {
 	default = 230,
 	type = 'int',
 	description = '3D printer temperature',
-	min = 0
-}
-
-M.printer_objectHeight = {
-	default = 20,
-	type = 'int',
-	description = 'Maximum height that will be printed',
 	min = 0
 }
 
@@ -116,27 +123,6 @@ M.printer_autoWarmUp = {
 	description = '',
 }
 
-M.printer_simplify_iterations = {
-	default = 10,
-	type = 'int',
-	description = '',
-	min = 0
-}
-
-M.printer_simplify_minNumPoints = {
-	default = 15,
-	type = 'int',
-	description = '',
-	min = 0
-}
-
-M.printer_simplify_minDistance = {
-	default = 3,
-	type = 'int',
-	description = '',
-	min = 0
-}
-
 M.printer_retraction_enabled = {
 	default = true,
 	type = 'bool',
@@ -165,9 +151,23 @@ M.printer_retraction_amount = {
 }
 
 M.printer_autoWarmUpCommand = {
-	default = 'M104 S230',
+	default = 'M104 S180',
 	type = 'string',
 	description = ''
+}
+
+M.doodle3d_objectHeight = {
+	default = 20,
+	type = 'int',
+	description = 'Maximum height that will be printed',
+	min = 0
+}
+
+M.doodle3d_simplify_minDistance = {
+	default = 3,
+	type = 'int',
+	description = '',
+	min = 0
 }
 
 return M

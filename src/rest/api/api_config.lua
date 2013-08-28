@@ -1,10 +1,10 @@
 local log = require('util.logger')
 local settings = require('util.settings')
+local printer = require('util.printer')
 
 local M = {
 	isApi = true
 }
-
 
 function M._global_GET(request, response)
 	response:setSuccess()
@@ -31,6 +31,20 @@ end
 function M.all_GET(request, response)
 	response:setSuccess()
 	for k,v in pairs(settings.getAll()) do
+		response:addData(k,v)
+	end
+end
+
+function M.supportedprinters_GET(request, response)
+	response:setSuccess()
+	for k,v in pairs(printer.supportedPrinters()) do
+		response:addData(k,v)
+	end
+end
+
+function M.supportedbaudrates_GET(request, response)
+	response:setSuccess()
+	for k,v in pairs(printer.supportedBaudRates()) do
 		response:addData(k,v)
 	end
 end

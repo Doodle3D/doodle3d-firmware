@@ -95,8 +95,13 @@ end
 -- @tparam table baseTable The base table to use constraint data from (min,max,regex).
 -- @treturn bool Returns true if the value is valid, false if it is not.
 local function isValid(value, baseTable)
-	local varType, min, max, regex = baseTable.type, baseTable.min, baseTable.max, baseTable.regex
-	
+	local varType, min, max, regex, isValid = baseTable.type, baseTable.min, baseTable.max, baseTable.regex, baseTable.isValid
+
+	if isValid then 
+		local ok = isValid(value)
+		return ok or nil,"invalid value"
+	end
+
 	if varType == 'bool' then
 		return type(value) == 'boolean' or nil,"invalid bool value"
 		
@@ -115,7 +120,7 @@ local function isValid(value, baseTable)
 		if regex then ok = ok and value:match(regex) ~= nil end
 		return ok or nil,"invalid string value"
 	end
-	
+
 	return true
 end
 
@@ -187,12 +192,13 @@ end
 -- @treturn ?string Error message in case first return value is nil (invalid key).
 function M.set(key, value)
 	key = replaceDots(key)
+
 	local r = utils.create(UCI_CONFIG_FILE)
 	uci:set(UCI_CONFIG_NAME, UCI_CONFIG_SECTION, UCI_CONFIG_TYPE)
 	
 	local base = getBaseKeyTable(key)
 	if not base then return nil,ERR_NO_SUCH_KEY end
-	
+
 	if M.isDefault(key) and value == nil then return true end -- key is default already
 	
 	local current = uci:get(UCI_CONFIG_NAME, UCI_CONFIG_SECTION, key)
@@ -205,6 +211,9 @@ function M.set(key, value)
 		end
 	elseif base.type == 'int' or base.type == 'float' then
 		value = tonumber(value)
+		if(value == nil) then 
+			return nil,"Value isn't a valid int or float"
+		end
 	end
 
 	if fromUciValue(current, base.type) == value then return true end

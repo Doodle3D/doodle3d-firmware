@@ -12,6 +12,7 @@
 	
 	NOTE that the all-caps definitions will be changed into configuration keys, or moved to a different location
 ]]--
+local printer = require('util.printer')
 
 local M = {}
 
@@ -53,14 +54,20 @@ M.printer_type = {
 	default = 'ultimaker',
 	type = 'string',
 	description = '',
-	regex = 'rigidbot|ultimaker|makerbot_replicator2|makerbot_thingomatic|printrbot|bukobot|cartesio|cyrus|delta_rostockmax|deltamaker|eventorbot|felix|gigabot|kossel|leapfrog_creatr|lulzbot_aO-101|makergear_m2|makergear_prusa|makibox|orca_0_3|ord_bot_hadron|printxel_3d|prusa_i3|prusa_iteration_2|rapman|reprappro_huxley|reprappro_mendel|robo_3d_printer|shapercube|tantillus|vision_3d_printer|'
+	isValid = function(value) 
+		local printers = printer.supportedPrinters()
+		return printers[value] ~= nil 
+	end
 }
 
 M.printer_baudrate = {
 	default = '115200',
 	type = 'int',
 	description = '',
-	regex = '115200|2500000'
+	isValid = function(value) 
+		local baudrates = printer.supportedBaudRates()
+		return baudrates[tostring(value)] ~= nil 
+	end
 }
 
 M.printer_temperature = {

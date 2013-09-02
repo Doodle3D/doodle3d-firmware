@@ -108,7 +108,7 @@ function M.associate_POST(request, response)
   local associate = function()
   	local rv,msg = netconf.associateSsid(argSsid, argPhrase, argRecreate)
 	end
-  --response:addPostResponseFunction(associate)
+  response:addPostResponseFunction(associate)
 
   local helloA = function()
   	local log = require('util.logger')

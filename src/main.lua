@@ -183,12 +183,6 @@ end
 
 		local response, err = rq:handle()
 
-
-    local utils = require('util.utils')
-    local log = require('util.logger')
-    log:info("Main (request handled")
-    log:info("  response.postResponseQueue: "..utils.dump(response.postResponseQueue))
-
 		if err ~= nil then log:error(err) end
 		response:send()
 

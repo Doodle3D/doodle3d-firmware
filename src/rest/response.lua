@@ -24,22 +24,25 @@ setmetatable(M, {
 --requestObject should always be passed (except on init failure, when it is not yet available)
 function M.new(requestObject)
 	local self = setmetatable({}, M)
-	
 	self.body = { status = nil, data = {} }
 	self:setHttpStatus(200, 'OK')
 	self:setContentType('text/plain;charset=UTF-8')
 	--self:setContentType('application/json;charset=UTF-8')
-	
+
+  -- a queue for functions to be executed when the response has bin given
+  -- needed for api calls like network/associate, which requires a restart of the webserver
+  self.postResponseQueue = {}
+
 	if requestObject ~= nil then
 		local rqId = requestObject:get(REQUEST_ID_ARGUMENT)
 		if rqId ~= nil then self.body[REQUEST_ID_ARGUMENT] = rqId end
-		
+
 		if settings.API_INCLUDE_ENDPOINT_INFO == true then
 			self.body['module'] = requestObject:getRequestedApiModule()
 			self.body['function'] = requestObject:getRealApiFunctionName() or ''
 		end
 	end
-	
+
 	return self
 end
 
@@ -65,7 +68,7 @@ end
 function M:setError(msg)
 	self.body.status = 'error'
 	if msg ~= '' then self.body.msg = msg end
-	
+
 	self:addData('more_info', 'http://' .. defaults.API_BASE_URL_PATH .. '/wiki/wiki/communication-api')
 end
 
@@ -74,6 +77,22 @@ end
 function M:addData(k, v)
 	self.body.data[k] = v
 	self.binaryData = nil
+end
+
+function M:addPostResponseFunction(fn)
+  local utils = require('util.utils')
+  local log = require('util.logger')
+  log:info("Response:addPostResponseFunction: " .. utils.dump(fn))
+  table.insert(self.postResponseQueue, fn)
+  log:info("  self.postResponseQueue: " .. utils.dump(self.postResponseQueue))
+end
+
+function M:executePostResponseQueue()
+  local utils = require('util.utils')
+  local log = require('util.logger')
+  log:info("Response:executePostResponseQueue: " .. utils.dump(self.postResponseQueue))
+
+  for i,fn in ipairs(self.postResponseQueue) do fn() end
 end
 
 function M:apiURL(mod, func)
@@ -103,17 +122,17 @@ end
 
 function M:setBinaryFileData(rFile, saveName, contentType)
 	if type(rFile) ~= 'string' or rFile:len() == 0 then return false end
-	
+
 	local f,msg = io.open(rFile, "rb")
-	
+
 	if not f then return nil,msg end
-	
+
 	self.binaryData = f:read("*all")
 	f:close()
-	
+
 	self.binarySavename = saveName
 	self:setContentType(contentType)
-	
+
 	return true
 end
 

@@ -43,7 +43,7 @@ end
 -- and additionally: wifiiface/add, network/reload
 function M.switchConfiguration(components)
 	local dirtyList = {} -- laundry list, add config/script name as key with value c (commit), r (reload) or b (both)
-	
+
 	for k,v in pairs(components) do
 		local fname = k .. '_' .. v
 		if type(reconf[fname]) == 'function' then
@@ -53,7 +53,7 @@ function M.switchConfiguration(components)
 			log:warn("unknown component or action '" .. fname .. "' skipped")
 		end
 	end
-	
+
 	-- first run all commits, then perform reloads
 	for k,v in pairs(dirtyList) do
 		if v == 'c' or v == 'b' then M.commitComponent(k) end
@@ -105,7 +105,7 @@ function reconf.apnet_add(dirtyList, noReload)
 		if s.ssid == ourSsid then sname = s['.name']; return false end
 	end)
 	if sname == nil then sname = uci:add('wireless', 'wifi-iface') end
-	
+
 	M.uciTableSet('wireless', sname, {
 		network = wifi.NET,
 		ssid = ourSsid,
@@ -113,7 +113,7 @@ function reconf.apnet_add(dirtyList, noReload)
 		device = 'radio0',
 		mode = 'ap',
 	})
-	
+
 	commitBit(dirtyList, 'wireless')
 	if noReload == nil or noReload == false then reloadBit(dirtyList, 'network') end
 end
@@ -189,14 +189,14 @@ function reconf.dnsredir_add(dirtyList)
 	local sname = utils.getUciSectionName('dhcp', 'dnsmasq')
 	if sname == nil then return log:error("dhcp config does not contain a dnsmasq section") end
 	if uci:get('dhcp', sname, 'address') ~= nil then return log:debug("DNS address redirection already in place, not re-adding", false) end
-	
+
 	uci:set('dhcp', sname, 'address', {redirText})
 	commitBit(dirtyList, 'dhcp'); reloadBit(dirtyList, 'dnsmasq')
 end
 function reconf.dnsredir_rm(dirtyList)
 	local sname = utils.getUciSectionName('dhcp', 'dnsmasq')
 	if sname == nil then return log:error("dhcp config does not contain a dnsmasq section") end
-	
+
 	uci:delete('dhcp', sname, 'address')
 	commitBit(dirtyList, 'dhcp'); reloadBit(dirtyList, 'dnsmasq')
 end
@@ -254,7 +254,7 @@ function M.setupAccessPoint(ssid)
 	-- NOTE: dnsmasq must be reloaded after network or it will be unable to serve IP addresses
 	M.switchConfiguration{ wifiiface="add", network="reload", staticaddr="add", dhcppool="add_noreload", wwwredir="add", dnsredir="add" }
 	M.switchConfiguration{dhcp="reload"}
-	
+
 	return true
 end
 
@@ -274,7 +274,7 @@ function M.associateSsid(ssid, passphrase, recreate)
 			break
 		end
 	end
-	
+
 	-- if not, or if newly created configuration is requested, create a new configuration
 	if cfg == nil or recreate ~= nil then
 		local scanResult = wifi.getScanInfo(ssid)
@@ -285,18 +285,18 @@ function M.associateSsid(ssid, passphrase, recreate)
 			return nil,"no wireless network with requested SSID is available"
 		end
 	end
-	
+
 	-- try to associate with the network
 	wifi.activateConfig(ssid)
 	--M.switchConfiguration{ wifiiface="add", apnet="rm", staticaddr="rm", dhcppool="rm", wwwredir="rm", dnsredir="rm", wwwcaptive="rm", wireless="reload" }
 	M.switchConfiguration{ wifiiface="add", apnet="rm", staticaddr="rm", dhcppool="rm", wwwredir="rm", dnsredir="rm", wireless="reload" }
-	
+
 	-- check if we are actually associated
-	local status = wifi.getDeviceState()
+  local status = wifi.getDeviceState()
 	if not status.ssid or status.ssid ~= ssid then
 		return nil,"could not associate with network (incorrect passphrase?)"
 	end
-	
+
 	return true
 end
 

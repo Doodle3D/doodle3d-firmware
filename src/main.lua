@@ -20,20 +20,20 @@ local function setupAutoWifiMode()
 		end
 		return nil
 	end
-	
+
 	local wifiState = wifi.getDeviceState()
 	local netName, netMode = wifiState.ssid, wifiState.mode
-	
+
 	local apSsid = wifi.getSubstitutedSsid(settings.get('network.ap.ssid'))
 	local apMode = (apSsid == netName) and netMode == 'ap'
-	
+
 	local scanList,msg = wifi.getScanInfo()
 	local knownSsids = wifi.getConfigs()
-	
+
 	if not scanList then
 		return nil, "autowifi: could not scan wifi networks (" .. msg .. ")"
 	end
-	
+
 	log:info("current wifi name/mode: " .. (netName or "<nil>") .. "/" .. netMode .. ", ssid of self: " .. apSsid)
 	local visNet, knownNet = {}, {}
 	for _,sn in ipairs(scanList) do
@@ -44,12 +44,12 @@ local function setupAutoWifiMode()
 	end
 	log:info("visible networks: " .. table.concat(visNet, ", "))
 	log:info("known networks: " .. table.concat(knownNet, ", "))
-	
+
 	-- if the currently active network is client mode and is also visible, do nothing since it will connect automatically further along the boot process
 	if netMode == 'sta' and netName ~= nil and netName ~= "" and findSsidInList(scanList, netName) then
 		return true, "autowifi: no action - existing configuration found for currently wifi visible network (" .. netName .. ")"
 	end
-	
+
 	-- try to find a known network which is also visible (ordered by known network definitions)
 	local connectWith = nil
 	for _,kn in ipairs(knownSsids) do
@@ -58,7 +58,7 @@ local function setupAutoWifiMode()
 			break
 		end
 	end
-	
+
 	if connectWith then
 		local rv,msg = netconf.associateSsid(connectWith)
 		if rv then
@@ -76,18 +76,18 @@ local function setupAutoWifiMode()
 	else
 		return true, "autowifi: no action - no known networks found, already in access point mode"
 	end
-	
+
 	return nil, "autowifi: uh oh - bad situation in autowifi function"
 end
 
 local function setupLogger()
 	local logStream = io.stderr -- use stderr as hard-coded default target
 	local logLevel = log.LEVEL.debug -- use debug logging as hard-coded default level
-	
+
 	local logTargetSetting = settings.getSystemKey('logfile')
 	local logLevelSetting = settings.getSystemKey('loglevel')
 	local logTargetError, logLevelError = nil, nil
-	
+
 	if type(logTargetSetting) == 'string' then
 		local specialTarget = logTargetSetting:match('^<(.*)>$')
 		if specialTarget then
@@ -96,13 +96,13 @@ local function setupLogger()
 			end
 		elseif logTargetSetting:sub(1, 1) == '/' then
 			local f,msg = io.open(logTargetSetting, 'a+')
-			
+
 			if f then logStream = f
 			else logTargetError = msg
 			end
 		end
 	end
-	
+
 	if type(logLevelSetting) == 'string' and logLevelSetting:len() > 0 then
 		local valid = false
 		for idx,lvl in ipairs(log.LEVEL) do
@@ -113,59 +113,59 @@ local function setupLogger()
 		end
 		if not valid then logLevelError = true end
 	end
-	
+
 	log:init(logLevel)
 	log:setStream(logStream)
-	
+
 	local rv = true
 	if logTargetError then
 		log:error("could not open logfile '" .. logTargetSetting .. "', using stderr as fallback (" .. logTargetError .. ")")
 		rv = false
 	end
-	
+
 	if logLevelError then
 		log:error("uci config specifies invalid log level '" .. logLevelSetting .. "', using debug level as fallback")
 		rv = false
 	end
-	
+
 	return rv
 end
 
 local function init(environment)
 	setupLogger()
-	
+
 	local dbgText = ""
 	if confDefaults.DEBUG_API and confDefaults.DEBUG_PCALLS then dbgText = "pcall and api"
 	elseif confDefaults.DEBUG_API then dbgText = "api"
 	elseif confDefaults.DEBUG_PCALL then dbgText = "pcall"
 	end
-	
+
 	if dbgText ~= "" then dbgText = " (" .. dbgText .. " debugging enabled)" end
-	
+
 	log:info("Wifibox CGI handler started" .. dbgText)
-	
+
 	if (environment['REQUEST_METHOD'] == 'POST') then
 		local n = tonumber(environment['CONTENT_LENGTH'])
 		postData = io.read(n)
 	end
-	
+
 	local s, msg
 	s, msg = wifi.init()
 	if not s then return s, msg end
-	
+
 	s, msg = netconf.init(wifi, true)
 	if not s then return s, msg end
-	
+
 	return true
 end
 
  local function main(environment)
 	local rq = RequestClass.new(environment, postData, confDefaults.DEBUG_API)
-	
+
 	if rq:getRequestMethod() == 'CMDLINE' and rq:get('autowifi') ~= nil then
 		log:info("running in autowifi mode")
 		local rv,msg = setupAutoWifiMode()
-		
+
 		if rv then
 			log:info("autowifi setup done (" .. msg .. ")")
 		else
@@ -180,11 +180,19 @@ end
 			log:info("remote IP/port: " .. rq:getRemoteHost() .. "/" .. rq:getRemotePort())
 			log:debug("user agent: " .. rq:getUserAgent())
 		end
-		
+
 		local response, err = rq:handle()
-		
+
+
+    local utils = require('util.utils')
+    local log = require('util.logger')
+    log:info("Main (request handled")
+    log:info("  response.postResponseQueue: "..utils.dump(response.postResponseQueue))
+
 		if err ~= nil then log:error(err) end
 		response:send()
+
+    response:executePostResponseQueue()
 	else
 		log:info("Nothing to do...bye.\n")
 	end
@@ -199,15 +207,15 @@ end
 -- @treturn number A Z+ return value suitable to return from wrapper script. Note that this value is ignored by uhttpd-mod-lua.
 function handle_request(env)
 	local s, msg = init(env)
-	
+
 	if s == false then
 		local resp = ResponseClass.new()
 		local errSuffix = msg and " (" .. msg .. ")" or ""
-		
+
 		resp:setError("initialization failed" .. errSuffix)
 		resp:send()
 		log:error("initialization failed" .. errSuffix) --NOTE: this assumes the logger has been initialized properly, despite init() having failed
-		
+
 		return 1
 	else
 		main(env)

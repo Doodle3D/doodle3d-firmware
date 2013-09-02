@@ -20,14 +20,14 @@ function M.scan(request, response)
 	local withRaw = utils.toboolean(request:get("with_raw"))
 	local sr = wifi.getScanInfo()
 	local si, se
-	
+
 	if sr and #sr > 0 then
 		response:setSuccess("")
 		local netInfoList = {}
 		for _, se in ipairs(sr) do
 			if noFilter or se.mode ~= "ap" and se.ssid ~= wifi.getSubstitutedSsid(settings.get('network.ap.ssid')) then
 				local netInfo = {}
-				
+
 				netInfo["ssid"] = se.ssid
 				netInfo["bssid"] = se.bssid
 				netInfo["channel"] = se.channel
@@ -37,7 +37,7 @@ function M.scan(request, response)
 				netInfo["quality"] = se.quality
 				netInfo["quality_max"] = se.quality_max
 				if withRaw then netInfo["_raw"] = utils.dump(se) end
-				
+
 				table.insert(netInfoList, netInfo)
 			end
 		end
@@ -53,7 +53,7 @@ end
 function M.known(request, response)
 	local noFilter = utils.toboolean(request:get("nofilter"))
 	local withRaw = utils.toboolean(request:get("with_raw"))
-	
+
 	response:setSuccess()
 	local netInfoList = {}
 	for _, net in ipairs(wifi.getConfigs()) do
@@ -75,7 +75,7 @@ end
 function M.status(request, response)
 	local withRaw = utils.toboolean(request:get("with_raw"))
 	local ds = wifi.getDeviceState()
-	
+
 	response:setSuccess()
 	response:addData("ssid", ds.ssid or "")
 	response:addData("bssid", ds.bssid or "")
@@ -92,23 +92,43 @@ end
 
 --requires ssid(string), accepts phrase(string), recreate(bool)
 function M.associate_POST(request, response)
+  local utils = require('util.utils')
+  local log = require('util.logger')
+  log:info("API:Network:associate")
+
 	local argSsid = request:get("ssid")
 	local argPhrase = request:get("phrase")
 	local argRecreate = request:get("recreate")
-	
+
 	if argSsid == nil or argSsid == "" then
 		response:setError("missing ssid argument")
 		return
 	end
 
-	local rv,msg = netconf.associateSsid(argSsid, argPhrase, argRecreate)
-	
-	response:addData("ssid", argSsid)
+  local associate = function()
+  	local rv,msg = netconf.associateSsid(argSsid, argPhrase, argRecreate)
+	end
+  --response:addPostResponseFunction(associate)
+
+  local helloA = function()
+  	local log = require('util.logger')
+    log:info("HELLO A")
+	end
+  response:addPostResponseFunction(helloA)
+
+  local helloB = function()
+  	local log = require('util.logger')
+    log:info("HELLO B")
+	end
+  response:addPostResponseFunction(helloB)
+
+	--[[response:addData("ssid", argSsid)
 	if rv then
 		response:setSuccess("wlan associated")
 	else
 		response:setFail(msg)
-	end
+	end]]--
+  response:setSuccess("wlan is trying to associate")
 end
 
 function M.disassociate_POST(request, response)
@@ -121,7 +141,7 @@ end
 function M.openap_POST(request, response)
 	local ssid = wifi.getSubstitutedSsid(settings.get('network.ap.ssid'))
 	local rv,msg = netconf.setupAccessPoint(ssid)
-	
+
 	response:addData("ssid", ssid)
 	if rv then
 		response:setSuccess("switched to Access Point mode")
@@ -134,12 +154,12 @@ end
 --requires ssid(string)
 function M.remove_POST(request, response)
 	local argSsid = request:get("ssid")
-	
+
 	if argSsid == nil or argSsid == "" then
 		response:setError("missing ssid argument")
 		return
 	end
-	
+
 	if wifi.removeConfig(argSsid) then
 		response:setSuccess("removed wireless network with requested SSID")
 		response:addData("ssid", argSsid)

@@ -19,12 +19,12 @@ local cachedApSsid, baseApSsid = nil, nil
 function M.getSubstitutedSsid(unformattedSsid)
 	if unformattedSsid == baseApSsid and cachedApSsid ~= nil then return cachedApSsid end
 	if not unformattedSsid or type(unformattedSsid) ~= 'string' then return nil end
-	
+
 	local macTail = M.getMacAddress():sub(7)
-	
+
 	baseApSsid = unformattedSsid
 	cachedApSsid = unformattedSsid:gsub('%%%%MAC_ADDR_TAIL%%%%', macTail)
-	
+
 	return cachedApSsid
 end
 
@@ -48,10 +48,10 @@ end
 ]]
 function M.mapEncryptionType(scanEncrTbl)
 	local wpaModeMap = { [1] = 'psk', [2] = 'psk2', [3] = 'mixed-psk' }
-	
+
 	if scanEncrTbl.enabled == false then return 'none' end
 	if scanEncrTbl.wep == true then return 'wep' end
-	
+
 	return wpaModeMap[scanEncrTbl.wpa] or scanEncrTbl.description
 end
 
@@ -66,9 +66,9 @@ function M.init(device)
 		local devInitial = deviceName
 		deviceName = M.DFL_DEVICE_FALLBACK
 		deviceApi = iwinfo.type(deviceName)
-		
+
 		log:info("wireless device '" .. devInitial .. "' not found, trying fallback '" .. deviceName .. "'")
-		
+
 		if not deviceApi then
 			return false, "No such wireless device: '" .. devInitial .. "' (and fallback '" .. deviceName .. "' does not exist either)"
 		end
@@ -101,15 +101,15 @@ end
 function M.getMacAddress()
 	local macText = utils.readFile('/sys/class/net/' .. deviceName .. '/address')
 	local out = ''
-	
+
 	-- Hack to prevent failure in case the MAC address could not be obtained.
 	if not macText or macText == '' then return "000000000000" end
-	
+
 	for i = 0, 5 do
 		local bt = string.sub(macText, i*3+1, i*3+2)
 		out = out .. bt
 	end
-	
+
 	return out:upper()
 end
 
@@ -121,6 +121,7 @@ end
 -- @param ssid	return data for given SSID or for all networks if SSID not given
 -- @return data for all or requested network; false+error on failure or nil when requested network not found
 function M.getScanInfo(ssid)
+
 	local iw = iwinfo[deviceApi]
 	local sr = iw.scanlist(deviceName)
 	local si, se
@@ -167,11 +168,35 @@ end
 --- Activate wireless section for given SSID and disable all others
 -- @param ssid	SSID of config to enable, or nil to disable all network configs
 function M.activateConfig(ssid)
-	uci:foreach('wireless', 'wifi-iface', function(s)
+
+  --local utils = require('util.utils')
+  --local log = require('util.logger')
+  --log:info("wlanconfig:activateConfig: "..utils.dump(ssid))
+
+  -- make sure only one is enabled
+  uci:foreach('wireless', 'wifi-iface', function(s)
 		local disabled = s.ssid ~= ssid and '1' or '0'
+    --log:info("    "..utils.dump(s.ssid).." disable: "..utils.dump(disabled))
 		uci:set('wireless', s['.name'], 'disabled', disabled)
 	end)
+
 	uci:commit('wireless')
+
+  -- make sure the wifi-device radio0 is on top
+  uci:reorder('wireless', 'radio0', 0)
+
+	uci:commit('wireless')
+
+  -- put it on top of the wireless configuration so it's the first option when the devices starts
+  uci:foreach('wireless', 'wifi-iface', function(s)
+		if s.ssid == ssid then
+      uci:reorder('wireless', s['.name'], 1)
+			return false
+		end
+	end)
+
+	uci:commit('wireless')
+
 end
 
 --- Create a new UCI network from the given iwinfo data
@@ -193,7 +218,7 @@ function M.createConfigFromScanInfo(info, passphrase, disabled)
 	}
 	if passphrase ~= nil then apconfig.key = passphrase end
 	apconfig.disabled = disabled ~= nil and disabled and 1 or 0
-	
+
 	uci:foreach('wireless', 'wifi-iface', function(s)
 		if s.bssid == info.bssid then
 			log:debug("removing old wireless config for net '" .. s.ssid .. "(bssid: " .. s.bssid .. ")'")
@@ -201,7 +226,7 @@ function M.createConfigFromScanInfo(info, passphrase, disabled)
 --			return false --keep looking, just in case multiple entries with this bssid exist
 		end
 	end)
-	
+
 	local sname = uci:add('wireless', 'wifi-iface');
 	for k, v in pairs(apconfig) do
 		uci:set('wireless', sname, k, v)

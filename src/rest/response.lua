@@ -80,17 +80,13 @@ function M:addData(k, v)
 end
 
 function M:addPostResponseFunction(fn)
-  local utils = require('util.utils')
-  local log = require('util.logger')
-  log:info("Response:addPostResponseFunction: " .. utils.dump(fn))
   table.insert(self.postResponseQueue, fn)
-  log:info("  self.postResponseQueue: " .. utils.dump(self.postResponseQueue))
 end
 
 function M:executePostResponseQueue()
-  local utils = require('util.utils')
-  local log = require('util.logger')
-  log:info("Response:executePostResponseQueue: " .. utils.dump(self.postResponseQueue))
+  --local utils = require('util.utils')
+  --local log = require('util.logger')
+  --log:info("Response:executePostResponseQueue: " .. utils.dump(self.postResponseQueue))
 
   for i,fn in ipairs(self.postResponseQueue) do fn() end
 end

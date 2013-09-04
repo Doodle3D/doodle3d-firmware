@@ -34,6 +34,7 @@ local function bothBits(dlist, itemname) dlist[itemname] = 'b' end
 function M.init(wifiInstance, reloadSilent)
 	wifi = wifiInstance
 	silent = reloadSilent or false
+
 	return true
 end
 
@@ -289,7 +290,8 @@ function M.associateSsid(ssid, passphrase, recreate)
 	-- try to associate with the network
 	wifi.activateConfig(ssid)
 	--M.switchConfiguration{ wifiiface="add", apnet="rm", staticaddr="rm", dhcppool="rm", wwwredir="rm", dnsredir="rm", wwwcaptive="rm", wireless="reload" }
-	M.switchConfiguration{ wifiiface="add", apnet="rm", staticaddr="rm", dhcppool="rm", wwwredir="rm", dnsredir="rm", wireless="reload" }
+	--M.switchConfiguration{ wifiiface="add", apnet="rm", staticaddr="rm", dhcppool="rm", wwwredir="rm", dnsredir="rm", wireless="reload" }
+  M.switchConfiguration{ wifiiface="add", staticaddr="rm", dhcppool="rm", wwwredir="rm", dnsredir="rm", wireless="reload" }
 
 	-- check if we are actually associated
   local status = wifi.getDeviceState()

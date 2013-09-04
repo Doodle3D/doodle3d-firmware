@@ -53,6 +53,7 @@ local function setupAutoWifiMode()
 	-- try to find a known network which is also visible (ordered by known network definitions)
 	local connectWith = nil
 	for _,kn in ipairs(knownSsids) do
+    if kn.mode == 'ap' and kn.ssid == apSsid then break end
 		if findSsidInList(scanList, kn.ssid) then
 			connectWith = kn.ssid
 			break

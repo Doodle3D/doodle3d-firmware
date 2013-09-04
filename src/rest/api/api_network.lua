@@ -110,7 +110,7 @@ function M.associate_POST(request, response)
 	end
   response:addPostResponseFunction(associate)
 
-  local helloA = function()
+  --[[local helloA = function()
   	local log = require('util.logger')
     log:info("HELLO A")
 	end
@@ -120,7 +120,7 @@ function M.associate_POST(request, response)
   	local log = require('util.logger')
     log:info("HELLO B")
 	end
-  response:addPostResponseFunction(helloB)
+  response:addPostResponseFunction(helloB)]]--
 
 	--[[response:addData("ssid", argSsid)
 	if rv then

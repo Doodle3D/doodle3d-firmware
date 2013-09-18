@@ -29,9 +29,9 @@ M.API_INCLUDE_ENDPOINT_INFO = false
 M.API_BASE_URL_PATH = 'doodle3d.com' -- includes any base path if necessary (e.g. 'localhost/~user')
 
 M.network_ap_ssid = {
-	default = 'd3d-ap-%%MAC_ADDR_TAIL%%',
+	default = 'Doodle3D-%%MAC_ADDR_TAIL%%',
 	type = 'string',
-	description = 'Access Point mode SSID',
+	description = 'Access Point mode SSID (name)',
 	min = 1,
 	max = 32
 }
@@ -158,7 +158,7 @@ M.printer_retraction_amount = {
 }
 
 M.printer_enableTraveling = {
-	default = true,
+	default = false,
 	type = 'bool',
 	description = ''
 }
@@ -170,7 +170,7 @@ M.printer_autoWarmUpCommand = {
 }
 
 M.printer_startgcode = {
-	default = ';Generated with Doodle3D\nG21 ;metric values\nG91 ;relative positioning\nM107 ;start with the fan off\nG28 X0 Y0 ;move X/Y to min endstops\nG28 Z0 ;move Z to min endstops\nG1 Z15 F9000 ;move the platform down 15mm\nG92 E0 ;zero the extruded length\nG1 F200 E10 ;extrude 10mm of feed stock\nG92 E0 ;zero the extruded length again\nG92 X-100 Y-100 E0 ;zero the extruded length again and make center the start position\nG1 F9000\nG90 ;absolute positioning\nM117 Printing Doodle...   ;display message (20 characters to clear whole screen)',
+	default = ';Generated with Doodle3D\nG21 ;metric values\nG91 ;relative positioning\nM107 ;start with the fan off\nG28 X0 Y0 ;move X/Y to min endstops\nG28 Z0 ;move Z to min endstops\nG1 Z15 F9000 ;move the platform down 15mm\nG92 E0 ;zero the extruded length\nG1 F200 E10 ;extrude 10mm of feed stock\nG92 E0 ;zero the extruded length again\nG92 E0 ;zero the extruded length again\nG1 F9000\nG90 ;absolute positioning\nM117 Printing Doodle...   ;display message (20 characters to clear whole screen)',
 	type = 'string',
 	description = ''
 }

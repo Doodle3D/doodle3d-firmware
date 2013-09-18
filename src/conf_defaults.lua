@@ -157,6 +157,12 @@ M.printer_retraction_amount = {
 	min = 0
 }
 
+M.printer_enableTraveling = {
+	default = true,
+	type = 'bool',
+	description = ''
+}
+
 M.printer_autoWarmUpCommand = {
 	default = 'M104 S180',
 	type = 'string',
@@ -170,16 +176,22 @@ M.printer_startgcode = {
 }
 
 M.printer_endgcode = {
-	default = 'M107 ;fan off\nG91 ;relative positioning\nG1 E-1 F300 ;retract the filament a bit before lifting the nozzle, to release some of the pressure\nG1 Z+0.5 E-5 X-20 Y-20 F9000 ;move Z up a bit and retract filament even more\nG28 X0 Y0 ;move X/Y to min endstops, so the head is out of the way\nM84 ;disable axes / steppers\nG90 ;absolute positioning\nM117 Done                 ;display message (20 characters to clear whole screen)',
+	default = 'M107 ;fan off\nG91 ;relative positioning\nG1 E-1 F300 ;retract the filament a bit before lifting the nozzle, to release some of the pressure\nG1 Z+0.5 E-5 X-20 Y-20 F9000 ;move Z up a bit and retract filament even more\nG28 X0 Y0 ;move X/Y to min endstops, so the head is out of the way\nM84 ;disable axes / steppers\nG90 ;absolute positioning\nM104 S180\nM117 Done                 ;display message (20 characters to clear whole screen)',
 	type = 'string',
 	description = ''
 }
 
-M.doodle3d_objectHeight = {
-	default = 20,
+M.printer_maxObjectHeight = {
+	default = 150,
 	type = 'int',
 	description = 'Maximum height that will be printed',
 	min = 0
+}
+
+M.printer_screenToMillimeterScale = {
+	default = 0.3,
+	type = 'float',
+	description = '',
 }
 
 M.doodle3d_simplify_minDistance = {

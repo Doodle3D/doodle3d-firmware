@@ -16,8 +16,6 @@ local COMMAND_FILE = 'command.in'
 local GCODE_TMP_FILE = 'combined.gc'
 
 
-
---NEW
 --returns a printer instance or nil (and sets error state on response in the latter case)
 local function createPrinterOrFail(deviceId, response)
 	local msg,printer = nil, nil
@@ -37,110 +35,6 @@ local function createPrinterOrFail(deviceId, response)
 	return printer
 end
 
-
--- returns printerId,devicePath,ultifiPath or nil if printer does not exist
--- when nil is returned, response has already been set as an error
-local function getPrinterDataOrFail(request, response)
-	local id = tonumber(request:get("id"))
-
-	if id == nil then
-		response:setError("missing id argument")
-		return nil
-	end
-
-	local devpath,ultipath = printerExists(id)
-
-	if not devpath then
-		response:setError("printer does not exist")
-		response:addData('id', id)
-		return nil
-	end
-
-	return id,devpath,ultipath
-end
-
-
-
--- returns full path + ultifi path or nil
-local function printerExists(id)
-	if id == nil then return nil end
-
-	local path = '/dev/ttyACM' .. id
-	local upath = ULTIFI_BASE_PATH .. '/ttyACM' .. id
-	if utils.exists(path) then return path,upath end
-
-	path = '/dev/ttyUSB' .. id
-	upath = ULTIFI_BASE_PATH .. '/ttyUSB' .. id
-	if utils.exists(path) then return path,upath end
-
-	return nil
-end
-
--- assumes printerPath exists, returns true if successful, false if command file already exists and is non-empty (i.e. printer busy),
--- nil+err if file could not be opened
-local function sendGcode(printerPath, gcode)
-	local cmdPath = printerPath .. '/' .. COMMAND_FILE
-	local f,msg = io.open(cmdPath, 'a+') -- 'a+' is important, do not overwrite current contents in any case
-
-	if not f then return nil,msg end
-	if utils.fileSize(f) > 0 then return false end
-
-	log:debug("sending " .. gcode:len() .. " bytes of gcode")
-	f:write(gcode)
-	f:close()
-
-	return true
-end
-
-local function addToGcodeFile(printerPath, gcode)
-	if not gcode or type(gcode) ~= 'string' then return nil,"missing gcode data" end
-
-	local gtFile = printerPath .. '/' .. GCODE_TMP_FILE
-
-	local gcf,msg = io.open(gtFile, 'a+')
-	if not gcf then return nil,msg end
-
-	log:debug("appending " .. gcode:len() .. " bytes of gcode to " .. gtFile)
-	gcf:write(gcode)
-	gcf:write("\n")
-	gcf:close()
-
-	return true
-end
-
--- assumes printerPath exists, returns true if successful, false if command file already exists and is non-empty (i.e. printer busy),
--- nil+err if file could not be opened
-local function printGcodeFile(printerPath)
-	local gtFile = printerPath .. '/' .. GCODE_TMP_FILE
-	local cmdPath = printerPath .. '/' .. COMMAND_FILE
-	local cmdf,msg = io.open(cmdPath, 'a+') -- 'a+' is important, do not overwrite current contents in any case
-
-	if not cmdf then return nil,msg end
-	if utils.fileSize(cmdf) > 0 then return false end
-
-	log:debug("starting print of gcode in " .. gtFile)
-	cmdf:write('(SENDFILE=' .. gtFile)
-	cmdf:close()
-
-	return true
-end
-
---UNTESTED
--- assumes printerPath exists, returns true if successful, false if command file already exists and is non-empty (i.e. printer busy),
--- nil+err if file could not be opened
-local function stopGcodeFile(printerPath)
-	local cmdPath = printerPath .. '/' .. COMMAND_FILE
-	local cmdf,msg = io.open(cmdPath, 'a+') -- 'a+' is important, do not overwrite current contents in any case
-
-	if not cmdf then return nil,msg end
-	if utils.fileSize(cmdf) > 0 then return false end
-
-	log:debug("stopping print of gcode")
-	cmdf:write('(CANCELFILE')
-	cmdf:close()
-
-	return true
-end
 
 local function isBusy(printerPath)
 	local cmdPath = printerPath .. '/' .. COMMAND_FILE
@@ -162,6 +56,9 @@ function M._global(request, response)
 	response:setSuccess()
 end
 
+-- TODO: reimplement the following fields
+--	if withRaw then response:addData('raw', tempText) end
+--	response:addData('last_mod', printer:getLastTemperatureUpdate())
 --requires id(int)
 --accepts with_raw(bool) to include raw printer response (currently not implemented)
 function M.temperature(request, response)
@@ -169,108 +66,83 @@ function M.temperature(request, response)
 	local printer,msg = createPrinterOrFail(argId, response)
 	if not printer then return end
 
-	response:setSuccess()
-	response:addData('id', argId)
-	response:addData('hotend', printer:getTemperature())
+	local temperatures,msg = printer:getTemperatures()
 
--- TODO: reimplement the following fields
---	if withRaw then response:addData('raw', tempText) end
---	response:addData('bed', printer:getBedTemperature())
---	response:addData('hotend_target', printer:getHotendTargetTemperature())
---	response:addData('bed_target', printer:getBedTargetTemperature())
---	response:addData('last_mod', printer:getLastTemperatureUpdate())
+	response:addData('id', argId)
+	if temperatures then
+		response:setSuccess()
+		response:addData('hotend', temperatures.hotend)
+		response:addData('hotend_target', temperatures.hotend_target)
+		response:addData('bed', temperatures.bed)
+		response:addData('bed_target', temperatures.bed_target)
+	else
+		response:setError(msg)
+	end
 end
 
+-- TODO: reimplement last_mod field
 --requires id(int)
 function M.progress(request, response)
-	local argId,devpath,ultipath = getPrinterDataOrFail(request, response)
-	if argId == nil then return end
+	local argId = request:get("id")
+	local printer,msg = createPrinterOrFail(argId, response)
+	if not printer then return end
 
-	local f = io.open(ultipath .. '/' .. PROGRESS_FILE)
+	-- NOTE: despite their names, `currentLine` is still the error indicator and `numLines` the message in such case.
+	local currentLine,numLines = printer:getProgress()
 
-	if not f then
-		response:setError("could not open progress file")
-		response:addData('id', argId)
-		return
-	end
-
-	local tempText = f:read('*all')
-	f:close()
-
-	local currentLine,numLines = tempText:match('(%d+)/(%d+)')
-
-	response:setSuccess()
-
-	if(currentLine == nil) then
-		response:addData('printing', false)
-	else
-		response:addData('printing', true)
+	response:addData('id', argId)
+	if currentLine then
+		response:setSuccess()
 		response:addData('current_line', currentLine)
 		response:addData('num_lines', numLines)
+	else
+		response:setError(numLines)
 	end
-
-	-- get last modified time
-	local file_attr = lfs.attributes(ultipath .. '/' .. PROGRESS_FILE)
-	local last_mod = file_attr.modification
-	local last_mod = os.difftime (os.time(),last_mod)
-	response:addData('last_mod', last_mod)
-
 end
 
 --requires id(int)
 function M.busy(request, response)
-	local argId,devpath,ultipath = getPrinterDataOrFail(request, response)
-	if argId == nil then return end
+	response:setError("not implemented") -- TODO: reimplement
+	return
 
-	local b,msg = isBusy(ultipath)
-
-	if b == nil then
-		response:setError("could not determine printer state")
-		response:addData('msg', msg)
-	else
-		response:setSuccess()
-		response:addData('busy', b)
-	end
-end
-
-
-function M.printing(request, response)
-	response:setError("not implemented")
-	response:addData('api_refer', response:apiURL('printer', 'busy'))
+--	local b,msg = isBusy(ultipath)
+--
+--	if b == nil then
+--		response:setError("could not determine printer state")
+--		response:addData('msg', msg)
+--	else
+--		response:setSuccess()
+--		response:addData('busy', b)
+--	end
 end
 
 --requires id(int)
 function M.heatup_POST(request, response)
-	local argId,devpath,ultipath = getPrinterDataOrFail(request, response)
-	if argId == nil then return end
+	local argId = request:get("id")
+	local printer,msg = createPrinterOrFail(argId, response)
+	if not printer then return end
 
-	local gcode = settings.get('printer.autoWarmUpCommand') .. "\n"
-	local rv,msg = sendGcode(ultipath, gcode)
+	local temperature = settings.get('printer.heatupTemperature')
+	local rv,msg = printer:heatup(temperature)
 
-	if rv then
-		response:setSuccess()
-	elseif rv == false then
-		response:setFail("printer is busy")
-	else
-		response:setError("could not send gcode")
-		response:addData('msg', msg)
+	response:addData('id', argId)
+	if rv then response:setSuccess()
+	else response:setFail(msg)
 	end
 end
 
 --requires id(int)
 function M.stop_POST(request, response)
-	local argId,devpath,ultipath = getPrinterDataOrFail(request, response)
-	if argId == nil then return end
+	local argId = request:get("id")
+	local printer,msg = createPrinterOrFail(argId, response)
+	if not printer then return end
 
-	rv,msg = stopGcodeFile(ultipath)
+	local endGcode = settings.get('printer.endgcode')
+	local rv,msg = printer:stopPrint(endGcode)
 
-	if rv then
-		response:setSuccess()
-	elseif rv == false then
-		response:setFail("printer is busy")
-	else
-		response:setError("could not send gcode")
-		response:addData('msg', msg)
+	response:addData('id', argId)
+	if rv then response:setSuccess()
+	else response:setError(msg)
 	end
 end
 
@@ -278,14 +150,15 @@ end
 --accepts: first(bool) (chunks will be concatenated but output file will be cleared first if this argument is true)
 --accepts: last(bool) (chunks will be concatenated and only when this argument is true will printing be started)
 function M.print_POST(request, response)
-	local argId,devpath,ultipath = getPrinterDataOrFail(request, response)
-	if argId == nil then return end
-
-	local gtFile = ultipath .. '/' .. GCODE_TMP_FILE
-
+	local argId = request:get("id")
 	local argGcode = request:get("gcode")
 	local argIsFirst = utils.toboolean(request:get("first"))
 	local argIsLast = utils.toboolean(request:get("last"))
+
+	local printer,msg = createPrinterOrFail(argId, response)
+	if not printer then return end
+
+	response:addData('id', argId)
 
 	if argGcode == nil or argGcode == '' then
 		response:setError("missing gcode argument")
@@ -293,31 +166,35 @@ function M.print_POST(request, response)
 	end
 
 	if argIsFirst == true then
-		log:debug("clearing all gcode in " .. gtFile)
+		log:debug("clearing all gcode for " .. printer)
 		response:addData('gcode_clear',true)
-		os.remove(gtFile)
+		local rv,msg = printer:clearGcode()
+
+		if not rv then
+			response:setError(msg)
+			return
+		end
 	end
 
 	local rv,msg
 
-	rv,msg = addToGcodeFile(ultipath, argGcode)
-	if rv == nil then
+	-- TODO: return errors with a separate argument like here in the rest of the code (this is how we designed the API right?)
+	rv,msg = printer:appendGcode(argGcode)
+	if rv then
+		--NOTE: this does not report the number of lines, but only the block which has just been added
+		response:addData('gcode_append',argGcode:len())
+	else
 		response:setError("could not add gcode")
 		response:addData('msg', msg)
 		return
-	else
-		--NOTE: this does not report the number of lines, but only the block which has just been added
-		response:addData('gcode_append',argGcode:len())
 	end
 
 	if argIsLast == true then
-		rv,msg = printGcodeFile(ultipath)
+		rv,msg = printer:startPrint()
 
 		if rv then
 			response:setSuccess()
 			response:addData('gcode_print',true)
-		elseif rv == false then
-			response:setFail("printer is busy")
 		else
 			response:setError("could not send gcode")
 			response:addData('msg', msg)

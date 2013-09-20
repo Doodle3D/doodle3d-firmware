@@ -16,6 +16,7 @@ fi
 if [ ! -d $PKG_DEST_DIR ]; then mkdir $PKG_DEST_DIR; fi
 cp $PKG_SRC_DIR/wifibox*.ipk $PKG_DEST_DIR
 cp $PKG_SRC_DIR/ultifi*.ipk $PKG_DEST_DIR
+cp $PKG_SRC_DIR/print3d*.ipk $PKG_DEST_DIR
 cd $PKG_DEST_DIR
 rm -f $INDEX_FILE
 rm -f $INDEX_GZ_FILE

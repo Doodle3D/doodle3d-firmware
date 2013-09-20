@@ -36,31 +36,12 @@ local function createPrinterOrFail(deviceId, response)
 end
 
 
-local function isBusy(printerPath)
-	local cmdPath = printerPath .. '/' .. COMMAND_FILE
-
-	if not utils.exists(cmdPath) then return false end
-
-	local f,msg = io.open(cmdPath, 'r')
-
-	if not f then return nil,msg end
-	local size = utils.fileSize(f)
-	f:close()
-
-	return size > 0
-end
-
-
 function M._global(request, response)
 	-- TODO: list all printers (based on /dev/ttyACM* and /dev/ttyUSB*)
 	response:setSuccess()
 end
 
--- TODO: reimplement the following fields
---	if withRaw then response:addData('raw', tempText) end
---	response:addData('last_mod', printer:getLastTemperatureUpdate())
---requires id(int)
---accepts with_raw(bool) to include raw printer response (currently not implemented)
+--requires id(string)
 function M.temperature(request, response)
 	local argId = request:get("id")
 	local printer,msg = createPrinterOrFail(argId, response)
@@ -80,8 +61,7 @@ function M.temperature(request, response)
 	end
 end
 
--- TODO: reimplement last_mod field
---requires id(int)
+--requires id(string)
 function M.progress(request, response)
 	local argId = request:get("id")
 	local printer,msg = createPrinterOrFail(argId, response)
@@ -100,23 +80,42 @@ function M.progress(request, response)
 	end
 end
 
---requires id(int)
+--TODO: remove busy function (client should use state function)
+--requires id(string)
 function M.busy(request, response)
-	response:setError("not implemented") -- TODO: reimplement
-	return
+	local argId = request:get("id")
+	local printer,msg = createPrinterOrFail(argId, response)
+	if not printer then return end
 
---	local b,msg = isBusy(ultipath)
---
---	if b == nil then
---		response:setError("could not determine printer state")
---		response:addData('msg', msg)
---	else
---		response:setSuccess()
---		response:addData('busy', b)
---	end
+	local rv,msg = printer:getState()
+
+	response:addData('id', argId)
+	if rv then
+		response:setSuccess()
+		response:addData('busy', (rv ~= 'idle'))
+	else
+		response:setError(msg)
+	end
 end
 
---requires id(int)
+--requires id(string)
+function M.state(request, response)
+	local argId = request:get("id")
+	local printer,msg = createPrinterOrFail(argId, response)
+	if not printer then return end
+
+	local rv,msg = printer:getState()
+
+	response:addData('id', argId)
+	if rv then
+		response:setSuccess()
+		response:addData('state', rv)
+	else
+		response:setError(msg)
+	end
+end
+
+--requires id(string)
 function M.heatup_POST(request, response)
 	local argId = request:get("id")
 	local printer,msg = createPrinterOrFail(argId, response)
@@ -131,7 +130,7 @@ function M.heatup_POST(request, response)
 	end
 end
 
---requires id(int)
+--requires id(string)
 function M.stop_POST(request, response)
 	local argId = request:get("id")
 	local printer,msg = createPrinterOrFail(argId, response)
@@ -146,7 +145,7 @@ function M.stop_POST(request, response)
 	end
 end
 
---requires id(int), gcode(string)
+--requires id(string), gcode(string)
 --accepts: first(bool) (chunks will be concatenated but output file will be cleared first if this argument is true)
 --accepts: last(bool) (chunks will be concatenated and only when this argument is true will printing be started)
 function M.print_POST(request, response)

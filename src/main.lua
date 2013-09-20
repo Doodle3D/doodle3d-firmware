@@ -160,7 +160,7 @@ local function init(environment)
 	return true
 end
 
- local function main(environment)
+local function main(environment)
 	local rq = RequestClass.new(environment, postData, confDefaults.DEBUG_API)
 
 	if rq:getRequestMethod() == 'CMDLINE' and rq:get('autowifi') ~= nil then

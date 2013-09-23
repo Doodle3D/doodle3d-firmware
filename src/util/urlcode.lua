@@ -104,11 +104,12 @@ function _M.parsequeryNoRegex (query, args)
 			local v = query:find('=', k+1, true) -- look for '=', assuming a key of at least 1 character and do not perform pattern matching
 			if not v then break end -- no k/v pairs left
 
+			local key = query:sub(k, v-1)
 			v = v + 1
 			local ampersand = query:find('&', v, true)
 			if not ampersand then ampersand = 0 end -- 0 will become -1 in the substring call below...meaning end of string
 
-			local key = query:sub(k, v-1)
+			
 			local value = query:sub(v, ampersand - 1)
 			insertfield (args, unescape(key), unescape(value))
 

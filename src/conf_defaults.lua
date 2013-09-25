@@ -9,7 +9,7 @@
 	- type: used for basic type checking, one of bool, int, float or string
 	- description: A descriptive text usable by API clients
 	- min, max, regex: optional constraints (min and max constrain value for numbers, or length for strings)
-
+	
 	NOTE that the all-caps definitions will be changed into configuration keys, or moved to a different location
 ]]--
 local printer = require('util.printer')
@@ -29,9 +29,9 @@ M.API_INCLUDE_ENDPOINT_INFO = false
 M.API_BASE_URL_PATH = 'doodle3d.com' -- includes any base path if necessary (e.g. 'localhost/~user')
 
 M.network_ap_ssid = {
-	default = 'd3d-ap-%%MAC_ADDR_TAIL%%',
+	default = 'Doodle3D-%%MAC_ADDR_TAIL%%',
 	type = 'string',
-	description = 'Access Point mode SSID',
+	description = 'Access Point mode SSID (name)',
 	min = 1,
 	max = 32
 }
@@ -54,9 +54,9 @@ M.printer_type = {
 	default = 'ultimaker',
 	type = 'string',
 	description = '',
-	isValid = function(value)
+	isValid = function(value) 
 		local printers = printer.supportedPrinters()
-		return printers[value] ~= nil
+		return printers[value] ~= nil 
 	end
 }
 
@@ -64,9 +64,9 @@ M.printer_baudrate = {
 	default = '115200',
 	type = 'int',
 	description = '',
-	isValid = function(value)
+	isValid = function(value) 
 		local baudrates = printer.supportedBaudRates()
-		return baudrates[tostring(value)] ~= nil
+		return baudrates[tostring(value)] ~= nil 
 	end
 }
 
@@ -124,10 +124,10 @@ M.printer_firstLayerSlow = {
 	description = 'Print the first layer slowly to get a more stable start'
 }
 
-M.printer_autoWarmUp = {
-	default = true,
-	type = 'bool',
-	description = '',
+M.printer_heatupTemperature = {
+	default = 180,
+	type = 'int',
+	description = ''
 }
 
 M.printer_retraction_enabled = {
@@ -157,29 +157,41 @@ M.printer_retraction_amount = {
 	min = 0
 }
 
-M.printer_heatupTemperature = {
-	default = 180,
-	type = 'int',
+M.printer_enableTraveling = {
+	default = false,
+	type = 'bool',
+	description = ''
+}
+
+M.printer_autoWarmUpCommand = {
+	default = 'M104 S180',
+	type = 'string',
 	description = ''
 }
 
 M.printer_startgcode = {
-	default = ';Generated with Doodle3D\nG21 ;metric values\nG91 ;relative positioning\nM107 ;start with the fan off\nG28 X0 Y0 ;move X/Y to min endstops\nG28 Z0 ;move Z to min endstops\nG1 Z15 F9000 ;move the platform down 15mm\nG92 E0 ;zero the extruded length\nG1 F200 E10 ;extrude 10mm of feed stock\nG92 E0 ;zero the extruded length again\nG92 X-100 Y-100 E0 ;zero the extruded length again and make center the start position\nG1 F9000\nG90 ;absolute positioning\nM117 Printing Doodle...   ;display message (20 characters to clear whole screen)',
+	default = ';Generated with Doodle3D\nG21 ;metric values\nG91 ;relative positioning\nM107 ;start with the fan off\nG28 X0 Y0 ;move X/Y to min endstops\nG28 Z0 ;move Z to min endstops\nG1 Z15 F9000 ;move the platform down 15mm\nG92 E0 ;zero the extruded length\nG1 F200 E10 ;extrude 10mm of feed stock\nG92 E0 ;zero the extruded length again\nG92 E0 ;zero the extruded length again\nG1 F9000\nG90 ;absolute positioning\nM117 Printing Doodle...   ;display message (20 characters to clear whole screen)',
 	type = 'string',
 	description = ''
 }
 
 M.printer_endgcode = {
-	default = 'M107 ;fan off\nG91 ;relative positioning\nG1 E-1 F300 ;retract the filament a bit before lifting the nozzle, to release some of the pressure\nG1 Z+0.5 E-5 X-20 Y-20 F9000 ;move Z up a bit and retract filament even more\nG28 X0 Y0 ;move X/Y to min endstops, so the head is out of the way\nM84 ;disable axes / steppers\nG90 ;absolute positioning\nM117 Done                 ;display message (20 characters to clear whole screen)',
+	default = 'M107 ;fan off\nG91 ;relative positioning\nG1 E-1 F300 ;retract the filament a bit before lifting the nozzle, to release some of the pressure\nG1 Z+0.5 E-5 X-20 Y-20 F9000 ;move Z up a bit and retract filament even more\nG28 X0 Y0 ;move X/Y to min endstops, so the head is out of the way\nM84 ;disable axes / steppers\nG90 ;absolute positioning\nM104 S180\nM117 Done                 ;display message (20 characters to clear whole screen)',
 	type = 'string',
 	description = ''
 }
 
-M.doodle3d_objectHeight = {
-	default = 20,
+M.printer_maxObjectHeight = {
+	default = 150,
 	type = 'int',
 	description = 'Maximum height that will be printed',
 	min = 0
+}
+
+M.printer_screenToMillimeterScale = {
+	default = 0.3,
+	type = 'float',
+	description = '',
 }
 
 M.doodle3d_simplify_minDistance = {

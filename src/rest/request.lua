@@ -23,7 +23,7 @@ M.resolutionError = nil --non-nil means function could not be resolved
 local function kvTableFromUrlEncodedString(encodedText)
 	local args = {}
 	if (encodedText ~= nil) then
-		urlcode.parsequery(encodedText, args)
+		urlcode.parsequeryNoRegex(encodedText, args)
 	end
 	return args
 
@@ -31,9 +31,9 @@ end
 
 local function kvTableFromArray(argArray)
 	local args = {}
-	
+
 	if not argArray then return args end
-	
+
 	for _, v in ipairs(argArray) do
 		local split = v:find("=")
 		if split ~= nil then
@@ -42,7 +42,7 @@ local function kvTableFromArray(argArray)
 			args[v] = true
 		end
 	end
-	
+
 	return args
 end
 
@@ -65,18 +65,18 @@ end
 local function resolveApiModule(modname)
 	if modname == nil then return nil, "missing module name" end
 	if string.find(modname, '_') == 1 then return nil, "module names starting with '_' are preserved for internal use" end
-	
+
 	local reqModName = 'rest.api.api_' .. modname
 	local ok, modObj
-	
+
 	if confDefaults.DEBUG_PCALLS then ok, modObj = true, require(reqModName)
 	else ok, modObj = pcall(require, reqModName)
 	end
-	
+
 	if ok == false then return nil, "API module does not exist" end
 	if modObj == nil then return nil, "API module could not be found" end
 	if modObj.isApi ~= true then return nil, "module is not part of the CGI API" end
-	
+
 	return modObj
 end
 
@@ -95,43 +95,43 @@ end
 -- @see resolveApiModule
 local function resolveApiFunction(modname, funcname, requestMethod)
 	local resultData = {}
-	
+
 	if funcname and string.find(funcname, "_") == 1 then return nil, "function names starting with '_' are preserved for internal use" end
-	
+
 	local mod, msg = resolveApiModule(modname)
-	
+
 	if mod == nil then
 		-- error is indicated by leaving out 'func' key and adding 'notfound'=true
 		resultData.notfound = true
 		resultData.msg = msg
 		return resultData
 	end
-	
+
 	if (funcname == nil or funcname == '') then funcname = GLOBAL_API_FUNCTION_NAME end --treat empty function name as nil
 	local rqType = requestMethod == 'POST' and 'POST' or 'GET'
 	local fGeneric = mod[funcname]
 	local fWithMethod = mod[funcname .. '_' .. rqType]
 	local funcNumber = tonumber(funcname)
-	
+
 	if (type(fWithMethod) == 'function') then
 		resultData.func = fWithMethod
 		resultData.accessType = rqType
-		
+
 	elseif (type(fGeneric) == 'function') then
 		resultData.func = fGeneric
 		resultData.accessType = 'ANY'
-		
+
 	elseif funcNumber ~= nil then
 		resultData.func = mod[GLOBAL_API_FUNCTION_NAME .. '_' .. rqType]
 		resultData.accessType = rqType
-		
+
 		if not resultData.func then
 			resultData.func = mod[GLOBAL_API_FUNCTION_NAME]
 			resultData.accessType = 'ANY'
 		end
-		
+
 		resultData.blankArg = funcNumber
-		
+
 	else
 		local otherRqType = rqType == 'POST' and 'GET' or 'POST'
 		local fWithOtherMethod = mod[funcname .. '_' .. otherRqType]
@@ -143,7 +143,7 @@ local function resolveApiFunction(modname, funcname, requestMethod)
 			resultData.notfound = true
 		end
 	end
-	
+
 	return resultData
 end
 
@@ -158,7 +158,7 @@ setmetatable(M, {
 --NOTE: if debugging is enabled, commandline arguments 'm' and 'f' override requested module and function
 function M.new(environment, postData, debugEnabled)
 	local self = setmetatable({}, M)
-	
+
 	--NOTE: is it correct to assume that absence of REQUEST_METHOD indicates command line invocation?
 	self.requestMethod = environment['REQUEST_METHOD']
 	if type(self.requestMethod) == 'string' and self.requestMethod:len() > 0 then
@@ -168,16 +168,16 @@ function M.new(environment, postData, debugEnabled)
 	else
 		self.requestMethod = 'CMDLINE'
 	end
-	
+
 	self.cmdLineArgs = kvTableFromArray(arg)
 	self.getArgs = kvTableFromUrlEncodedString(environment['QUERY_STRING'])
 	self.postArgs = kvTableFromUrlEncodedString(postData)
 	self.pathArgs = arrayFromPath(environment['PATH_INFO'])
-	
+
 	-- override path arguments with command line parameter and allow to emulate GET/POST if debugging is enabled *and* if the autowifi special command wasn't mentioned
 	if debugEnabled and self.requestMethod == 'CMDLINE' and self:get('autowifi') == nil then
 		self.pathArgs = arrayFromPath(self.cmdLineArgs['p'])
-		
+
 		if self.cmdLineArgs['r'] == 'GET' or self.cmdLineArgs['r'] == nil then
 			self.requestMethod = 'GET'
 			self.getArgs = self.cmdLineArgs
@@ -189,19 +189,19 @@ function M.new(environment, postData, debugEnabled)
 		end
 	end
 	table.remove(self.pathArgs, 1) --drop the first 'empty' field caused by the opening slash of the query string
-	
-	
+
+
 	if #self.pathArgs >= 1 then self.requestedApiModule = self.pathArgs[1] end
 	if #self.pathArgs >= 2 then self.requestedApiFunction = self.pathArgs[2] end
-	
+
 	if self.requestedApiModule == '' then self.requestedApiModule = nil end
 	if self.requestedApiFunction == '' then self.requestedApiFunction = nil end
-	
-	
+
+
 	-- Perform module/function resolution
 	local rData = resolveApiFunction(self:getRequestedApiModule(), self:getRequestedApiFunction(), self.requestMethod)
 	local modFuncInfo = (self:getRequestedApiModule() or "<>") .. "/" .. (self:getRequestedApiFunction() or "<>")
-	
+
 	if rData.func ~= nil then --function (possibly the global one) could be resolved
 		self.resolvedApiFunction = rData.func
 		if rData.blankArg ~= nil then --apparently it was the global one, and we received a 'blank argument'
@@ -220,7 +220,7 @@ function M.new(environment, postData, debugEnabled)
 	else
 		self.resolutionError = "module/function '" .. modFuncInfo .. "' can only be accessed with the " .. rData.accessType .. " method"
 	end
-	
+
 	return self
 end
 
@@ -266,14 +266,14 @@ end
 function M:handle()
 	local modname = self:getRequestedApiModule()
 	local resp = ResponseClass.new(self)
-	
+
 	if (self.resolvedApiFunction ~= nil) then --we found a function (possible the global function)
 		--invoke the function
 		local ok, r
 		if confDefaults.DEBUG_PCALLS then ok, r = true, self.resolvedApiFunction(self, resp)
 		else ok, r = pcall(self.resolvedApiFunction, self, resp)
 		end
-		
+
 		--handle the result
 		if ok == true then
 			return resp, nil
@@ -285,7 +285,7 @@ function M:handle()
 		resp:setError("cannot call function or module '" .. (modname or "<empty>") .. "/" .. (self:getRequestedApiFunction() or "<empty>") .. "' ('" .. self.resolutionError .. "')")
 		return resp, ("cannot call requested API function ('" .. self.resolutionError .. "')")
 	end
-	
+
 	return resp
 end
 

@@ -8,6 +8,7 @@ local wifi = require('network.wlanconfig')
 local netconf = require('network.netconfig')
 local RequestClass = require('rest.request')
 local ResponseClass = require('rest.response')
+local Signin = require('network.signin')
 
 local postData = nil
 
@@ -172,6 +173,19 @@ local function main(environment)
 		else
 			log:error("autowifi setup failed (" .. msg .. ")")
 		end
+	elseif rq:getRequestMethod() == 'CMDLINE' and rq:get('signin') ~= nil then
+		log:info("running in signin mode")
+		
+		local ds = wifi.getDeviceState()
+		if ds.mode == "sta" then 
+			local rv,msg = Signin.signin()
+		end
+		
+		--[[if rv then
+			log:info("autowifi setup done (" .. msg .. ")")
+		else
+			log:error("autowifi setup failed (" .. msg .. ")")
+		end]]--
 	elseif rq:getRequestMethod() ~= 'CMDLINE' or confDefaults.DEBUG_API then
 	--	log:info("received request of type " .. rq:getRequestMethod() .. " for " .. (rq:getRequestedApiModule() or "<unknown>")
 	--			.. "/" .. (rq:getRealApiFunctionName() or "<unknown>") .. " with arguments: " .. util.dump(rq:getAll()))

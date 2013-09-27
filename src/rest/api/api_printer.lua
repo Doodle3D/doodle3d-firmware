@@ -121,7 +121,7 @@ function M.heatup_POST(request, response)
 	local printer,msg = createPrinterOrFail(argId, response)
 	if not printer then return end
 
-	local temperature = settings.get('printer.heatupTemperature')
+	local temperature = settings.get('printer.heatup.temperature')
 	local rv,msg = printer:heatup(temperature)
 
 	response:addData('id', argId)
@@ -165,7 +165,7 @@ function M.print_POST(request, response)
 	end
 
 	if argIsFirst == true then
-		log:debug("clearing all gcode for " .. printer)
+		log:debug("clearing all gcode for " .. printer:getId())
 		response:addData('gcode_clear',true)
 		local rv,msg = printer:clearGcode()
 

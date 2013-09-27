@@ -9,7 +9,7 @@
 	- type: used for basic type checking, one of bool, int, float or string
 	- description: A descriptive text usable by API clients
 	- min, max, regex: optional constraints (min and max constrain value for numbers, or length for strings)
-	
+
 	NOTE that the all-caps definitions will be changed into configuration keys, or moved to a different location
 ]]--
 local printer = require('util.printer')
@@ -54,9 +54,9 @@ M.printer_type = {
 	default = 'ultimaker',
 	type = 'string',
 	description = '',
-	isValid = function(value) 
+	isValid = function(value)
 		local printers = printer.supportedPrinters()
-		return printers[value] ~= nil 
+		return printers[value] ~= nil
 	end
 }
 
@@ -64,9 +64,9 @@ M.printer_baudrate = {
 	default = '115200',
 	type = 'int',
 	description = '',
-	isValid = function(value) 
+	isValid = function(value)
 		local baudrates = printer.supportedBaudRates()
-		return baudrates[tostring(value)] ~= nil 
+		return baudrates[tostring(value)] ~= nil
 	end
 }
 
@@ -124,7 +124,13 @@ M.printer_firstLayerSlow = {
 	description = 'Print the first layer slowly to get a more stable start'
 }
 
-M.printer_heatupTemperature = {
+M.printer_heatup_enabled = {
+	default = true,
+	type = 'bool',
+	description = ''
+}
+
+M.printer_heatup_temperature = {
 	default = 180,
 	type = 'int',
 	description = ''
@@ -160,12 +166,6 @@ M.printer_retraction_amount = {
 M.printer_enableTraveling = {
 	default = false,
 	type = 'bool',
-	description = ''
-}
-
-M.printer_autoWarmUpCommand = {
-	default = 'M104 S180',
-	type = 'string',
 	description = ''
 }
 

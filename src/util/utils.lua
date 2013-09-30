@@ -103,4 +103,12 @@ function M.readFile(filePath)
 	return res
 end
 
+-- TODO: this function has been duplicated from rest/api/api_system.lua
+function M.captureCommandOutput(cmd)
+	local f = assert(io.popen(cmd, 'r'))
+	local output = assert(f:read('*all'))
+	f:close()
+	return output;
+end
+
 return M

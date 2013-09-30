@@ -1,17 +1,8 @@
+local utils = require('util.utils')
+
 local M = {
 	isApi = true
 }
-
-
--- TODO: this function has been duplicated from test/test_wlanconfig.lua
-local function captureCommandOutput(cmd)
-	local f = assert(io.popen(cmd, 'r'))
-	local output = assert(f:read('*all'))
-	--TODO: test if this works to obtain the return code (http://stackoverflow.com/questions/7607384/getting-return-status-and-program-output)
-	--local rv = assert(f:close())
-	--return output,rv[3]
-	return output
-end
 
 function M._global(request, response)
 	response:setSuccess()
@@ -24,13 +15,13 @@ function M.fwversions(request, response)
 	
 	response:setSuccess()
 	
-	output = captureCommandOutput(opkg .. ' list-installed wifibox')
+	output = utils.captureCommandOutput(opkg .. ' list-installed wifibox')
 	local version = output:match('^wifibox %- (.*)\n$')
 	response:addData('current', version)
 	
 	rv = os.execute(opkg .. ' update >/dev/null')
 	if rv == 0 then
-		output = captureCommandOutput(opkg .. ' list wifibox')
+		output = utils.captureCommandOutput(opkg .. ' list wifibox')
 		local versions = {}
 		for v in output:gmatch('wifibox %- (%d+\.%d+\.%d+%-%d+) %- ') do
 			versions[#versions+1] = v

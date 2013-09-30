@@ -88,6 +88,9 @@ function M.status(request, response)
 	response:addData("signal", ds.signal)
 	response:addData("noise", ds.noise)
 	if withRaw then response:addData("_raw", utils.dump(ds)) end
+	
+	local localip = wifi.getLocalIP()
+	response:addData("localip", localip)
 end
 
 --requires ssid(string), accepts phrase(string), recreate(bool)

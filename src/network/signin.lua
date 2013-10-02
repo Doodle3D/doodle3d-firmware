@@ -15,7 +15,7 @@ function M.signin()
 	local localip = wifi.getLocalIP();
 	if localip == nil then
 		log:error("signin failed no local ip found")
-		return
+		return false
 	end
 	
 	local wifiboxid = wifi.getSubstitutedSsid(settings.get('network.cl.wifiboxid'))
@@ -24,7 +24,7 @@ function M.signin()
 	local output = utils.captureCommandOutput(cmd);
 	log:info("signin: "..output)
 	
-	return 0
+	return string.len(output) > 0
 end
 
 return M

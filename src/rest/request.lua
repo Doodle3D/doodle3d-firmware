@@ -175,7 +175,7 @@ function M.new(environment, postData, debugEnabled)
 	self.pathArgs = arrayFromPath(environment['PATH_INFO'])
 
 	-- override path arguments with command line parameter and allow to emulate GET/POST if debugging is enabled *and* if the autowifi special command wasn't mentioned
-	if debugEnabled and self.requestMethod == 'CMDLINE' and self:get('autowifi') == nil then
+	if debugEnabled and self.requestMethod == 'CMDLINE' and self:get('autowifi') == nil and self:get('signin') == nil then
 		self.pathArgs = arrayFromPath(self.cmdLineArgs['p'])
 
 		if self.cmdLineArgs['r'] == 'GET' or self.cmdLineArgs['r'] == nil then

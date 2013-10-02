@@ -1,6 +1,7 @@
 local log = require('util.logger')
 local settings = require('util.settings')
 local printer = require('util.printer')
+local signin = require('network.signin')
 
 local M = {
 	isApi = true
@@ -26,6 +27,10 @@ function M._global_POST(request, response)
 		else response:addData(k, "could not set key ('" .. m .. "')")
 		end
 	end
+	
+	log:info("API:Network:try signing in")
+  	signin.signin();
+  	log:info("API:Network:signed in")
 end
 
 function M.all_GET(request, response)

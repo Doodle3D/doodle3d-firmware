@@ -50,6 +50,14 @@ M.network_ap_netmask = {
 	regex = '%d+\.%d+\.%d+\.%d+'
 }
 
+M.network_cl_wifiboxid = {
+	default = 'Doodle3D-%%MAC_ADDR_TAIL%%',
+	type = 'string',
+	description = 'Client mode WiFi box id',
+	min = 1,
+	max = 32
+}
+
 M.printer_type = {
 	default = 'ultimaker',
 	type = 'string',

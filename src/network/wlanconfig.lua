@@ -113,6 +113,13 @@ function M.getMacAddress()
 	return out:upper()
 end
 
+--returns the wireless local ip address
+function M.getLocalIP()
+	local ifconfig, rv = utils.captureCommandOutput("ifconfig wlan0");
+	local localip = ifconfig:match('inet addr:([%d\.]+)')
+	return localip;
+end
+
 function M.getDeviceName()
 	return deviceName
 end

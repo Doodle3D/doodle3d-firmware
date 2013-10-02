@@ -97,20 +97,31 @@ end
 ----------------------------------------------------------------------------
 function _M.parsequeryNoRegex (query, args)
 	if type(query) == "string" then
+		local log = require('util.logger')
+		local util = require('util.utils')
+		log:info("parsequeryNoRegex")
+		--log:info("  query: " .. util.dump(query))
+		--log:info("  args: " .. util.dump(args))
+		
 		local insertfield, unescape = _M.insertfield, _M.unescape
 
 		local k = 1
 		while true do
 			local v = query:find('=', k+1, true) -- look for '=', assuming a key of at least 1 character and do not perform pattern matching
+			--log:info("  v: " .. util.dump(v))
 			if not v then break end -- no k/v pairs left
 
 			local key = query:sub(k, v-1)
+			log:info("  key: " .. util.dump(key))
 			v = v + 1
+			--log:info("  >v: " .. util.dump(v))
 			local ampersand = query:find('&', v, true)
+			--log:info("  ampersand: " .. util.dump(ampersand))
 			if not ampersand then ampersand = 0 end -- 0 will become -1 in the substring call below...meaning end of string
 
 			
 			local value = query:sub(v, ampersand - 1)
+			--log:info("  value: " .. util.dump(value))
 			insertfield (args, unescape(key), unescape(value))
 
 			if ampersand == 0 then break end -- we couldn't find any ampersands anymore so this was the last k/v

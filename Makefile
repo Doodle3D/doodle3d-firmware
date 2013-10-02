@@ -99,6 +99,7 @@ define Package/wifibox/install
 	
 	$(INSTALL_BIN) $(WIFIBOX_BASE_DIR)/script/wifibox_init $(1)/etc/init.d/wifibox  # copy directly to init dir (required for post-inst enabling)
 	$(INSTALL_BIN) $(WIFIBOX_BASE_DIR)/script/d3dapi $(1)/$(TGT_LUA_DIR_SUFFIX)/script
+	$(INSTALL_BIN) $(WIFIBOX_BASE_DIR)/script/signin.sh $(1)/$(TGT_LUA_DIR_SUFFIX)/script
 	
 	$(CP) $(WIFIBOX_BASE_DIR)/script/wifibox.uci.config $(1)/etc/config/wifibox  # copy base configuration to uci config dir
 

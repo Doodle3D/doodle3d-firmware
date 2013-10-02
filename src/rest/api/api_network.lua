@@ -1,8 +1,10 @@
+local log = require('util.logger')
 local settings = require('util.settings')
 local utils = require('util.utils')
 local netconf = require('network.netconfig')
 local wifi = require('network.wlanconfig')
 local ResponseClass = require('rest.response')
+local signin = require('network.signin')
 
 local M = {
 	isApi = true
@@ -88,6 +90,9 @@ function M.status(request, response)
 	response:addData("signal", ds.signal)
 	response:addData("noise", ds.noise)
 	if withRaw then response:addData("_raw", utils.dump(ds)) end
+	
+	local localip = wifi.getLocalIP()
+	response:addData("localip", localip)
 end
 
 --requires ssid(string), accepts phrase(string), recreate(bool)
@@ -105,10 +110,12 @@ function M.associate_POST(request, response)
 		return
 	end
 
-  local associate = function()
-  	local rv,msg = netconf.associateSsid(argSsid, argPhrase, argRecreate)
+  	local associate = function()
+  		local rv,msg = netconf.associateSsid(argSsid, argPhrase, argRecreate)
 	end
-  response:addPostResponseFunction(associate)
+  	response:addPostResponseFunction(associate)
+	
+	
 
   --[[local helloA = function()
   	local log = require('util.logger')
@@ -166,6 +173,17 @@ function M.remove_POST(request, response)
 	else
 		response:setFail("no wireless network with requested SSID") --this used to be a warning instead of an error...
 		response:addData("ssid", argSsid)
+	end
+end
+
+function M.signin(request, response)
+	log:info("API:Network:signin")
+	if signin.signin() then
+  		log:info("API:Network:signed in")
+  		response:setSuccess("API:Network:signed in")
+	else 
+		log:info("API:Network:Signing in failed")
+		response:setError("Signing in failed")
 	end
 end
 

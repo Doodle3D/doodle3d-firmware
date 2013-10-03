@@ -10,7 +10,7 @@ local M = {}
 --- Signin to connect.doodle3d.com server
 -- 
 function M.signin()
-	local baseurl = "http://connect.doodle3d.com/signin.php"
+	local baseurl = "http://connect.doodle3d.com/api/signin.php"
 	
 	local localip = wifi.getLocalIP();
 	if localip == nil then
@@ -24,7 +24,7 @@ function M.signin()
 	local output = utils.captureCommandOutput(cmd);
 	log:info("signin: "..output)
 	
-	return string.len(output) > 0
+	return string.len(output) > 0, output
 end
 
 return M

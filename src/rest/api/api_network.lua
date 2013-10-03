@@ -178,13 +178,19 @@ end
 
 function M.signin(request, response)
 	log:info("API:Network:signin")
-	if signin.signin() then
+	local success, output = signin.signin()
+	if success then
   		log:info("API:Network:signed in")
   		response:setSuccess("API:Network:signed in")
+  		response:addData("response", output)
 	else 
 		log:info("API:Network:Signing in failed")
 		response:setError("Signing in failed")
 	end
+end
+
+function M.alive(request, response)
+	response:setSuccess("alive")
 end
 
 return M

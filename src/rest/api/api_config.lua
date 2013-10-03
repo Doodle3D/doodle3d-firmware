@@ -29,8 +29,11 @@ function M._global_POST(request, response)
 	end
 	
 	log:info("API:Network:try signing in")
-  	signin.signin();
-  	log:info("API:Network:signed in")
+  	if signin.signin() then
+  		log:info("API:Network:signin successfull")
+  	else
+  		log:info("API:Network:signin failed")
+  	end
 end
 
 function M.all_GET(request, response)

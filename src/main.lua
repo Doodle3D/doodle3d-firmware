@@ -60,7 +60,7 @@ local function setupAutoWifiMode()
 			break
 		end
 	end
-
+	
 	if connectWith then
 		local rv,msg = netconf.associateSsid(connectWith)
 		if rv then
@@ -143,7 +143,7 @@ local function init(environment)
 	end
 
 	if dbgText ~= "" then dbgText = " (" .. dbgText .. " debugging enabled)" end
-
+	log:info("===========================")
 	log:info("Wifibox CGI handler started" .. dbgText)
 
 	if (environment['REQUEST_METHOD'] == 'POST') then
@@ -177,15 +177,16 @@ local function main(environment)
 		log:info("running in signin mode")
 		
 		local ds = wifi.getDeviceState()
+		log:info("  ds.mode: "..util.dump(ds.mode))
 		if ds.mode == "sta" then 
-			local rv,msg = Signin.signin()
+			log:info("  attempting signin")
+			local success,msg = Signin.signin()
+			if success then
+		  		log:info("Signin successful")
+			else 
+				log:info("Signin failed: "..util.dump(msg))
+			end
 		end
-		
-		--[[if rv then
-			log:info("autowifi setup done (" .. msg .. ")")
-		else
-			log:error("autowifi setup failed (" .. msg .. ")")
-		end]]--
 	elseif rq:getRequestMethod() ~= 'CMDLINE' or confDefaults.DEBUG_API then
 	--	log:info("received request of type " .. rq:getRequestMethod() .. " for " .. (rq:getRequestedApiModule() or "<unknown>")
 	--			.. "/" .. (rq:getRealApiFunctionName() or "<unknown>") .. " with arguments: " .. util.dump(rq:getAll()))

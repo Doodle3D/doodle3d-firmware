@@ -78,7 +78,12 @@ function M.status(request, response)
 	local withRaw = utils.toboolean(request:get("with_raw"))
 	local ds = wifi.getDeviceState()
 
-	response:setSuccess()
+	if ds.ssid == nil then
+		response:setFail("Not connected")
+	else 
+		response:setSuccess()
+	end
+	
 	response:addData("ssid", ds.ssid or "")
 	response:addData("bssid", ds.bssid or "")
 	response:addData("channel", ds.channel or "")

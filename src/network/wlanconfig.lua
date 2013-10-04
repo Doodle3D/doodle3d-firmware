@@ -175,35 +175,36 @@ end
 --- Activate wireless section for given SSID and disable all others
 -- @param ssid	SSID of config to enable, or nil to disable all network configs
 function M.activateConfig(ssid)
+	--log:info("wlanconfig.activateConfig: "..ssid);
 
-  --local utils = require('util.utils')
-  --local log = require('util.logger')
-  --log:info("wlanconfig:activateConfig: "..utils.dump(ssid))
-
-  -- make sure only one is enabled
-  uci:foreach('wireless', 'wifi-iface', function(s)
+	-- make sure only one is enabled
+	uci:foreach('wireless', 'wifi-iface', function(s)
 		local disabled = s.ssid ~= ssid and '1' or '0'
-    --log:info("    "..utils.dump(s.ssid).." disable: "..utils.dump(disabled))
+		--log:info("    "..utils.dump(s.ssid).." disable: "..utils.dump(disabled))
 		uci:set('wireless', s['.name'], 'disabled', disabled)
 	end)
 
 	uci:commit('wireless')
 
-  -- make sure the wifi-device radio0 is on top
-  uci:reorder('wireless', 'radio0', 0)
+	-- make sure the wifi-device radio0 is on top
+	uci:reorder('wireless', 'radio0', 0)
 
 	uci:commit('wireless')
 
-  -- put it on top of the wireless configuration so it's the first option when the devices starts
-  uci:foreach('wireless', 'wifi-iface', function(s)
+	-- put it on top of the wireless configuration so it's the first option when the devices starts
+	uci:foreach('wireless', 'wifi-iface', function(s)
 		if s.ssid == ssid then
-      uci:reorder('wireless', s['.name'], 1)
+			uci:reorder('wireless', s['.name'], 1)
 			return false
 		end
 	end)
+	--[[log:info("  result:");
+	uci:foreach('wireless', 'wifi-iface', function(s)
+		local disabled = s.ssid ~= ssid and '1' or '0'
+		log:info("    "..utils.dump(s.ssid).." disable: "..utils.dump(disabled))
+	end)]]--
 
 	uci:commit('wireless')
-
 end
 
 --- Create a new UCI network from the given iwinfo data

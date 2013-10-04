@@ -267,6 +267,7 @@ end
 -- @tparam boolean recreate If true, a new UCI configuration based on scan data will always be created, otherwise an attempt will be made to use an existing configuration.
 -- @return True on success or nil+msg on error.
 function M.associateSsid(ssid, passphrase, recreate)
+	log:info("netconfig:associateSsid: "..(ssid or "<nil>")..", "..(passphrase or "<nil>")..", "..(recreate or "<nil>"))
 	-- see if previously configured network for given ssid exists
 	local cfg = nil
 	for _, net in ipairs(wifi.getConfigs()) do
@@ -275,7 +276,7 @@ function M.associateSsid(ssid, passphrase, recreate)
 			break
 		end
 	end
-
+	
 	-- if not, or if newly created configuration is requested, create a new configuration
 	if cfg == nil or recreate ~= nil then
 		local scanResult = wifi.getScanInfo(ssid)
@@ -291,10 +292,10 @@ function M.associateSsid(ssid, passphrase, recreate)
 	wifi.activateConfig(ssid)
 	--M.switchConfiguration{ wifiiface="add", apnet="rm", staticaddr="rm", dhcppool="rm", wwwredir="rm", dnsredir="rm", wwwcaptive="rm", wireless="reload" }
 	--M.switchConfiguration{ wifiiface="add", apnet="rm", staticaddr="rm", dhcppool="rm", wwwredir="rm", dnsredir="rm", wireless="reload" }
-  M.switchConfiguration{ wifiiface="add", staticaddr="rm", dhcppool="rm", wwwredir="rm", dnsredir="rm", wireless="reload" }
+  	M.switchConfiguration{ wifiiface="add", staticaddr="rm", dhcppool="rm", wwwredir="rm", dnsredir="rm", wireless="reload" }
 
 	-- check if we are actually associated
-  local status = wifi.getDeviceState()
+  	local status = wifi.getDeviceState()
 	if not status.ssid or status.ssid ~= ssid then
 		return nil,"could not associate with network (incorrect passphrase?)"
 	end

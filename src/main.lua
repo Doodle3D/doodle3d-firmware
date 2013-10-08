@@ -60,7 +60,7 @@ local function setupAutoWifiMode()
 			break
 		end
 	end
-	
+
 	if connectWith then
 		local rv,msg = netconf.associateSsid(connectWith)
 		if rv then
@@ -137,14 +137,13 @@ local function init(environment)
 	setupLogger()
 
 	local dbgText = ""
-	if confDefaults.DEBUG_API and confDefaults.DEBUG_PCALLS then dbgText = "pcall and api"
+	if confDefaults.DEBUG_API and confDefaults.DEBUG_PCALLS then dbgText = "pcall+api"
 	elseif confDefaults.DEBUG_API then dbgText = "api"
 	elseif confDefaults.DEBUG_PCALL then dbgText = "pcall"
 	end
 
-	if dbgText ~= "" then dbgText = " (" .. dbgText .. " debugging enabled)" end
-	log:info("===========================")
-	log:info("Wifibox CGI handler started" .. dbgText)
+	if dbgText ~= "" then dbgText = " (" .. dbgText .. " debugging)" end
+	log:info("=======rest api" .. dbgText .. "=======")
 
 	if (environment['REQUEST_METHOD'] == 'POST') then
 		local n = tonumber(environment['CONTENT_LENGTH'])
@@ -175,15 +174,15 @@ local function main(environment)
 		end
 	elseif rq:getRequestMethod() == 'CMDLINE' and rq:get('signin') ~= nil then
 		log:info("running in signin mode")
-		
+
 		local ds = wifi.getDeviceState()
 		log:info("  ds.mode: "..util.dump(ds.mode))
-		if ds.mode == "sta" then 
+		if ds.mode == "sta" then
 			log:info("  attempting signin")
 			local success,msg = Signin.signin()
 			if success then
 		  		log:info("Signin successful")
-			else 
+			else
 				log:info("Signin failed: "..util.dump(msg))
 			end
 		end
@@ -194,7 +193,7 @@ local function main(environment)
 				.. "/" .. (rq:getRealApiFunctionName() or "<unknown>"))
 		if rq:getRequestMethod() ~= 'CMDLINE' then
 			log:info("remote IP/port: " .. rq:getRemoteHost() .. "/" .. rq:getRemotePort())
-			log:debug("user agent: " .. rq:getUserAgent())
+			--log:debug("user agent: " .. rq:getUserAgent())
 		end
 
 		local response, err = rq:handle()

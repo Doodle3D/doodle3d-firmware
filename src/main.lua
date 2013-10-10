@@ -201,7 +201,7 @@ local function main(environment)
 		if err ~= nil then log:error(err) end
 		response:send()
 
-    response:executePostResponseQueue()
+    	response:executePostResponseQueue()
 	else
 		log:info("Nothing to do...bye.\n")
 	end

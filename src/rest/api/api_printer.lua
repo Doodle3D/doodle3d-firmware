@@ -3,6 +3,8 @@ local log = require('util.logger')
 local utils = require('util.utils')
 local settings = require('util.settings')
 local printDriver = require('print3d')
+local printerUtils = require('util.printer')
+local accessManager = require('util.access')
 
 local M = {
 	isApi = true
@@ -15,27 +17,6 @@ local PROGRESS_FILE = 'progress2.out'
 local COMMAND_FILE = 'command.in'
 local GCODE_TMP_FILE = 'combined.gc'
 
-
---returns a printer instance or nil (and sets error state on response in the latter case)
-local function createPrinterOrFail(deviceId, response)
-	local msg,printer = nil, nil
-
-	if deviceId and deviceId ~= "" then
-		printer,msg = printDriver.getPrinter(deviceId)
-	else
-		msg = "missing device ID"
-	end
-
-	if not printer then
-		response:setError("could not open printer driver (" .. msg .. ")")
-		response:addData('id', deviceId)
-		return nil
-	end
-
-	return printer
-end
-
-
 function M._global(request, response)
 	-- TODO: list all printers (based on /dev/ttyACM* and /dev/ttyUSB*)
 	response:setSuccess()
@@ -44,7 +25,7 @@ end
 --requires id(string)
 function M.temperature(request, response)
 	local argId = request:get("id")
-	local printer,msg = createPrinterOrFail(argId, response)
+	local printer,msg = printerUtils.createPrinterOrFail(argId, response)
 	if not printer then return end
 
 	local temperatures,msg = printer:getTemperatures()
@@ -64,7 +45,7 @@ end
 --requires id(string)
 function M.progress(request, response)
 	local argId = request:get("id")
-	local printer,msg = createPrinterOrFail(argId, response)
+	local printer,msg = printerUtils.createPrinterOrFail(argId, response)
 	if not printer then return end
 
 	-- NOTE: despite their names, `currentLine` is still the error indicator and `numLines` the message in such case.
@@ -84,7 +65,7 @@ end
 --requires id(string)
 function M.busy(request, response)
 	local argId = request:get("id")
-	local printer,msg = createPrinterOrFail(argId, response)
+	local printer,msg = printerUtils.createPrinterOrFail(argId, response)
 	if not printer then return end
 
 	local rv,msg = printer:getState()
@@ -101,7 +82,7 @@ end
 --requires id(string)
 function M.state(request, response)
 	local argId = request:get("id")
-	local printer,msg = createPrinterOrFail(argId, response)
+	local printer,msg = printerUtils.createPrinterOrFail(argId, response)
 	if not printer then return end
 
 	local rv,msg = printer:getState()
@@ -115,10 +96,18 @@ function M.state(request, response)
 	end
 end
 
+
+
 --requires id(string)
 function M.heatup_POST(request, response)
+
+	if not accessManager.hasControl(request.remoteAddress) then
+		response:setFail("No control access")
+		return
+	end
+
 	local argId = request:get("id")
-	local printer,msg = createPrinterOrFail(argId, response)
+	local printer,msg = printerUtils.createPrinterOrFail(argId, response)
 	if not printer then return end
 
 	local temperature = settings.get('printer.heatup.temperature')
@@ -132,8 +121,14 @@ end
 
 --requires id(string)
 function M.stop_POST(request, response)
+
+	if not accessManager.hasControl(request.remoteAddress) then
+		response:setFail("No control access")
+		return
+	end
+
 	local argId = request:get("id")
-	local printer,msg = createPrinterOrFail(argId, response)
+	local printer,msg = printerUtils.createPrinterOrFail(argId, response)
 	if not printer then return end
 
 	local endGcode = settings.get('printer.endgcode')
@@ -149,12 +144,28 @@ end
 --accepts: first(bool) (chunks will be concatenated but output file will be cleared first if this argument is true)
 --accepts: last(bool) (chunks will be concatenated and only when this argument is true will printing be started)
 function M.print_POST(request, response)
+
+	local controllerIP = accessManager.getController()
+	local hasControl = false
+	if controllerIP == "" then
+		accessManager.setController(request.remoteAddress)
+		hasControl = true
+	elseif controllerIP == request.remoteAddress then
+		hasControl = true
+	end
+	
+	log:info("  hasControl: "..utils.dump(hasControl))
+	if not hasControl then
+		response:setFail("No control access")
+		return
+	end
+
 	local argId = request:get("id")
 	local argGcode = request:get("gcode")
 	local argIsFirst = utils.toboolean(request:get("first"))
 	local argIsLast = utils.toboolean(request:get("last"))
 
-	local printer,msg = createPrinterOrFail(argId, response)
+	local printer,msg = printerUtils.createPrinterOrFail(argId, response)
 	if not printer then return end
 
 	response:addData('id', argId)

@@ -8,7 +8,6 @@ local utils = require('util.utils')
 
 local M = {}
 
-
 local logLevel, logVerbose, logStream
 
 --- Available log levels.

@@ -3,6 +3,7 @@ local urlcode = require('util.urlcode')
 local confDefaults = require('conf_defaults')
 local s = require('util.settings')
 local ResponseClass = require('rest.response')
+local log = require('util.logger')
 
 local M = {}
 M.__index = M
@@ -165,6 +166,7 @@ function M.new(environment, postData, debugEnabled)
 		self.remoteHost = environment['REMOTE_HOST']
 		self.remotePort = environment['REMOTE_PORT']
 		self.userAgent = environment['HTTP_USER_AGENT']
+		self.remoteAddress = environment['REMOTE_ADDR']
 	else
 		self.requestMethod = 'CMDLINE'
 	end

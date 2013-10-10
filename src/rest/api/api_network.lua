@@ -78,11 +78,10 @@ function M.status(request, response)
 	local withRaw = utils.toboolean(request:get("with_raw"))
 	local ds = wifi.getDeviceState()
 
-	if ds.ssid == nil then
-		response:setFail("Not connected")
-	else 
-		response:setSuccess()
-	end
+	local statusCode, statusMessage = netconf.getStatus()
+	response:addData("status",statusCode)
+	response:addData("statusMessage",statusMessage)
+	response:setSuccess(statusMessage)
 	
 	response:addData("ssid", ds.ssid or "")
 	response:addData("bssid", ds.bssid or "")
@@ -94,6 +93,9 @@ function M.status(request, response)
 	response:addData("txpower", ds.txpower)
 	response:addData("signal", ds.signal)
 	response:addData("noise", ds.noise)
+	
+	
+	
 	if withRaw then response:addData("_raw", utils.dump(ds)) end
 	
 	local localip = wifi.getLocalIP()
@@ -102,10 +104,6 @@ end
 
 --requires ssid(string), accepts phrase(string), recreate(bool)
 function M.associate_POST(request, response)
-  local utils = require('util.utils')
-  local log = require('util.logger')
-  log:info("API:Network:associate")
-
 	local argSsid = request:get("ssid")
 	local argPhrase = request:get("phrase")
 	local argRecreate = request:get("recreate")
@@ -114,38 +112,22 @@ function M.associate_POST(request, response)
 		response:setError("missing ssid argument")
 		return
 	end
-
-  	local associate = function()
-  		local rv,msg = netconf.associateSsid(argSsid, argPhrase, argRecreate)
-	end
-  	response:addPostResponseFunction(associate)
 	
-	
+	response:setSuccess("wlan is trying to associate")
 
-  --[[local helloA = function()
-  	local log = require('util.logger')
-    log:info("HELLO A")
-	end
-  response:addPostResponseFunction(helloA)
-
-  local helloB = function()
-  	local log = require('util.logger')
-    log:info("HELLO B")
-	end
-  response:addPostResponseFunction(helloB)]]--
-
-	--[[response:addData("ssid", argSsid)
+	local rv,msg = netconf.associateSsid(argSsid, argPhrase, argRecreate)
 	if rv then
-		response:setSuccess("wlan associated")
-	else
-		response:setFail(msg)
-	end]]--
-  response:setSuccess("wlan is trying to associate")
+		log:info("associated to wifi: "..utils.dump(argSsid))
+	else 
+		log:info("failed to associate to wifi: "..utils.dump(argSsid).." ("..utils.dump(msg)..")")
+	end
+	
 end
 
 function M.disassociate_POST(request, response)
-	wifi.activateConfig()
-	local rv = wifi.restart()
+	
+	local rv = netconf.disassociate()
+	
 	response:setSuccess("all wireless networks deactivated")
 	response:addData("wifi_restart_result", rv)
 end

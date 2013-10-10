@@ -1,3 +1,7 @@
+local log = require('util.logger')
+local utils = require('util.utils')
+local printDriver = require('print3d')
+
 local SUPPORTED_PRINTERS = { 
 	rigidbot = "Rigidbot",
 	ultimaker = "Ultimaker",
@@ -44,6 +48,29 @@ end
 
 function M.supportedBaudRates()
 	return SUPPORTED_BAUDRATES
+end
+
+
+
+--returns a printer instance or nil (and sets error state on response in the latter case)
+function M.createPrinterOrFail(deviceId, response)
+
+	log:info("API:printer:createPrinterOrFail: "..utils.dump(deviceId))
+	local msg,printer = nil, nil
+	
+	if deviceId == nil or deviceId == "" then
+		printer,msg = printDriver.getPrinter()
+	else 
+		printer,msg = printDriver.getPrinter(deviceId)
+	end
+	
+	if not printer then
+		response:setError("could not open printer driver (" .. msg .. ")")
+		response:addData('id', deviceId)
+		return nil
+	end
+
+	return printer
 end
 
 return M

@@ -3,6 +3,7 @@ local log = require('util.logger')
 local settings = require('util.settings')
 local wifi = require('network.wlanconfig')
 local uci = require('uci').cursor()
+local signin = require('network.signin')
 
 local M = {}
 local reconf = {}
@@ -13,7 +14,12 @@ M.WWW_CAPTIVE_PATH = '/usr/share/lua/wifibox/www'
 M.WWW_CAPTIVE_INDICATOR = '/www/.wifibox-inplace'
 M.WWW_RENAME_NAME = '/www-regular'
 
-
+M.CONNECTING_FAILED = -1
+M.NOT_CONNECTED 	= 0
+M.CONNECTING 		= 1
+M.CONNECTED 		= 2 
+M.CREATING 			= 3 
+M.CREATED 			= 4 
 
 local function reloadBit(dlist, itemname)
 	if dlist[itemname] == nil then dlist[itemname] = '' end
@@ -250,11 +256,16 @@ end
 -- @tparam string ssid The SSID to use for the access point.
 -- @return True on success or nil+msg on error.
 function M.setupAccessPoint(ssid)
+	
+	M.setStatus(M.CREATING,"Creating access point...");
+	
 	M.switchConfiguration{apnet="add_noreload"}
 	wifi.activateConfig(ssid)
 	-- NOTE: dnsmasq must be reloaded after network or it will be unable to serve IP addresses
 	M.switchConfiguration{ wifiiface="add", network="reload", staticaddr="add", dhcppool="add_noreload", wwwredir="add", dnsredir="add" }
 	M.switchConfiguration{dhcp="reload"}
+	
+	M.setStatus(M.CREATED,"Access point created");
 
 	return true
 end
@@ -268,6 +279,9 @@ end
 -- @return True on success or nil+msg on error.
 function M.associateSsid(ssid, passphrase, recreate)
 	log:info("netconfig:associateSsid: "..(ssid or "<nil>")..", "..(passphrase or "<nil>")..", "..(recreate or "<nil>"))
+	
+	M.setStatus(M.CONNECTING,"Connecting...");
+	
 	-- see if previously configured network for given ssid exists
 	local cfg = nil
 	for _, net in ipairs(wifi.getConfigs()) do
@@ -284,7 +298,9 @@ function M.associateSsid(ssid, passphrase, recreate)
 			wifi.createConfigFromScanInfo(scanResult, passphrase)
 		else
 			--check for error
-			return nil,"no wireless network with requested SSID is available"
+			local msg = "Wireless network "..ssid.." is not available"
+			M.setStatus(M.CONNECTING_FAILED,msg);
+			return nil,msg
 		end
 	end
 
@@ -297,10 +313,59 @@ function M.associateSsid(ssid, passphrase, recreate)
 	-- check if we are actually associated
   	local status = wifi.getDeviceState()
 	if not status.ssid or status.ssid ~= ssid then
-		return nil,"could not associate with network (incorrect passphrase?)"
+		local msg = "Could not associate with network (incorrect password?)"
+		M.setStatus(M.CONNECTING_FAILED,msg);
+		return nil,msg
+	end
+	
+	M.setStatus(M.CONNECTED,"Connected");
+	
+	-- signin to connect.doodle3d.com
+	local success, output = signin.signin()
+	if success then
+  		log:info("API:Network:signed in")
+	else 
+		log:info("API:Network:Signing in failed")
 	end
 
 	return true
+end
+--- Disassociate wlan device as client from all SSID's.
+-- Note: this function might belong in the wlanconfig module but that would introduce
+-- a circular dependency, easiest solution is to place the function here.
+-- @return True on success or nil+msg on error.
+function M.disassociate()
+
+	M.setStatus(M.NOT_CONNECTED,"Not connected");
+	
+	wifi.activateConfig()
+	return wifi.restart()
+end
+
+function M.getStatus()
+	log:info("getStatus")
+	local file, error = io.open('/tmp/networkstatus.txt','r')
+	if file == nil then
+		--log:error("Util:Access:Can't read controller file. Error: "..error)
+		return "",""
+	else
+		local status = file:read('*a')
+		--log:info("  status: "..utils.dump(status))
+		file:close()
+		local parts = {}
+		local code, msg = string.match(status, "([^|]+)|+(.*)")
+		--log:info("  code: "..utils.dump(code))
+		--log:info("  msg: "..utils.dump(msg))
+		return code,msg
+	end
+end
+
+function M.setStatus(code,msg)
+	log:info("setStatus: "..code.." | "..msg)
+	local file = io.open('/tmp/networkstatus.txt','w')
+	file:write(code.."|"..msg)
+	file:flush()
+	file:close()
 end
 
 return M

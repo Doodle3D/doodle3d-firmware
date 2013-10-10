@@ -11,12 +11,6 @@ local M = {
 }
 
 
-local ULTIFI_BASE_PATH = '/tmp/UltiFi'
-local TEMPERATURE_FILE = 'temp.out'
-local PROGRESS_FILE = 'progress2.out'
-local COMMAND_FILE = 'command.in'
-local GCODE_TMP_FILE = 'combined.gc'
-
 function M._global(request, response)
 	-- TODO: list all printers (based on /dev/ttyACM* and /dev/ttyUSB*)
 	response:setSuccess()
@@ -48,16 +42,17 @@ function M.progress(request, response)
 	local printer,msg = printerUtils.createPrinterOrFail(argId, response)
 	if not printer then return end
 
-	-- NOTE: despite their names, `currentLine` is still the error indicator and `numLines` the message in such case.
-	local currentLine,numLines = printer:getProgress()
+	-- NOTE: despite their names, `currentLine` is still the error indicator and `bufferedLines` the message in such case.
+	local currentLine,bufferedLines,totalLines = printer:getProgress()
 
 	response:addData('id', argId)
 	if currentLine then
 		response:setSuccess()
 		response:addData('current_line', currentLine)
-		response:addData('num_lines', numLines)
+		response:addData('buffered_lines', bufferedLines)
+		response:addData('total_lines', totalLines)
 	else
-		response:setError(numLines)
+		response:setError(bufferedLines)
 	end
 end
 
@@ -153,7 +148,7 @@ function M.print_POST(request, response)
 	elseif controllerIP == request.remoteAddress then
 		hasControl = true
 	end
-	
+
 	log:info("  hasControl: "..utils.dump(hasControl))
 	if not hasControl then
 		response:setFail("No control access")

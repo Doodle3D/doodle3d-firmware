@@ -112,25 +112,32 @@ function M.access(request, response)
 			end
 		else
 			response:setError(msg)
-			return 
+			return false
 		end
 	end
 	
 	local hasControl = accessManager.hasControl(request.remoteAddress)
 	response:setSuccess()
-	response:addData('hasControl', hasControl)
+	response:addData('has_control', hasControl)
 	
-	return 
+	return true
 end
 
 function M.status(request, response)
 	
-	printerAPI.temperature(request, response)
-	printerAPI.progress(request, response)
-	printerAPI.state(request, response)
-	M.access(request, response)
+	local rv
+	rv, state = printerAPI.state(request, response)
+	if(rv == false) then return end
 	
-	response:addData('v', 9)
+	if(state ~= "disconnected") then
+		rv = printerAPI.temperature(request, response)
+		if(rv == false) then return end
+		rv = printerAPI.progress(request, response)
+		if(rv == false) then return end
+		rv = M.access(request, response)
+		if(rv == false) then return end
+	end
+	response:addData('v', 10)
 	
 end
 

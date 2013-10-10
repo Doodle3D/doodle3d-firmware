@@ -22,11 +22,10 @@ function M._global(request, response)
 	response:setSuccess()
 end
 
---requires id(string)
 function M.temperature(request, response)
 	local argId = request:get("id")
 	local printer,msg = printerUtils.createPrinterOrFail(argId, response)
-	if not printer then return end
+	if not printer then return false end
 
 	local temperatures,msg = printer:getTemperatures()
 
@@ -39,66 +38,57 @@ function M.temperature(request, response)
 		response:addData('bed_target', temperatures.bed_target)
 	else
 		response:setError(msg)
+		return false;
 	end
+	
+	return true;
 end
 
---requires id(string)
 function M.progress(request, response)
 	local argId = request:get("id")
 	local printer,msg = printerUtils.createPrinterOrFail(argId, response)
-	if not printer then return end
+	if not printer then return false end
 
 	-- NOTE: despite their names, `currentLine` is still the error indicator and `numLines` the message in such case.
-	local currentLine,numLines = printer:getProgress()
+	local currentLine,totalLines = printer:getProgress()
 
 	response:addData('id', argId)
 	if currentLine then
 		response:setSuccess()
 		response:addData('current_line', currentLine)
-		response:addData('num_lines', numLines)
+		response:addData('total_lines', totalLines)
 	else
-		response:setError(numLines)
+		response:setError(totalLines)
+		return false
 	end
+	
+	return true;
 end
 
---TODO: remove busy function (client should use state function)
---requires id(string)
-function M.busy(request, response)
-	local argId = request:get("id")
-	local printer,msg = printerUtils.createPrinterOrFail(argId, response)
-	if not printer then return end
-
-	local rv,msg = printer:getState()
-
-	response:addData('id', argId)
-	if rv then
-		response:setSuccess()
-		response:addData('busy', (rv ~= 'idle'))
-	else
-		response:setError(msg)
-	end
-end
-
---requires id(string)
 function M.state(request, response)
 	local argId = request:get("id")
-	local printer,msg = printerUtils.createPrinterOrFail(argId, response)
-	if not printer then return end
-
-	local rv,msg = printer:getState()
-
 	response:addData('id', argId)
-	if rv then
+	
+	local printer,msg = printerUtils.createPrinterOrFail(argId, response)
+	if not printer then 
 		response:setSuccess()
-		response:addData('state', rv)
-	else
-		response:setError(msg)
+		local printerState = "disconnected"
+		response:addData('state', printerState)
+		return true, printerState
+	else 
+		local rv,msg = printer:getState()
+		if rv then
+			response:setSuccess()
+			response:addData('state', rv)
+			return true, rv
+		else
+			response:setError(msg)
+			return false
+		end
 	end
+	return true;
 end
 
-
-
---requires id(string)
 function M.heatup_POST(request, response)
 
 	if not accessManager.hasControl(request.remoteAddress) then
@@ -108,7 +98,7 @@ function M.heatup_POST(request, response)
 
 	local argId = request:get("id")
 	local printer,msg = printerUtils.createPrinterOrFail(argId, response)
-	if not printer then return end
+	if not printer then return false end
 
 	local temperature = settings.get('printer.heatup.temperature')
 	local rv,msg = printer:heatup(temperature)
@@ -119,7 +109,6 @@ function M.heatup_POST(request, response)
 	end
 end
 
---requires id(string)
 function M.stop_POST(request, response)
 
 	if not accessManager.hasControl(request.remoteAddress) then
@@ -140,7 +129,6 @@ function M.stop_POST(request, response)
 	end
 end
 
---requires id(string), gcode(string)
 --accepts: first(bool) (chunks will be concatenated but output file will be cleared first if this argument is true)
 --accepts: last(bool) (chunks will be concatenated and only when this argument is true will printing be started)
 function M.print_POST(request, response)

@@ -4,7 +4,7 @@ local utils = require('util.utils')
 local accessManager = require('util.access')
 local printDriver = require('print3d')
 local printerUtils = require('util.printer')
---local printerAPI = require('rest.api.api_printer')
+local printerAPI = require('rest.api.api_printer')
 
 local TMP_DIR = '/tmp'
 local LOG_COLLECT_DIRNAME = 'wifibox-logs'
@@ -124,60 +124,13 @@ function M.access(request, response)
 end
 
 function M.status(request, response)
-	--[[
-	local argId = request:get("id")
-	local printer,msg = printerUtils.createPrinterOrFail(argId, response)
-	if not printer then return end
-
-	response:addData('id', argId)
-
-	-- Temperature
-	local temperatures,msg = printer:getTemperatures()
-	if temperatures then
-		response:setSuccess()
-		response:addData('hotend', temperatures.hotend)
-		response:addData('hotend_target', temperatures.hotend_target)
-		response:addData('bed', temperatures.bed)
-		response:addData('bed_target', temperatures.bed_target)
-	else
-		response:setError(msg)
-		return
-	end
-	--TODO: reuse printer/temperature api
-
-	-- Progress
-	-- NOTE: despite their names, `currentLine` is still the error indicator and `numLines` the message in such case.
-	local currentLine,numLines = printer:getProgress()
-	if currentLine then
-		response:setSuccess()
-		response:addData('current_line', currentLine)
-		response:addData('num_lines', numLines)
-	else
-		response:setError(numLines)
-		return
-	end
-	--TODO: reuse printer/progress api
-
-	-- State
-	local rv,msg = printer:getState()
-	if rv then
-		response:setSuccess()
-		response:addData('state', rv)
-	else
-		response:setError(msg)
-		return 
-	end
-	]]---
-	----TODO: reuse printer/state api
 	
-	--printerAPI.temperature(request, response)
-	--printerAPI.progress(request, response)
-	--printerAPI.state(request, response)
-	
-	-- access
+	printerAPI.temperature(request, response)
+	printerAPI.progress(request, response)
+	printerAPI.state(request, response)
 	M.access(request, response)
 	
-	response:addData('v', 8)
+	response:addData('v', 9)
 	
 end
 

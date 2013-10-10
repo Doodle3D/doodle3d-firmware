@@ -323,9 +323,9 @@ function M.associateSsid(ssid, passphrase, recreate)
 	-- signin to connect.doodle3d.com
 	local success, output = signin.signin()
 	if success then
-  		log:info("API:Network:signed in")
+  		log:info("Signed in")
 	else 
-		log:info("API:Network:Signing in failed")
+		log:info("Signing in failed")
 	end
 
 	return true

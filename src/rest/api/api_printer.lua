@@ -125,7 +125,7 @@ function M.stop_POST(request, response)
 end
 
 --accepts: first(bool) (chunks will be concatenated but output file will be cleared first if this argument is true)
---accepts: last(bool) (chunks will be concatenated and only when this argument is true will printing be started)
+--accepts: start(bool) (only when this argument is true will printing be started)
 function M.print_POST(request, response)
 
 	local controllerIP = accessManager.getController()
@@ -146,7 +146,7 @@ function M.print_POST(request, response)
 	local argId = request:get("id")
 	local argGcode = request:get("gcode")
 	local argIsFirst = utils.toboolean(request:get("first"))
-	local argIsLast = utils.toboolean(request:get("last"))
+	local argStart = utils.toboolean(request:get("start"))
 
 	local printer,msg = printerUtils.createPrinterOrFail(argId, response)
 	if not printer then return end
@@ -182,7 +182,7 @@ function M.print_POST(request, response)
 		return
 	end
 
-	if argIsLast == true then
+	if argStart == true then
 		rv,msg = printer:startPrint()
 
 		if rv then

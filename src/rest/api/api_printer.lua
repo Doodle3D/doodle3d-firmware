@@ -44,7 +44,7 @@ function M.progress(request, response)
 	if not printer then return false end
 
 	-- NOTE: despite their names, `currentLine` is still the error indicator and `bufferedLines` the message in such case.
-	local currentLine,bufferedLines,totalLines = printer:getProgress()
+	local currentLine,bufferedLines,totalLines,bufferSize,bufferSizeMax = printer:getProgress()
 
 	response:addData('id', argId)
 	if currentLine then
@@ -52,6 +52,8 @@ function M.progress(request, response)
 		response:addData('current_line', currentLine)
 		response:addData('buffered_lines', bufferedLines)
 		response:addData('total_lines', totalLines)
+		response:addData('buffer_size', bufferSize)
+		response:addData('buffer_size_max', bufferSizeMax)
 	else
 		response:setError(bufferedLines)
 		return false
@@ -176,7 +178,10 @@ function M.print_POST(request, response)
 	if rv then
 		--NOTE: this does not report the number of lines, but only the block which has just been added
 		response:addData('gcode_append',argGcode:len())
-	else
+	elseif rv == false then
+		response:setFail("could not add gcode - not enough buffer space")
+		return
+	else -- this is an actual nil
 		response:setError("could not add gcode")
 		response:addData('msg', msg)
 		return

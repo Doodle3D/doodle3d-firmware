@@ -107,16 +107,19 @@ end
 function reconf.apnet_add_noreload(dirtyList) reconf.apnet_add(dirtyList, true) end
 function reconf.apnet_add(dirtyList, noReload)
 	local ourSsid = wifi.getSubstitutedSsid(settings.get('network.ap.ssid'))
+	local networkKey = settings.get('network.ap.key')
 	local sname = nil
 	uci:foreach('wireless', 'wifi-iface', function(s)
 		if s.ssid == ourSsid then sname = s['.name']; return false end
 	end)
 	if sname == nil then sname = uci:add('wireless', 'wifi-iface') end
 
+	local encType = networkKey == '' and 'none' or 'psk2'
 	M.uciTableSet('wireless', sname, {
 		network = wifi.NET,
 		ssid = ourSsid,
-		encryption = 'none',
+		encryption = encType,
+		key = networkKey,
 		device = 'radio0',
 		mode = 'ap',
 	})

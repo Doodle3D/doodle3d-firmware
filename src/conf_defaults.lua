@@ -43,6 +43,12 @@ M.network_ap_address = {
 	regex = '%d+\.%d+\.%d+\.%d+'
 }
 
+M.network_ap_key = {
+        default = '',
+        type = 'string',
+        description = 'Access Point security key'
+}
+
 M.network_ap_netmask = {
 	default = '255.255.255.0',
 	type = 'string',

@@ -34,6 +34,11 @@ for arg in "$@"; do
 done
 
 $WIFIBOX_BASE_DIR/extra/scripts/create-wifibox-updates-dir.sh $OPTIONS
+RETURN_VALUE=$?
+if [ $RETURN_VALUE -ne 0 ]; then
+	echo "create-wifibox-updates-dir.sh returned an error (${RETURN_VALUE}), exiting"
+	exit $RETURN_VALUE
+fi
 
 if [ $UPLOAD_FILES -eq 1 ]; then
 	UPLOAD_PATH=$BASE_URL:public_html/updates

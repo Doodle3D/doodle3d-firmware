@@ -1,11 +1,20 @@
 #!/bin/sh
 
+#prevent being run as root (which is dangerous)
+if [ "$(id -u)" == "0" ]; then
+   echo "Don't run this script as root, it is potentially dangerous." 1>&2
+   exit 1
+fi
+
 OPENWRT_BASE=.
 PKG_SRC_DIR=$OPENWRT_BASE/bin/ar71xx/packages
 PKG_DEST_SUBPATH=updates
 MAKE_INDEX_SCRIPT=$OPENWRT_BASE/scripts/ipkg-make-index.sh
 INDEX_FILE=Packages
 INDEX_GZ_FILE=Packages.gz
+DEVICE_TYPES="tl-mr3020 tl-wr703"
+MAX_GOOD_IMAGE_SIZE=3500000
+IMAGE_BASENAME="doodle3d-wifibox"
 
 COMPRESS_RESULT=0
 PKG_DEST_BASE=.
@@ -54,6 +63,27 @@ rm -f $PKG_FEED_DIR/$INDEX_FILE
 rm -f $PKG_FEED_DIR/$INDEX_GZ_FILE
 
 
+#copy and rename images
+if [ ! -d $PKG_IMG_DIR ]; then mkdir $PKG_IMG_DIR; fi
+for devtype in $DEVICE_TYPES; do
+	IMG_SRC_PATH=$OPENWRT_BASE/bin/ar71xx
+	if [ -f $IMG_SRC_PATH/openwrt-ar71xx-generic-${devtype}-v1-squashfs-sysupgrade.bin ]; then
+		sysupgrade_name=$IMG_SRC_PATH/openwrt-ar71xx-generic-${devtype}-v1-squashfs-sysupgrade.bin
+		factory_name=$IMG_SRC_PATH/openwrt-ar71xx-generic-${devtype}-v1-squashfs-factory.bin
+		sysupgrade_size=`stat -f %z $sysupgrade_name`
+		factory_size=`stat -f %z $factory_name`
+
+		echo "Copying images for device '${devtype}' (sysupgrade size: ${sysupgrade_size}, factory size: ${factory_size})"
+
+		if [ $sysupgrade_size -gt $MAX_GOOD_IMAGE_SIZE ]; then
+			echo "WARNING: the sysupgrade is larger than $MAX_GOOD_IMAGE_SIZE bytes, which probably means it will cause read/write problems when flashed to a device"
+		fi
+
+		cp $sysupgrade_name $PKG_IMG_DIR/$IMAGE_BASENAME-${devtype}-sysupgrade.bin
+		cp $factory_name $PKG_IMG_DIR/$IMAGE_BASENAME-${devtype}-factory.bin
+	fi
+done
+
 # NOTE: the aliasing construct in the indexing script does not work (and even then, the md5 command defaults to a different output format), so we hack around it here.
 MD5_HACK_ENABLED=0
 which md5sum >/dev/null 2>&1
@@ -72,9 +102,9 @@ fi
 
 #this cwd juggling is required to have the package indexer generate correct paths (i.e. no paths) in the Packages file
 OPENWRT_DIR=`pwd`
-pushd $PKG_FEED_DIR
+pushd $PKG_FEED_DIR > /dev/null
 $OPENWRT_DIR/$MAKE_INDEX_SCRIPT . > $PKG_FEED_DIR/$INDEX_FILE
-popd
+popd > /dev/null
 
 if [ $MD5_HACK_ENABLED -eq 1 ]; then
 	rm $TEMPBIN_DIR/md5sum

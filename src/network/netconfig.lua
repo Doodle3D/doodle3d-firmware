@@ -260,7 +260,7 @@ end
 -- @return True on success or nil+msg on error.
 function M.setupAccessPoint(ssid)
 	
-	M.setStatus(M.CREATING,"Creating access point...");
+	M.setStatus(M.CREATING,"Creating access point '"..ssid.."'...");
 	
 	M.switchConfiguration{apnet="add_noreload"}
 	wifi.activateConfig(ssid)
@@ -269,7 +269,24 @@ function M.setupAccessPoint(ssid)
 	M.switchConfiguration{dhcp="reload"}
 	
 	M.setStatus(M.CREATED,"Access point created");
-
+	
+	local ds = wifi.getDeviceState()
+	--log:info("  network/status: ")
+	log:info("    ssid: ".. utils.dump(ds.ssid))
+	--[[log:info("    bssid: ".. utils.dump(ds.bssid))
+	log:info("    channel: ".. utils.dump(ds.channel))
+	log:info("    mode: ".. utils.dump(ds.mode))
+	log:info("    encryption: ".. utils.dump(ds.encryption))
+	log:info("    quality: ".. utils.dump(ds.quality))
+	log:info("    quality_max: ".. utils.dump(ds.quality_max))
+	log:info("    txpower: ".. utils.dump(ds.txpower))
+	log:info("    signal: ".. utils.dump(ds.signal))
+	log:info("    noise: ".. utils.dump(ds.noise))
+	log:info("    raw: ".. utils.dump(ds))
+	
+	local localip = wifi.getLocalIP()
+	log:info("    localip: "..utils.dump(localip))]]--
+			
 	return true
 end
 

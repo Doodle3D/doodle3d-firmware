@@ -20,7 +20,7 @@ function M.signin()
 	
 	local wifiboxid = wifi.getSubstitutedSsid(settings.get('network.cl.wifiboxid'))
 	
-	local cmd = "wget -q -O - "..baseurl.."?wifiboxid="..wifiboxid.."\\&localip="..localip;
+	local cmd = "wget -q -T 2 -t 1 -O - "..baseurl.."?wifiboxid="..wifiboxid.."\\&localip="..localip;
 	local output = utils.captureCommandOutput(cmd);
 	log:info("signin: "..output)
 	

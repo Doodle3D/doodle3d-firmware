@@ -18,7 +18,7 @@ local M = {}
 
 --NOTE: pcall protects from invocation exceptions, which is what we need except
 --during debugging. This flag replaces them with a normal call so we can inspect stack traces.
-M.DEBUG_PCALLS = false
+M.DEBUG_PCALLS = true
 
 --This enables debugging of the REST API from the command-line, specify the path and optionally the request method as follows: 'p=/mod/func rq=POST'
 M.DEBUG_API = true
@@ -44,9 +44,11 @@ M.network_ap_address = {
 }
 
 M.network_ap_key = {
-        default = '',
-        type = 'string',
-        description = 'Access Point security key'
+  default = '',
+  type = 'string',
+  description = 'Access Point security key',
+  min = 8,
+	max = 63
 }
 
 M.network_ap_netmask = {

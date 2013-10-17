@@ -46,10 +46,22 @@ if [ $? -ne 0 ]; then
 	exit 1
 fi
 
+#determine the wifibox root path
+my_rel_dir=`dirname $0`
+pushd "$my_rel_dir" > /dev/null
+WIFIBOX_DIR="`pwd`/../.."
+popd > /dev/null
+
+FW_VERSION=`cat $WIFIBOX_DIR/src/FIRMWARE-VERSION`
+echo "Compiling firmware update files for version ${FW_VERSION}"
+
+
 #setup paths
 PKG_DEST_DIR=$PKG_DEST_BASE/$PKG_DEST_SUBPATH
 PKG_FEED_DIR=$PKG_DEST_DIR/feed
 PKG_IMG_DIR=$PKG_DEST_DIR/images
+IMG_INDEX_FILE=$PKG_IMG_DIR/wifibox-image.index
+
 if [ ! -d $PKG_DEST_DIR ]; then mkdir -p $PKG_DEST_DIR; fi
 echo "Using $PKG_DEST_DIR as target directory"
 
@@ -65,6 +77,7 @@ rm -f $PKG_FEED_DIR/$INDEX_GZ_FILE
 
 #copy and rename images
 if [ ! -d $PKG_IMG_DIR ]; then mkdir $PKG_IMG_DIR; fi
+rm -f $IMG_INDEX_FILE
 for devtype in $DEVICE_TYPES; do
 	IMG_SRC_PATH=$OPENWRT_BASE/bin/ar71xx
 	if [ -f $IMG_SRC_PATH/openwrt-ar71xx-generic-${devtype}-v1-squashfs-sysupgrade.bin ]; then
@@ -72,15 +85,27 @@ for devtype in $DEVICE_TYPES; do
 		factory_name=$IMG_SRC_PATH/openwrt-ar71xx-generic-${devtype}-v1-squashfs-factory.bin
 		sysupgrade_size=`stat -f %z $sysupgrade_name`
 		factory_size=`stat -f %z $factory_name`
+		sysupgrade_out_basename=$IMAGE_BASENAME-${FW_VERSION}-${devtype}-sysupgrade.bin
+		factory_out_basename=$IMAGE_BASENAME-${FW_VERSION}-${devtype}-factory.bin
 
 		echo "Copying images for device '${devtype}' (sysupgrade size: ${sysupgrade_size}, factory size: ${factory_size})"
 
+		#TODO: replace 'wc -c' with something more efficient (stat? ls?)
+		sysupgrade_filesize=`wc -c < ${sysupgrade_name} | tr -d ' '`
+		factory_filesize=`wc -c < ${factory_name} | tr -d ' '`
+		sysupgrade_md5sum=`md5 -q ${sysupgrade_name}`
+		factory_md5sum=`md5 -q ${factory_name}`
+		echo "Version: ${FW_VERSION}" >> $IMG_INDEX_FILE
+		echo "Files: ${sysupgrade_out_basename}; ${factory_out_basename}" >> $IMG_INDEX_FILE
+		echo "FileSize: ${sysupgrade_filesize}; ${factory_filesize}" >> $IMG_INDEX_FILE
+		echo "MD5: ${sysupgrade_md5sum}; ${factory_md5sum}" >> $IMG_INDEX_FILE
+
 		if [ $sysupgrade_size -gt $MAX_GOOD_IMAGE_SIZE ]; then
-			echo "WARNING: the sysupgrade is larger than $MAX_GOOD_IMAGE_SIZE bytes, which probably means it will cause read/write problems when flashed to a device"
+			echo "WARNING: the sysupgrade image is larger than $MAX_GOOD_IMAGE_SIZE bytes, which probably means it will cause read/write problems when flashed to a device"
 		fi
 
-		cp $sysupgrade_name $PKG_IMG_DIR/$IMAGE_BASENAME-${devtype}-sysupgrade.bin
-		cp $factory_name $PKG_IMG_DIR/$IMAGE_BASENAME-${devtype}-factory.bin
+		cp $sysupgrade_name $PKG_IMG_DIR/$sysupgrade_out_basename
+		cp $factory_name $PKG_IMG_DIR/$factory_out_basename
 	fi
 done
 

@@ -100,8 +100,9 @@ local function isValid(value, baseTable)
 	local varType, min, max, regex, isValid = baseTable.type, baseTable.min, baseTable.max, baseTable.regex, baseTable.isValid
 
 	if isValid then 
-		local ok = isValid(value)
-		return ok or nil,"invalid value"
+		local ok,msg = isValid(value)
+		if msg == nil then msg = "invalid value" end
+		return ok or nil,msg
 	end
 
 	if varType == 'bool' then

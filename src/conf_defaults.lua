@@ -44,11 +44,20 @@ M.network_ap_address = {
 }
 
 M.network_ap_key = {
-  default = '',
-  type = 'string',
-  description = 'Access Point security key',
-  min = 8,
-	max = 63
+	default = '',
+	type = 'string',
+	description = 'Access Point security key',
+	isValid = function(value)
+		if value == "" then 
+			return true;
+		elseif value:len() < 8 then
+			return false, "to short"
+		elseif value:len() > 63 then
+			return false, "to long"
+		else
+			return true
+		end
+	end
 }
 
 M.network_ap_netmask = {

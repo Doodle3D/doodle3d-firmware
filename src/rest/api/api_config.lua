@@ -1,4 +1,5 @@
 local log = require('util.logger')
+local utils = require('util.utils')
 local settings = require('util.settings')
 local printer = require('util.printer')
 local signin = require('network.signin')
@@ -19,12 +20,17 @@ function M._global_GET(request, response)
 end
 
 function M._global_POST(request, response)
+	--log:info("API:config:set")
 	response:setSuccess()
 	for k,v in pairs(request:getAll()) do
+		--log:info("  "..k..": "..v);
 		local r,m = settings.set(k, v)
 		
-		if r then response:addData(k, "ok")
-		else response:addData(k, "could not set key ('" .. m .. "')")
+		if r then 
+			response:addData(k, "ok")
+		else 
+			response:addData(k, "could not save setting ('" .. m .. "')")
+			log:info("  m: "..utils.dump(m))
 		end
 	end
 	

@@ -76,9 +76,15 @@ function M.commitComponent(c)
 end
 
 function M.reloadComponent(c, silent)
-	log:info("reloading component '" .. c .. "'")
-	if silent ~= nil and silent then os.execute('/etc/init.d/' .. c .. ' reload &> /dev/null')
-	else os.execute('/etc/init.d/' .. c .. ' reload') end
+	log:info("reloading component '" .. c .. "'") 
+	local cmd = '/etc/init.d/' .. c .. ' reload'
+	if silent ~= nil and silent then 
+		cmd = cmd .. ' &> /dev/null'
+		os.execute(cmd)
+	else
+		rv = utils.captureCommandOutput(cmd)
+		log:info("  result reloading component '" .. c .. "': "..utils.dump(rv))
+	end
 end
 
 function M.uciTableSet(config, section, options)

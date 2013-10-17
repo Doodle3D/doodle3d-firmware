@@ -154,7 +154,7 @@ local function init(environment)
 	s, msg = wifi.init()
 	if not s then return s, msg end
 
-	s, msg = netconf.init(wifi, true)
+	s, msg = netconf.init(wifi, false)
 	if not s then return s, msg end
 
 	return true

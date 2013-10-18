@@ -115,17 +115,17 @@ local function isValid(value, baseTable)
 		elseif varType == 'int' and math.floor(numValue) ~= numValue then
 			return nil, "invalid int"
 		elseif min and numValue < min then
-			return nil, "to low"
+			return nil, "too low"
 		elseif max and numValue > max then
-			return nil, "to high"
+			return nil, "too high"
 		end
 		
 	elseif varType == 'string' then
 		local ok = true
 		if min and value:len() < min then
-			return nil,"to short"
+			return nil,"too short"
 		elseif max and value:len() > max then
-			return nil,"to long"
+			return nil,"too long"
 		elseif regex and value:match(regex) == nil then
 			return nil,"invalid value"
 		end 

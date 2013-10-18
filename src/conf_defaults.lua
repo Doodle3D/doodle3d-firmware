@@ -51,9 +51,9 @@ M.network_ap_key = {
 		if value == "" then 
 			return true;
 		elseif value:len() < 8 then
-			return false, "to short"
+			return false, "too short"
 		elseif value:len() > 63 then
-			return false, "to long"
+			return false, "too long"
 		else
 			return true
 		end

@@ -30,15 +30,6 @@ function M._global(request, response)
 	response:setSuccess()
 end
 
-function M.firmware(request, response)
-	--response:setSuccess()
-	-- can return (essentially all wraps ipkg output):
-	-- available (list)
-	-- current
-	-- latest
-	-- upgradable
-end
-
 -- TODO: redirect stdout+stderr; handle errors
 function M.logfiles(request, response)
 	local rv,msg = lfs.mkdir(LOG_COLLECT_DIR)
@@ -115,16 +106,16 @@ function M.access(request, response)
 	response:setSuccess()
 
 	response:addData('has_control', hasControl)
-	
+
 	return true
 end
 
 function M.status(request, response)
-	
+
 	local rv
 	rv, state = printerAPI.state(request, response)
 	if(rv == false) then return end
-	
+
 	if(state ~= "disconnected") then
 		rv = printerAPI.temperature(request, response)
 		if(rv == false) then return end

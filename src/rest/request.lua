@@ -70,6 +70,7 @@ local function resolveApiModule(modname)
 	local reqModName = 'rest.api.api_' .. modname
 	local ok, modObj
 
+	-- NOTE: with some errors, execution just seems to stop in require() (nothing is logged anymore, not even errors)
 	if confDefaults.DEBUG_PCALLS then ok, modObj = true, require(reqModName)
 	else ok, modObj = pcall(require, reqModName)
 	end
@@ -191,7 +192,6 @@ function M.new(environment, postData, debugEnabled)
 		end
 	end
 	table.remove(self.pathArgs, 1) --drop the first 'empty' field caused by the opening slash of the query string
-
 
 	if #self.pathArgs >= 1 then self.requestedApiModule = self.pathArgs[1] end
 	if #self.pathArgs >= 2 then self.requestedApiFunction = self.pathArgs[2] end

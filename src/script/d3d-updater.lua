@@ -1,6 +1,8 @@
 #!/usr/bin/env lua
 
 -- TODO/NOTES:
+-- add function wgetErrorToString and use it everywhere to get clearer error feedback
+-- make P/E/D choose between print and log, so it doesn't clutter functions anymore (esp. since accidentally printing while in cgi mode breaks cgi)
 -- M.checkValidImage(verEnt) -> doet exists+fileSize/MD5 check
 -- after download: (can use checkValidImage for this)
 -- - remove file on fail
@@ -8,7 +10,6 @@
 -- add to status: validImage: none|<version> (can use checkValidImage for this)
 -- any more TODO's across this file?
 -- max 1 image tegelijk (moet api doen), en rekening houden met printbuffer (printen blokkeren?)
--- API calls to add: update/status, update/download, update/install, update/clear
 
 -- MAYBE/LATER:
 -- wget: add provision (in verbose mode?) to use -v instead of -q and disable output redirection
@@ -22,9 +23,9 @@
 local M = {}
 
 -- NOTE: 'INSTALLED' will never be returned (and probably neither will 'INSTALLING') since in that case the device is flashing or rebooting
-M.STATE = { NONE = 1, DOWNLOADING = 2, IMAGE_READY = 3, INSTALLING = 4, INSTALLED = 5, INSTALL_FAILED = 6 }
+M.STATE = { NONE = 1, DOWNLOADING = 2, DOWNLOAD_FAILED = 3, IMAGE_READY = 4, INSTALLING = 5, INSTALLED = 6, INSTALL_FAILED = 7 }
 M.STATE_NAMES = {
-	[M.STATE.NONE] = 'none', [M.STATE.DOWNLOADING] = 'downloading', [M.STATE.IMAGE_READY] = 'image_ready',
+	[M.STATE.NONE] = 'none', [M.STATE.DOWNLOADING] = 'downloading', [M.STATE.DOWNLOAD_FAILED] = 'download_failed', [M.STATE.IMAGE_READY] = 'image_ready',
 	[M.STATE.INSTALLING] = 'installing', [M.STATE.INSTALLED] = 'installed', [M.STATE.INSTALL_FAILED] = 'install_failed'
 }
 
@@ -47,9 +48,31 @@ local log = nil -- wifibox API can use M.setLogger to enable this module to use 
 ---------------------
 
 -- use level==1 for important messages, 0 for regular messages and -1 for less important messages
-local function P(lvl, msg) if (-lvl <= M.verbosity) then print(msg) end end
-local function E(msg) io.stderr:write(msg .. '\n') end
-local function D(msg) P(-1, "(DBG) " .. msg) end
+local function P(lvl, msg)
+	if log then
+		if lvl == -1 then log:debug(msg)
+		elseif lvl == 0 or lvl == 1 then log:info(msg)
+		end
+	else
+		if (-lvl <= verbosity) then print(msg) end
+	end
+end
+
+local function D(msg) P(-1, (log and msg or "(DBG) " .. msg)) end
+
+local function E(msg)
+	if log then log:error(msg)
+	else io.stderr:write(msg .. '\n')
+	end
+end
+
+
+local function createCacheDirectory()
+	if os.execute('mkdir -p ' .. M.CACHE_PATH) ~= 0 then
+		return nil,"Error: could not create cache directory '" .. M.CACHE_PATH .. "'"
+	end
+	return true
+end
 
 local function getState()
 	local file,msg = io.open(M.CACHE_PATH .. '/' .. M.STATE_FILE, 'r')
@@ -61,12 +84,21 @@ local function getState()
 	return code,msg
 end
 
+-- NOTE: make sure the cache directory exists before calling this function or it will fail.
+-- NOTE: this function _can_ fail but we don't expect this to happen so the return value is ignored for now
 local function setState(code, msg)
 	local s = code .. '|' .. msg
-	if log then log:info("update state: " .. s) else D("update state: " .. s) end
-	local file = io.open(M.CACHE_PATH .. '/' .. M.STATE_FILE, 'w')
+	D("set update state: " .. M.STATE_NAMES[code] .. " ('" .. s .. "')")
+	local file,msg = io.open(M.CACHE_PATH .. '/' .. M.STATE_FILE, 'w')
+
+	if not file then
+		E("error: could not open state file for writing (" .. msg .. ")")
+		return false
+	end
+
 	file:write(s)
 	file:close()
+	return true
 end
 
 -- trim whitespace from both ends of string (from http://snippets.luacode.org/?p=snippets/trim_whitespace_from_string_76)
@@ -124,7 +156,8 @@ end
 -- returns return value of command
 local function runCommand(command, dryRun) D("about to run: '" .. command .. "'"); return (not dryRun) and os.execute(command) or 0 end
 
--- returns return value of wget (or nil if saveDir is nil or empty)
+-- returns return value of wget (or nil if saveDir is nil or empty), filename is optional
+-- NOTE: leaving out filename will cause issues with files not being overwritten but suffixed with '.1', '.2',etc instead
 local function downloadFile(url, saveDir, filename)
 	if not saveDir or saveDir:len() == 0 then return nil, "saveDir must be non-empty" end
 	local outArg = (filename:len() > 0) and (' -O' .. filename) or ''
@@ -186,10 +219,14 @@ function M.setLogger(logger)
 	log = logger
 end
 
+-- baseUrl and useCache are optional
 function M.getStatus(baseUrl, useCache)
+	if not baseUrl then baseUrl = M.DEFAULT_BASE_URL end
 	local result = {}
 
-	local verTable = M.getAvailableVersions(baseUrl, useCache)
+	local verTable,msg = M.getAvailableVersions(baseUrl, useCache)
+	if not verTable then return nil,msg end
+
 	local newest = verTable[#verTable]
 	result.currentVersion = M.getCurrentVersion()
 	result.newestVersion = newest.version
@@ -198,20 +235,33 @@ function M.getStatus(baseUrl, useCache)
 
 	if result.stateCode == M.STATE.DOWNLOADING then
 		result.progress = fileSize(M.CACHE_PATH .. '/' .. newest.sysupgradeFilename)
+		if not result.progress then result.progress = 0 end -- in case the file does not exist yet (which yields nil)
 		result.imageSize = newest.sysupgradeFileSize
 	end
 
 	return result
 end
 
+-- Turns a plain-text version into a table.
+-- tables as argument are ignored so you can safely pass in an already parsed
+-- version and expect it back unmodified.
 function M.parseVersion(versionText)
+	if type(versionText) == 'table' then return versionText end
 	if not versionText or versionText:len() == 0 then return nil end
+
 	local major,minor,patch = versionText:match("^%s*(%d+)%.(%d+)%.(%d+)%s*$")
 	if not major or not minor or not patch then return nil end
+
 	return { ['major'] = major, ['minor'] = minor, ['patch'] = patch }
 end
 
-function M.formatVersion(version) return version.major .. "." .. version.minor .. "." .. version.patch end
+-- Formats a version as returned by parseVersion().
+-- Strings are returned unmodified, so an 'already formatted' version can be
+-- passed in safely and expected back unmodified.
+function M.formatVersion(version)
+	if type(version) == 'string' then return version end
+	return version.major .. "." .. version.minor .. "." .. version.patch
+end
 
 -- expects two tables as created by M.parseVersion()
 function M.compareVersions(versionA, versionB)
@@ -230,9 +280,9 @@ function M.findVersion(verTable, version)
 end
 
 -- version may be a table or a string, devtype and isFactory are optional
-function M.constructImageFilename(ver, devType, isFactory)
+function M.constructImageFilename(version, devType, isFactory)
 	local sf = isFactory and 'factory' or 'sysupgrade'
-	local v = (type(ver) == 'table') and ver or M.formatVersion(ver)
+	local v = M.formatVersion(version)
 	local dt = devType and devType or 'tl-mr3020'
 	return 'doodle3d-wifibox-' .. M.formatVersion(v) .. '-' .. dt .. '-' .. sf .. '.bin'
 end
@@ -250,8 +300,13 @@ function M.getCurrentVersion()
 end
 
 -- requires url of image index file; returns an indexed (and sorted) table containing version tables
-function M.getAvailableVersions(baseUrl, useCache, version)
+-- baseUrl and useCache are optional
+function M.getAvailableVersions(baseUrl, useCache)
+	if not baseUrl then baseUrl = M.DEFAULT_BASE_URL end
 	local indexFilename = M.CACHE_PATH .. '/' .. M.IMAGE_INDEX_FILE
+
+	local ccRv,ccMsg = createCacheDirectory()
+	if not ccRv then return nil,ccMsg end
 
 	if not useCache or not exists(indexFilename) then
 		local rv = downloadFile(baseUrl .. '/images/' .. M.IMAGE_INDEX_FILE, M.CACHE_PATH, M.IMAGE_INDEX_FILE)
@@ -267,7 +322,7 @@ function M.getAvailableVersions(baseUrl, useCache, version)
 	for line in idxLines do
 		local k,v = line:match('^(.-):(.*)$')
 		k,v = trim(k), trim(v)
-		--P(1, "#" .. lineno .. ": considering '" .. line .. "' (" .. (k or '<nil>') .. " / " .. (v or '<nil>') .. ")") -- debug
+		D(1, "#" .. lineno .. ": considering '" .. line .. "' (" .. (k or '<nil>') .. " / " .. (v or '<nil>') .. ")") -- debug
 		if not changelogMode and (not k or not v) then return nil,"incorrectly formatted line in index file (line " .. lineno .. ")" end
 
 		if k == 'ChangelogEnd' then
@@ -308,7 +363,6 @@ function M.getAvailableVersions(baseUrl, useCache, version)
 
 	if entry ~= nil then table.insert(result, entry) end
 
-	--sort table
 	table.sort(result, function(a,b)
 		return M.compareVersions(a.version,b.version) < 0
 	end)
@@ -316,27 +370,45 @@ function M.getAvailableVersions(baseUrl, useCache, version)
 	return result
 end
 
--- devtype and isFactory are optional; returns a table with major, minor and patch as keys
-function M.downloadImageFile(baseUrl, ver, forceDownload, devType, isFactory)
-	local filename = M.constructImageFilename(ver, devType, isFactory)
+-- forceDownload, devtype and isFactory are optional
+-- returns true or nil+msg or nil + return value from wget
+function M.downloadImageFile(baseUrl, version, forceDownload, devType, isFactory)
+	if not baseUrl then baseUrl = M.DEFAULT_BASE_URL end
+	local filename = M.constructImageFilename(version, devType, isFactory)
 	local doDownload = (type(forceDownload) == 'boolean') and forceDownload or (not exists(M.CACHE_PATH .. '/' .. filename))
+
+	local ccRv,ccMsg = createCacheDirectory()
+	if not ccRv then return nil,ccMsg end
 
 	--TODO: call M.checkValidImage, set doDownload to true if not valid
 
 	local rv = 0
 	if doDownload then
 		setState(M.STATE.DOWNLOADING, "Downloading image (" .. filename .. ")")
-		rv = downloadFile(baseUrl .. '/images/' .. filename, M.CACHE_PATH, filename) or 0
+		rv = downloadFile(baseUrl .. '/images/' .. filename, M.CACHE_PATH, filename)
 	end
-	setState(M.STATE.IMAGE_READY, "Image downloaded, ready to install (image name: " .. filename .. ")")
-	return rv
+
+	if rv == 0 then
+		--TODO: check if the downloaded file is complete and matches checksum
+		setState(M.STATE.IMAGE_READY, "Image downloaded, ready to install (image name: " .. filename .. ")")
+	else
+		setState(M.STATE.DOWNLOAD_FAILED, "Image download failed (wget return value: " .. rv .. ")")
+	end
+
+	return (rv == 0) and true or nil,rv
 end
 
 -- this function will not return
+-- noRetain, devType and isFactory are optional
+-- returns true or nil + wget return value
 function M.flashImageVersion(version, noRetain, devType, isFactory)
 	local imgName = M.constructImageFilename(version, devType, isFactory)
 	local cmd = noRetain and 'sysupgrade -n ' or 'sysupgrade '
 	cmd = cmd .. M.CACHE_PATH .. '/' .. imgName
+
+	local ccRv,ccMsg = createCacheDirectory()
+	if not ccRv then return nil,ccMsg end
+
 	setState(M.STATE, "Installing new image (" .. imgName .. ")") -- yes this is rather pointless
 	local rv = runCommand(cmd, true) -- if everything goes to plan, this will not return
 
@@ -344,13 +416,18 @@ function M.flashImageVersion(version, noRetain, devType, isFactory)
 	else setState(M.STATE.INSTALL_FAILED, "Image installation failed (sysupgrade returned " .. rv .. ")")
 	end
 
-	return rv
+	return (rv == 0) and true or nil,rv
 end
 
+--returns true on success, or nil+msg otherwise
 function M.clear()
-	P(0, "Removing " .. M.CACHE_PATH .. "/doodle3d-wifibox-*.bin")
+	local ccRv,ccMsg = createCacheDirectory()
+	if not ccRv then return nil,ccMsg end
+
+	D(0, "Removing " .. M.CACHE_PATH .. "/doodle3d-wifibox-*.bin")
 	setState(M.STATE.NONE, "")
-	return os.execute('rm -f ' .. M.CACHE_PATH .. '/doodle3d-wifibox-*.bin')
+	local rv = os.execute('rm -f ' .. M.CACHE_PATH .. '/doodle3d-wifibox-*.bin')
+	return (rv == 0) and true or nil,"could not remove image files"
 end
 
 
@@ -370,12 +447,13 @@ local function main()
 		os.exit(1)
 	end
 
-	M.verbosity = argTable.verbosity
+	verbosity = argTable.verbosity
 	if argTable.useCache ~= nil then useCache = argTable.useCache end
 
 	P(0, "Doodle3D Wifibox firmware updater")
-	if os.execute('mkdir -p ' .. M.CACHE_PATH) ~= 0 then
-		E("Error: could not create cache directory '" .. M.CACHE_PATH .. "'")
+	local cacheCreated,msg = createCacheDirectory()
+	if not cacheCreated then
+		E(msg)
 		os.exit(1)
 	end
 
@@ -459,20 +537,20 @@ local function main()
 	elseif argTable.action == 'imageDownload' then
 		--TODO: first check if version exists
 		local rv,msg = M.downloadImageFile(argTable.baseUrl, argTable.version, not useCache) --TEMP
-		if rv ~= 0 then E("could not download file (" .. rv .. ")")
+		if not rv then E("could not download file (" .. msg .. ")")
 		else P(1, "success")
 		end
 	elseif argTable.action == 'clear' then
-		local rv = M.clear()
-		if rv ~= 0 then
-			P(1, "error (" .. rv .. ")")
-		else
-			P(1, "success")
+		local rv,msg = M.clear()
+		if not rv then P(1, "error (" .. msg .. ")")
+		else P(1, "success")
 		end
+
 	elseif argTable.action == 'imageInstall' then
 		local rv = M.flashImageVersion(argTable.version)
 		E("error: flash function returned, the device should have been flashed and rebooted instead")
 		os.exit(3)
+
 	else
 		P(0, "usage: d3d-updater [-hqVcCvslr] [-u base_url] [-i version] [-d version] [-f version]")
 	end

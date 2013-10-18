@@ -17,9 +17,9 @@ M.WWW_RENAME_NAME = '/www-regular'
 M.CONNECTING_FAILED = -1
 M.NOT_CONNECTED 	= 0
 M.CONNECTING 		= 1
-M.CONNECTED 		= 2 
-M.CREATING 			= 3 
-M.CREATED 			= 4 
+M.CONNECTED 		= 2
+M.CREATING 			= 3
+M.CREATED 			= 4
 
 local function reloadBit(dlist, itemname)
 	if dlist[itemname] == nil then dlist[itemname] = '' end
@@ -259,15 +259,15 @@ end
 -- @tparam string ssid The SSID to use for the access point.
 -- @return True on success or nil+msg on error.
 function M.setupAccessPoint(ssid)
-	
+
 	M.setStatus(M.CREATING,"Creating access point...");
-	
+
 	M.switchConfiguration{apnet="add_noreload"}
 	wifi.activateConfig(ssid)
 	-- NOTE: dnsmasq must be reloaded after network or it will be unable to serve IP addresses
 	M.switchConfiguration{ wifiiface="add", network="reload", staticaddr="add", dhcppool="add_noreload", wwwredir="add", dnsredir="add" }
 	M.switchConfiguration{dhcp="reload"}
-	
+
 	M.setStatus(M.CREATED,"Access point created");
 
 	return true
@@ -282,9 +282,9 @@ end
 -- @return True on success or nil+msg on error.
 function M.associateSsid(ssid, passphrase, recreate)
 	log:info("netconfig:associateSsid: "..(ssid or "<nil>")..", "..(passphrase or "<nil>")..", "..(recreate or "<nil>"))
-	
+
 	M.setStatus(M.CONNECTING,"Connecting...");
-	
+
 	-- see if previously configured network for given ssid exists
 	local cfg = nil
 	for _, net in ipairs(wifi.getConfigs()) do
@@ -293,7 +293,7 @@ function M.associateSsid(ssid, passphrase, recreate)
 			break
 		end
 	end
-	
+
 	-- if not, or if newly created configuration is requested, create a new configuration
 	if cfg == nil or recreate ~= nil then
 		local scanResult = wifi.getScanInfo(ssid)
@@ -320,14 +320,14 @@ function M.associateSsid(ssid, passphrase, recreate)
 		M.setStatus(M.CONNECTING_FAILED,msg);
 		return nil,msg
 	end
-	
+
 	M.setStatus(M.CONNECTED,"Connected");
-	
+
 	-- signin to connect.doodle3d.com
 	local success, output = signin.signin()
 	if success then
   		log:info("Signed in")
-	else 
+	else
 		log:info("Signing in failed")
 	end
 
@@ -340,13 +340,13 @@ end
 function M.disassociate()
 
 	M.setStatus(M.NOT_CONNECTED,"Not connected");
-	
+
 	wifi.activateConfig()
 	return wifi.restart()
 end
 
 function M.getStatus()
-	log:info("getStatus")
+	log:info("network:getStatus")
 	local file, error = io.open('/tmp/networkstatus.txt','r')
 	if file == nil then
 		--log:error("Util:Access:Can't read controller file. Error: "..error)
@@ -355,8 +355,7 @@ function M.getStatus()
 		local status = file:read('*a')
 		--log:info("  status: "..utils.dump(status))
 		file:close()
-		local parts = {}
-		local code, msg = string.match(status, "([^|]+)|+(.*)")
+		local code, msg = string.match(status, '([^|]+)|+(.*)')
 		--log:info("  code: "..utils.dump(code))
 		--log:info("  msg: "..utils.dump(msg))
 		return code,msg
@@ -364,7 +363,7 @@ function M.getStatus()
 end
 
 function M.setStatus(code,msg)
-	log:info("setStatus: "..code.." | "..msg)
+	log:info("network:setStatus: "..code.." | "..msg)
 	local file = io.open('/tmp/networkstatus.txt','w')
 	file:write(code.."|"..msg)
 	file:flush()

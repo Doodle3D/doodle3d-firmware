@@ -1,27 +1,43 @@
 #!/usr/bin/env lua
 
 -- TODO/NOTES:
--- implement image removal
--- make sure downloaded files are overwritten, and never named with '.n' suffix
--- max 1 image tegelijk gedownload (zelfs dat is al link qua geheugengebruik? -> printen blokkeren vanaf download image?)
+-- M.checkValidImage(verEnt) -> doet exists+fileSize/MD5 check
+-- after download: (can use checkValidImage for this)
+-- - remove file on fail
+-- - check size or md5 and remove file on mismatch [osx: md5 -q <file>]
+-- add to status: validImage: none|<version> (can use checkValidImage for this)
+-- any more TODO's across this file?
+-- max 1 image tegelijk (moet api doen), en rekening houden met printbuffer (printen blokkeren?)
+-- API calls to add: update/status, update/download, update/install, update/clear
 
--- interpret wget return values more intelligently? or add function to run integrity check on index vs actually present files?
--- after downloading anything, check whether it really exists?
--- document index file format (Version first, then in any order: Files: sysup; factory, ChangelogStart:, ..., ChangelogEnd:)
--- can we also get rid of the .lua extension? (looks nicer on command-line)
+-- MAYBE/LATER:
+-- wget: add provision (in verbose mode?) to use -v instead of -q and disable output redirection
+-- wget: configurable timeout?
+-- max cache lifetime for index file?
+-- document index file format (Version first, then in any order: Files: sysup; factory, FileSize: sysup; factory, MD5: sysup; factory, ChangelogStart:, ..., ChangelogEnd:)
 -- remove /etc/wifibox-version on macbook...
--- perhaps create a function for each action and directly assign them in the arguments parser
+-- copy improved fileSize back to utils (add unit tests!)
+-- create new utils usable by updater as well as api? (remove dependencies on uci and logger etc)
 
 local M = {}
 
+-- NOTE: 'INSTALLED' will never be returned (and probably neither will 'INSTALLING') since in that case the device is flashing or rebooting
+M.STATE = { NONE = 1, DOWNLOADING = 2, IMAGE_READY = 3, INSTALLING = 4, INSTALLED = 5, INSTALL_FAILED = 6 }
+M.STATE_NAMES = {
+	[M.STATE.NONE] = 'none', [M.STATE.DOWNLOADING] = 'downloading', [M.STATE.IMAGE_READY] = 'image_ready',
+	[M.STATE.INSTALLING] = 'installing', [M.STATE.INSTALLED] = 'installed', [M.STATE.INSTALL_FAILED] = 'install_failed'
+}
+
 M.DEFAULT_BASE_URL = 'http://doodle3d.com/updates'
---M.DEFAULT_BASE_URL = 'http://localhost/~wouter/wifibox/updates'
+--M.DEFAULT_BASE_URL = 'http://localhost/~USERNAME/wifibox/updates'
 M.IMAGE_INDEX_FILE = 'wifibox-image.index'
 M.CACHE_PATH = '/tmp/d3d-updater'
+M.STATE_FILE = 'update-state'
 M.WGET_OPTIONS = "-q -t 1 -T 30"
 --M.WGET_OPTIONS = "-v -t 1 -T 30"
 
-M.verbosity = 0
+local verbosity = 0
+local log = nil -- wifibox API can use M.setLogger to enable this module to use its logger
 
 
 
@@ -32,8 +48,26 @@ M.verbosity = 0
 
 -- use level==1 for important messages, 0 for regular messages and -1 for less important messages
 local function P(lvl, msg) if (-lvl <= M.verbosity) then print(msg) end end
-
 local function E(msg) io.stderr:write(msg .. '\n') end
+local function D(msg) P(-1, "(DBG) " .. msg) end
+
+local function getState()
+	local file,msg = io.open(M.CACHE_PATH .. '/' .. M.STATE_FILE, 'r')
+	if not file then return M.STATE.NONE,"" end
+
+	local state = file:read('*a')
+	file:close()
+	local code,msg = string.match(state, '([^|]+)|+(.*)')
+	return code,msg
+end
+
+local function setState(code, msg)
+	local s = code .. '|' .. msg
+	if log then log:info("update state: " .. s) else D("update state: " .. s) end
+	local file = io.open(M.CACHE_PATH .. '/' .. M.STATE_FILE, 'w')
+	file:write(s)
+	file:close()
+end
 
 -- trim whitespace from both ends of string (from http://snippets.luacode.org/?p=snippets/trim_whitespace_from_string_76)
 local function trim(s)
@@ -68,27 +102,37 @@ local function exists(file)
 end
 
 -- from utils.lua
+--argument: either an open file or a filename
 local function fileSize(file)
-	local current = file:seek()
-	local size = file:seek('end')
-	file:seek('set', current)
+	local size = nil
+	if type(file) == 'file' then
+		local current = file:seek()
+		size = file:seek('end')
+		file:seek('set', current)
+	elseif type(file) == 'string' then
+		local f = io.open(file)
+		if f then
+			size = f:seek('end')
+			f:close()
+		end
+	end
+
 	return size
 end
 
 
 -- returns return value of command
-local function runCommand(command, dryRun) P(-1, "(DBG) about to run: '" .. command .. "'"); return (not dryRun) and os.execute(command) or 0 end
+local function runCommand(command, dryRun) D("about to run: '" .. command .. "'"); return (not dryRun) and os.execute(command) or 0 end
 
 -- returns return value of wget (or nil if saveDir is nil or empty)
 local function downloadFile(url, saveDir, filename)
 	if not saveDir or saveDir:len() == 0 then return nil, "saveDir must be non-empty" end
 	local outArg = (filename:len() > 0) and (' -O' .. filename) or ''
 	if filename:len() > 0 then
-		--return runCommand('wget ' .. M.WGET_OPTIONS .. ' -O ' .. saveDir .. '/' .. filename .. ' ' .. url .. ' 2> /dev/null')
-		return runCommand('wget ' .. M.WGET_OPTIONS .. ' -O ' .. saveDir .. '/' .. filename .. ' ' .. url)
+		return runCommand('wget ' .. M.WGET_OPTIONS .. ' -O ' .. saveDir .. '/' .. filename .. ' ' .. url .. ' 2> /dev/null')
 	else
-	return runCommand('wget ' .. M.WGET_OPTIONS .. ' -P ' .. saveDir .. ' ' .. url .. ' 2> /dev/null')
-end
+		return runCommand('wget ' .. M.WGET_OPTIONS .. ' -P ' .. saveDir .. ' ' .. url .. ' 2> /dev/null')
+	end
 end
 
 local function parseCommandlineArguments(arglist)
@@ -106,29 +150,27 @@ local function parseCommandlineArguments(arglist)
 			elseif argument == '-c' then result.useCache = true
 			elseif argument == '-C' then result.useCache = false
 			elseif argument == '-u' then nextIsUrl = true
-			elseif argument == '-m' then result.machineOutput = true
 			elseif argument == '-v' then result.action = 'showCurrentVersion'
+			elseif argument == '-s' then result.action = 'showStatus'
 			elseif argument == '-l' then result.action = 'showAvailableVersions'
 			elseif argument == '-i' then result.action = 'showVersionInfo'; nextIsVersion = true
 			elseif argument == '-d' then result.action = 'imageDownload'; nextIsVersion = true
-			elseif argument == '-r' then result.action = 'imageRemove'
 			elseif argument == '-f' then result.action = 'imageInstall'; nextIsVersion = true
-			else return nil,"Unrecognized argument '" .. argument .. "'"
+			elseif argument == '-r' then result.action = 'clear'
+			else return nil,"unrecognized argument '" .. argument .. "'"
 			end
 		end
 	end
 
-	if result.machineOutput then result.verbosity = -1 end
-
-		if result.version then
+	if result.version then
 		result.version = M.parseVersion(result.version)
 		if not result.version then
 			return nil,"error parsing specified version"
 		end
 	end
 
-	if nextIsVersion then return nil, "Missing required version argument" end
-	if nextIsUrl then return nil, "Missing required URL argument" end
+	if nextIsVersion then return nil, "missing required version argument" end
+	if nextIsUrl then return nil, "missing required URL argument" end
 
 	return result
 end
@@ -139,6 +181,28 @@ end
 ----------------------
 -- MODULE FUNCTIONS --
 ----------------------
+
+function M.setLogger(logger)
+	log = logger
+end
+
+function M.getStatus(baseUrl, useCache)
+	local result = {}
+
+	local verTable = M.getAvailableVersions(baseUrl, useCache)
+	local newest = verTable[#verTable]
+	result.currentVersion = M.getCurrentVersion()
+	result.newestVersion = newest.version
+	result.stateCode, result.stateText = getState()
+	result.stateCode = tonumber(result.stateCode)
+
+	if result.stateCode == M.STATE.DOWNLOADING then
+		result.progress = fileSize(M.CACHE_PATH .. '/' .. newest.sysupgradeFilename)
+		result.imageSize = newest.sysupgradeFileSize
+	end
+
+	return result
+end
 
 function M.parseVersion(versionText)
 	if not versionText or versionText:len() == 0 then return nil end
@@ -181,12 +245,12 @@ end
 
 -- returns a table with major, minor and patch as keys
 function M.getCurrentVersion()
-	local vt,msg = getCurrentVersionText()
+	local vt,msg = M.getCurrentVersionText()
 	return vt and M.parseVersion(vt) or nil,msg
 end
 
 -- requires url of image index file; returns an indexed (and sorted) table containing version tables
-function M.getAvailableVersions(baseUrl, useCache)
+function M.getAvailableVersions(baseUrl, useCache, version)
 	local indexFilename = M.CACHE_PATH .. '/' .. M.IMAGE_INDEX_FILE
 
 	if not useCache or not exists(indexFilename) then
@@ -228,8 +292,8 @@ function M.getAvailableVersions(baseUrl, useCache)
 			elseif k == 'FileSize' then
 				local sSize,fSize = v:match('^(.-);(.*)$')
 				sSize,fSize = trim(sSize), trim(fSize)
-				if sSize then entry.sysupgradeFileSize = sSize end
-				if fSize then entry.factoryFileSize = fSize end
+				if sSize then entry.sysupgradeFileSize = tonumber(sSize) end
+				if fSize then entry.factoryFileSize = tonumber(fSize) end
 			elseif k == 'MD5' then
 				local sSum,fSum = v:match('^(.-);(.*)$')
 				sSum,fSum = trim(sSum), trim(fSum)
@@ -256,9 +320,16 @@ end
 function M.downloadImageFile(baseUrl, ver, forceDownload, devType, isFactory)
 	local filename = M.constructImageFilename(ver, devType, isFactory)
 	local doDownload = (type(forceDownload) == 'boolean') and forceDownload or (not exists(M.CACHE_PATH .. '/' .. filename))
-	--TODO: if file exists but is of different length, set doDownload to true
-	--TODO: if file exists but does not match md5sum, set doDownload to true
-	return doDownload and downloadFile(baseUrl .. '/images/' .. filename, M.CACHE_PATH, filename) or 0
+
+	--TODO: call M.checkValidImage, set doDownload to true if not valid
+
+	local rv = 0
+	if doDownload then
+		setState(M.STATE.DOWNLOADING, "Downloading image (" .. filename .. ")")
+		rv = downloadFile(baseUrl .. '/images/' .. filename, M.CACHE_PATH, filename) or 0
+	end
+	setState(M.STATE.IMAGE_READY, "Image downloaded, ready to install (image name: " .. filename .. ")")
+	return rv
 end
 
 -- this function will not return
@@ -266,9 +337,23 @@ function M.flashImageVersion(version, noRetain, devType, isFactory)
 	local imgName = M.constructImageFilename(version, devType, isFactory)
 	local cmd = noRetain and 'sysupgrade -n ' or 'sysupgrade '
 	cmd = cmd .. M.CACHE_PATH .. '/' .. imgName
-	P(1, "running command: '" .. cmd .. "'")
-	return runCommand(cmd, true) -- if everything goes to plan, this will not return
+	setState(M.STATE, "Installing new image (" .. imgName .. ")") -- yes this is rather pointless
+	local rv = runCommand(cmd, true) -- if everything goes to plan, this will not return
+
+	if rv == 0 then setState(M.STATE.INSTALLED, "Image installed")
+	else setState(M.STATE.INSTALL_FAILED, "Image installation failed (sysupgrade returned " .. rv .. ")")
+	end
+
+	return rv
 end
+
+function M.clear()
+	P(0, "Removing " .. M.CACHE_PATH .. "/doodle3d-wifibox-*.bin")
+	setState(M.STATE.NONE, "")
+	return os.execute('rm -f ' .. M.CACHE_PATH .. '/doodle3d-wifibox-*.bin')
+end
+
+
 
 
 
@@ -295,20 +380,19 @@ local function main()
 	end
 
 	if argTable.action == 'showHelp' then
-		print("\t-h\t\tShow this help message")
-		print("\t-q\t\tBe more quiet")
-		print("\t-c\t\tUse cache as much as possible")
-		print("\t-C\t\tDo not use the cache")
-		print("\t-q\t\tBe more quiet")
-		print("\t-V\t\tBe more verbose")
-		print("\t-u <base_url>\tUse specified base URL (default: " .. M.DEFAULT_BASE_URL .. ")")
-		print("\t-m\t\tOnly print machine-readable output (implies -q)")
-		print("\t-v\t\tShow current image version")
-		print("\t-l\t\tShow list of available image versions (and which one has been downloaded, if any)")
-		print("\t-i <version>\tShow information (changelog) about the requested image version")
-		print("\t-d <version>\tDownload requested image version")
-		print("\t-r\t\tRemove downloaded image")
-		print("\t-f <version>\tFlash to requested image version (by means of sysupgrade)")
+		P(1, "\t-h\t\tShow this help message")
+		P(1, "\t-q\t\tquiet mode")
+		P(1, "\t-V\t\tverbose mode")
+		P(1, "\t-c\t\tUse cache as much as possible")
+		P(1, "\t-C\t\tDo not use the cache")
+		P(1, "\t-u <base_url>\tUse specified base URL (default: " .. M.DEFAULT_BASE_URL .. ")")
+		P(1, "\t-v\t\tShow current image version")
+		P(1, "\t-s\t\tShow current update status")
+		P(1, "\t-l\t\tShow list of available image versions (and which one has been downloaded, if any)")
+		P(1, "\t-i <version>\tShow information (changelog) about the requested image version")
+		P(1, "\t-d <version>\tDownload requested image version")
+		P(1, "\t-f <version>\tFlash to requested image version (by means of sysupgrade)")
+		P(1, "\t-r\t\tClear downloaded images and reset state")
 		os.exit(10)
 
 	elseif argTable.action == 'showCurrentVersion' then
@@ -317,6 +401,23 @@ local function main()
 		local v = M.parseVersion(vText)
 		if not v then E("error parsing version '" .. vText .. "'"); os.exit(2) end
 		P(1, "version: " .. M.formatVersion(v))
+
+	elseif argTable.action == 'showStatus' then
+		local status = M.getStatus(argTable.baseUrl, useCache)
+		P(0, "Current update status:")
+		P(1, "  currentVersion:\t" .. (M.formatVersion(status.currentVersion) or '?'))
+		P(1, "  newestVersion:\t" .. (M.formatVersion(status.newestVersion) or '?'))
+
+		if status.stateText and status.stateText:len() > 0 then
+			P(1, "  state:\t\t" .. M.STATE_NAMES[status.stateCode] .. " (" .. status.stateText .. ")")
+		else
+			P(1, "  state:\t\t" .. M.STATE_NAMES[status.stateCode])
+		end
+
+		if status.stateCode == M.STATE.DOWNLOADING then
+			local percent = (status.imageSize > 0) and (math.ceil(status.progress / status.imageSize * 1000) / 10) or 0
+			P(1, "  download progress:\t" .. status.progress .. "/" .. status.imageSize .. " (" .. percent .. "%)")
+		end
 
 	elseif argTable.action == 'showAvailableVersions' then
 		local verTable,msg = M.getAvailableVersions(argTable.baseUrl, useCache)
@@ -339,14 +440,18 @@ local function main()
 
 		if vEnt then
 			P(0, "Information on version:")
-			P(1, "version: " .. M.formatVersion(vEnt.version))
-			P(1, "sysupgradeFilename: " .. (vEnt.sysupgradeFilename or '<nil>'))
-			P(1, "factoryFilename: " .. (vEnt.factoryFilename or '<nil>'))
-			P(1, "sysupgradeFileSize: " .. (vEnt.sysupgradeFileSize or '<nil>'))
-			P(1, "factoryFileSize: " .. (vEnt.factoryFileSize or '<nil>'))
-			P(1, "sysupgradeMD5: " .. (vEnt.sysupgradeMD5 or '<nil>'))
-			P(1, "factoryMD5: " .. (vEnt.factoryMD5 or '<nil>'))
-			P(1, "changelog: " .. (vEnt.changelog or '<nil>'))
+			P(1, "  version:\t\t" .. M.formatVersion(vEnt.version))
+			P(1, "  sysupgradeFilename:\t" .. (vEnt.sysupgradeFilename or '-'))
+			P(1, "  sysupgradeFileSize:\t" .. (vEnt.sysupgradeFileSize or '-'))
+			P(1, "  sysupgradeMD5:\t" .. (vEnt.sysupgradeMD5 or '-'))
+			P(1, "  factoryFilename:\t" .. (vEnt.factoryFilename or '-'))
+			P(1, "  factoryFileSize:\t" .. (vEnt.factoryFileSize or '-'))
+			P(1, "  factoryMD5:\t\t" .. (vEnt.factoryMD5 or '-'))
+			if vEnt.changelog then
+				P(1, "\n--- Changelog ---\n" .. vEnt.changelog .. '---')
+			else
+				P(1, "  changelog:\t\t-")
+			end
 		else
 			P(1, "not found")
 		end
@@ -357,13 +462,19 @@ local function main()
 		if rv ~= 0 then E("could not download file (" .. rv .. ")")
 		else P(1, "success")
 		end
-	elseif argTable.action == 'imageRemove' then
-		P(0, "Removing " .. M.CACHE_PATH .. "/doodle3d-wifibox-*.bin")
-		--TODO: actually remove
+	elseif argTable.action == 'clear' then
+		local rv = M.clear()
+		if rv ~= 0 then
+			P(1, "error (" .. rv .. ")")
+		else
+			P(1, "success")
+		end
 	elseif argTable.action == 'imageInstall' then
 		local rv = M.flashImageVersion(argTable.version)
 		E("error: flash function returned, the device should have been flashed and rebooted instead")
 		os.exit(3)
+	else
+		P(0, "usage: d3d-updater [-hqVcCvslr] [-u base_url] [-i version] [-d version] [-f version]")
 	end
 
 	os.exit(0)

@@ -1,8 +1,6 @@
 #!/usr/bin/env lua
 
 -- TODO/NOTES:
--- add function wgetErrorToString and use it everywhere to get clearer error feedback
--- make P/E/D choose between print and log, so it doesn't clutter functions anymore (esp. since accidentally printing while in cgi mode breaks cgi)
 -- M.checkValidImage(verEnt) -> doet exists+fileSize/MD5 check
 -- after download: (can use checkValidImage for this)
 -- - remove file on fail
@@ -12,6 +10,7 @@
 -- max 1 image tegelijk (moet api doen), en rekening houden met printbuffer (printen blokkeren?)
 
 -- MAYBE/LATER:
+-- add API calls to retrieve a list of all versions with their info (i.e., the result of getAvailableVersions)
 -- wget: add provision (in verbose mode?) to use -v instead of -q and disable output redirection
 -- wget: configurable timeout?
 -- max cache lifetime for index file?
@@ -19,6 +18,8 @@
 -- remove /etc/wifibox-version on macbook...
 -- copy improved fileSize back to utils (add unit tests!)
 -- create new utils usable by updater as well as api? (remove dependencies on uci and logger etc)
+-- note: take care not to print any text in module functions, as this breaks http responses
+-- change representation of sysupgrade/factory info in versionInfo? (and also in image index?) <- create api call to get all info on all versions?
 
 local M = {}
 
@@ -66,6 +67,29 @@ local function E(msg)
 	end
 end
 
+-- dontShift is optional
+-- Note: os.execute() return value is shifted one byte to the left, this function
+-- takes that fact into account, unless dontShift is true.
+local function wgetStatusToString(exitStatus, dontShift)
+	if not dontShift then exitStatus = exitStatus / 256 end
+	-- adapted from man(1) wget on OSX
+	local statusTexts = {
+		['0'] = 'Ok',
+		['1'] = 'Generic error',
+		['2'] = 'Parse error', -- for instance, when parsing command-line options, the .wgetrc or .netrc...
+		['3'] = 'File I/O error',
+		['4'] = 'Network failure',
+		['5'] = 'SSL verification failure',
+		['6'] = 'Username/password authentication failure',
+		['7'] = 'Protocol error',
+		['8'] = 'Server issued an error response'
+	}
+	local result = statusTexts[tostring(exitStatus)]
+
+	if result then return exitStatus .. ": " .. result
+	else return exitStatus
+	end
+end
 
 local function createCacheDirectory()
 	if os.execute('mkdir -p ' .. M.CACHE_PATH) ~= 0 then
@@ -310,7 +334,7 @@ function M.getAvailableVersions(baseUrl, useCache)
 
 	if not useCache or not exists(indexFilename) then
 		local rv = downloadFile(baseUrl .. '/images/' .. M.IMAGE_INDEX_FILE, M.CACHE_PATH, M.IMAGE_INDEX_FILE)
-		if rv ~= 0 then return nil,"could not download image index file" end
+		if rv ~= 0 then return nil,"could not download image index file (" .. wgetStatusToString(rv) .. ")" end
 	end
 
 	local status,idxLines = pcall(io.lines, indexFilename)
@@ -322,7 +346,7 @@ function M.getAvailableVersions(baseUrl, useCache)
 	for line in idxLines do
 		local k,v = line:match('^(.-):(.*)$')
 		k,v = trim(k), trim(v)
-		D(1, "#" .. lineno .. ": considering '" .. line .. "' (" .. (k or '<nil>') .. " / " .. (v or '<nil>') .. ")") -- debug
+		if not log then D("#" .. lineno .. ": considering '" .. line .. "' (" .. (k or '<nil>') .. " / " .. (v or '<nil>') .. ")") end
 		if not changelogMode and (not k or not v) then return nil,"incorrectly formatted line in index file (line " .. lineno .. ")" end
 
 		if k == 'ChangelogEnd' then
@@ -391,11 +415,12 @@ function M.downloadImageFile(baseUrl, version, forceDownload, devType, isFactory
 	if rv == 0 then
 		--TODO: check if the downloaded file is complete and matches checksum
 		setState(M.STATE.IMAGE_READY, "Image downloaded, ready to install (image name: " .. filename .. ")")
+		return true
 	else
-		setState(M.STATE.DOWNLOAD_FAILED, "Image download failed (wget return value: " .. rv .. ")")
+		local ws = wgetStatusToString(rv)
+		setState(M.STATE.DOWNLOAD_FAILED, "Image download failed (" .. ws .. ")")
+		return nil,ws
 	end
-
-	return (rv == 0) and true or nil,rv
 end
 
 -- this function will not return
@@ -424,7 +449,7 @@ function M.clear()
 	local ccRv,ccMsg = createCacheDirectory()
 	if not ccRv then return nil,ccMsg end
 
-	D(0, "Removing " .. M.CACHE_PATH .. "/doodle3d-wifibox-*.bin")
+	D("Removing " .. M.CACHE_PATH .. "/doodle3d-wifibox-*.bin")
 	setState(M.STATE.NONE, "")
 	local rv = os.execute('rm -f ' .. M.CACHE_PATH .. '/doodle3d-wifibox-*.bin')
 	return (rv == 0) and true or nil,"could not remove image files"

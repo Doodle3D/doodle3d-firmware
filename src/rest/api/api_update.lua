@@ -62,20 +62,20 @@ function M.download_POST(request, response)
 	end
 
 	if argClearGcode then
-response:addData('gcode_clear',true)
-local rv,msg = printer:clearGcode()
+		response:addData('gcode_clear',true)
+		local rv,msg = printer:clearGcode()
 
-if not rv then
-	response:setError(msg)
-	return
-end
+		if not rv then
+			response:setError(msg)
+			return
+		end
 	end
 
 	vEnt,msg = updater.findVersion(argVersion)
 	if vEnt == nil then
 		response:setFail("error searching version index (" .. msg .. ")")
 		return
-	else if vEnt == false then
+	elseif vEnt == false then
 		response:setFail("no such version")
 		return
 	end
@@ -99,7 +99,16 @@ function M.install_POST(request, response)
 		return
 	end
 
-	local rv,msg = updater.flashImageVersion(argVersion)
+	vEnt,msg = updater.findVersion(argVersion)
+	if vEnt == nil then
+		response:setFail("error searching version index (" .. msg .. ")")
+		return
+	elseif vEnt == false then
+		response:setFail("no such version")
+		return
+	end
+
+	local rv,msg = updater.flashImageVersion(vEnt)
 
 	if not rv then response:setFail("installation failed (" .. msg .. ")")
 	else response:setSuccess()

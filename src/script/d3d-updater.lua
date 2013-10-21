@@ -13,7 +13,7 @@
 -- copy improved fileSize back to utils (add unit tests!)
 -- create new utils usable by updater as well as api? (remove dependencies on uci and logger etc)
 -- note: take care not to print any text in module functions, as this breaks http responses
--- change representation of sysupgrade/factory info in versionInfo? (and also in image index?)
+-- change representation of sysupgrade/factory info in versionInfo? (and also in image index?) <- create api call to get all info on all versions?
 
 local M = {}
 
@@ -64,6 +64,7 @@ end
 
 -- splits the return status from os.execute (see: http://stackoverflow.com/questions/16158436/how-to-shift-and-mask-bits-from-integer-in-lua)
 local function splitExitStatus(exitStatus)
+	if exitStatus == -1 then return -1,-1 end
 	local cmdStatus = math.floor(exitStatus / 256)
 	local systemStatus = exitStatus - cmdStatus * 256
 	return cmdStatus, systemStatus
@@ -183,7 +184,7 @@ end
 -- returns return value of command
 local function runCommand(command, dryRun)
 	D("about to run: '" .. command .. "'")
-	return (not dryRun) and os.execute(command) or 0
+	return (not dryRun) and os.execute(command) or -1
 end
 
 local function removeFile(filePath)
@@ -263,14 +264,18 @@ end
 
 function M.getStatus()
 	if not baseUrl then baseUrl = M.DEFAULT_BASE_URL end
+	local unknownVersion = { major = 0, minor = 0, patch = 0 }
 	local result = {}
 
 	local verTable,msg = M.getAvailableVersions()
-	if not verTable then return nil,msg end
+	if not verTable then
+		D("could not obtain available versions (" .. msg .. ")")
+		-- TODO: set an error state in result to signify we probably do not have internet access?
+	end
 
-	local newest = verTable[#verTable]
+	local newest = verTable and verTable[#verTable]
 	result.currentVersion = M.getCurrentVersion()
-	result.newestVersion = newest and newest.version or { major = 0, minor = 0, patch = 0 }
+	result.newestVersion = newest and newest.version or unknownVersion
 	result.stateCode, result.stateText = getState()
 	result.stateCode = tonumber(result.stateCode)
 
@@ -316,6 +321,7 @@ end
 -- verTable is optional, getAvailableVersions will be used to obtain it if nil
 function M.findVersion(version, verTable)
 	local msg = nil
+	version = M.parseVersion(version)
 	if not verTable then verTable,msg = M.getAvailableVersions() end
 
 	if not verTable then return nil,msg end

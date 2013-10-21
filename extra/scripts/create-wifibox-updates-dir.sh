@@ -1,10 +1,47 @@
 #!/bin/sh
 
+# NOTE: this script generates an index based on images found in the target directory.
+# So make sure it contains all images ever released (unless you want to actually remove them).
+# If this is not the case, first create a mirror of doodle3d.com/updates/images.
+
 #prevent being run as root (which is dangerous)
 if [ "$(id -u)" == "0" ]; then
    echo "Don't run this script as root, it is potentially dangerous." 1>&2
    exit 1
 fi
+
+
+# expects path of file to return the size of
+fileSize() {
+	stat -f %z ${1}
+}
+
+# expects arguments: version, devType, sysupgrade|factory
+# image name will be: '${IMAGE_BASENAME}-<version>-<devType>-<sysupgrade|factory>.bin'
+constructImageName() {
+	if [ $# -lt 3 ]; then echo "incorrect usage of constructImageName()"; exit 1; fi
+	echo "${IMAGE_BASENAME}-${1}-${2}-${3}.bin"
+}
+
+# expects arguments: basePath (where the files are), version, devType
+generateIndexEntry() {
+	if [ $# -lt 3 ]; then echo "incorrect usage of generateIndexEntry()"; exit 1; fi
+
+	sysupgrade_out_basename=`constructImageName ${2} ${3} sysupgrade`
+	factory_out_basename=`constructImageName ${2} ${3} factory`
+	sysupgrade_out_file=${1}/${sysupgrade_out_basename}
+	factory_out_file=${1}/${factory_out_basename}
+
+	sysupgrade_filesize=`fileSize ${sysupgrade_out_file}`
+	factory_filesize=`fileSize ${factory_out_file}`
+	sysupgrade_md5sum=`md5 -q ${sysupgrade_out_file}`
+	factory_md5sum=`md5 -q ${factory_out_file}`
+	echo "Version: ${2}" >> $IMG_INDEX_FILE
+	echo "Files: ${sysupgrade_out_basename}; ${factory_out_basename}" >> $IMG_INDEX_FILE
+	echo "FileSize: ${sysupgrade_filesize}; ${factory_filesize}" >> $IMG_INDEX_FILE
+	echo "MD5: ${sysupgrade_md5sum}; ${factory_md5sum}" >> $IMG_INDEX_FILE
+}
+
 
 OPENWRT_BASE=.
 PKG_SRC_DIR=$OPENWRT_BASE/bin/ar71xx/packages
@@ -18,6 +55,7 @@ IMAGE_BASENAME="doodle3d-wifibox"
 
 COMPRESS_RESULT=0
 PKG_DEST_BASE=.
+
 
 for arg in "$@"; do
 	case $arg in
@@ -45,6 +83,7 @@ if [ $? -ne 0 ]; then
 	echo "Please run this script from the Openwrt build root (on OSX this is probably an image mounted under /Volumes)."
 	exit 1
 fi
+
 
 #determine the wifibox root path
 my_rel_dir=`dirname $0`
@@ -83,31 +122,33 @@ for devtype in $DEVICE_TYPES; do
 	if [ -f $IMG_SRC_PATH/openwrt-ar71xx-generic-${devtype}-v1-squashfs-sysupgrade.bin ]; then
 		sysupgrade_name=$IMG_SRC_PATH/openwrt-ar71xx-generic-${devtype}-v1-squashfs-sysupgrade.bin
 		factory_name=$IMG_SRC_PATH/openwrt-ar71xx-generic-${devtype}-v1-squashfs-factory.bin
-		sysupgrade_size=`stat -f %z $sysupgrade_name`
-		factory_size=`stat -f %z $factory_name`
-		sysupgrade_out_basename=$IMAGE_BASENAME-${FW_VERSION}-${devtype}-sysupgrade.bin
-		factory_out_basename=$IMAGE_BASENAME-${FW_VERSION}-${devtype}-factory.bin
+		sysupgrade_size=`fileSize $sysupgrade_name`
+		factory_size=`fileSize $factory_name`
 
 		echo "Copying images for device '${devtype}' (sysupgrade size: ${sysupgrade_size}, factory size: ${factory_size})"
-
-		#TODO: replace 'wc -c' with something more efficient (stat? ls?)
-		sysupgrade_filesize=`wc -c < ${sysupgrade_name} | tr -d ' '`
-		factory_filesize=`wc -c < ${factory_name} | tr -d ' '`
-		sysupgrade_md5sum=`md5 -q ${sysupgrade_name}`
-		factory_md5sum=`md5 -q ${factory_name}`
-		echo "Version: ${FW_VERSION}" >> $IMG_INDEX_FILE
-		echo "Files: ${sysupgrade_out_basename}; ${factory_out_basename}" >> $IMG_INDEX_FILE
-		echo "FileSize: ${sysupgrade_filesize}; ${factory_filesize}" >> $IMG_INDEX_FILE
-		echo "MD5: ${sysupgrade_md5sum}; ${factory_md5sum}" >> $IMG_INDEX_FILE
+		cp $sysupgrade_name $PKG_IMG_DIR/`constructImageName ${FW_VERSION} ${devtype} sysupgrade`
+		cp $factory_name $PKG_IMG_DIR/`constructImageName ${FW_VERSION} ${devtype} factory`
 
 		if [ $sysupgrade_size -gt $MAX_GOOD_IMAGE_SIZE ]; then
 			echo "WARNING: the sysupgrade image is larger than $MAX_GOOD_IMAGE_SIZE bytes, which probably means it will cause read/write problems when flashed to a device"
 		fi
-
-		cp $sysupgrade_name $PKG_IMG_DIR/$sysupgrade_out_basename
-		cp $factory_name $PKG_IMG_DIR/$factory_out_basename
 	fi
 done
+
+
+# ok this is ugly, but at least it generates a complete index (the loop assumes for each
+# sysupgrade image it finds, there is also a factory counterpart)
+for file in $PKG_IMG_DIR/${IMAGE_BASENAME}-*-sysupgrade.bin; do
+	basefile=`basename ${file}`
+	echo "Considering $basefile (${file})"
+	# sorry for the shell magic
+	devtype=${basefile:`expr ${#IMAGE_BASENAME} + 1`}
+	version=${devtype//-*}
+	devtype=${devtype#*-}
+	devtype=${devtype%-*}
+	generateIndexEntry $PKG_IMG_DIR $version $devtype >> $IMG_INDEX_FILE
+done
+
 
 # NOTE: the aliasing construct in the indexing script does not work (and even then, the md5 command defaults to a different output format), so we hack around it here.
 MD5_HACK_ENABLED=0

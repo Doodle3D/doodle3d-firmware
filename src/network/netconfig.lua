@@ -17,9 +17,9 @@ M.WWW_RENAME_NAME = '/www-regular'
 M.CONNECTING_FAILED = -1
 M.NOT_CONNECTED 	= 0
 M.CONNECTING 		= 1
-M.CONNECTED 		= 2
-M.CREATING 			= 3
-M.CREATED 			= 4
+M.CONNECTED 		= 2 
+M.CREATING 			= 3 
+M.CREATED 			= 4 
 
 local function reloadBit(dlist, itemname)
 	if dlist[itemname] == nil then dlist[itemname] = '' end
@@ -76,9 +76,15 @@ function M.commitComponent(c)
 end
 
 function M.reloadComponent(c, silent)
-	log:info("reloading component '" .. c .. "'")
-	if silent ~= nil and silent then os.execute('/etc/init.d/' .. c .. ' reload &> /dev/null')
-	else os.execute('/etc/init.d/' .. c .. ' reload') end
+	log:info("reloading component '" .. c .. "'") 
+	local cmd = '/etc/init.d/' .. c .. ' reload'
+	if silent ~= nil and silent then 
+		cmd = cmd .. ' &> /dev/null'
+		os.execute(cmd)
+	else
+		rv = utils.captureCommandOutput(cmd)
+		log:info("  result reloading component '" .. c .. "': "..utils.dump(rv))
+	end
 end
 
 function M.uciTableSet(config, section, options)
@@ -259,17 +265,34 @@ end
 -- @tparam string ssid The SSID to use for the access point.
 -- @return True on success or nil+msg on error.
 function M.setupAccessPoint(ssid)
-
-	M.setStatus(M.CREATING,"Creating access point...");
-
+	
+	M.setStatus(M.CREATING,"Creating access point '"..ssid.."'...");
+	
 	M.switchConfiguration{apnet="add_noreload"}
 	wifi.activateConfig(ssid)
 	-- NOTE: dnsmasq must be reloaded after network or it will be unable to serve IP addresses
 	M.switchConfiguration{ wifiiface="add", network="reload", staticaddr="add", dhcppool="add_noreload", wwwredir="add", dnsredir="add" }
 	M.switchConfiguration{dhcp="reload"}
-
+	
 	M.setStatus(M.CREATED,"Access point created");
-
+	
+	local ds = wifi.getDeviceState()
+	--log:info("  network/status: ")
+	log:info("    ssid: ".. utils.dump(ds.ssid))
+	--[[log:info("    bssid: ".. utils.dump(ds.bssid))
+	log:info("    channel: ".. utils.dump(ds.channel))
+	log:info("    mode: ".. utils.dump(ds.mode))
+	log:info("    encryption: ".. utils.dump(ds.encryption))
+	log:info("    quality: ".. utils.dump(ds.quality))
+	log:info("    quality_max: ".. utils.dump(ds.quality_max))
+	log:info("    txpower: ".. utils.dump(ds.txpower))
+	log:info("    signal: ".. utils.dump(ds.signal))
+	log:info("    noise: ".. utils.dump(ds.noise))
+	log:info("    raw: ".. utils.dump(ds))
+	
+	local localip = wifi.getLocalIP()
+	log:info("    localip: "..utils.dump(localip))]]--
+			
 	return true
 end
 
@@ -282,9 +305,9 @@ end
 -- @return True on success or nil+msg on error.
 function M.associateSsid(ssid, passphrase, recreate)
 	log:info("netconfig:associateSsid: "..(ssid or "<nil>")..", "..(passphrase or "<nil>")..", "..(recreate or "<nil>"))
-
+	
 	M.setStatus(M.CONNECTING,"Connecting...");
-
+	
 	-- see if previously configured network for given ssid exists
 	local cfg = nil
 	for _, net in ipairs(wifi.getConfigs()) do
@@ -293,7 +316,7 @@ function M.associateSsid(ssid, passphrase, recreate)
 			break
 		end
 	end
-
+	
 	-- if not, or if newly created configuration is requested, create a new configuration
 	if cfg == nil or recreate ~= nil then
 		local scanResult = wifi.getScanInfo(ssid)
@@ -320,14 +343,14 @@ function M.associateSsid(ssid, passphrase, recreate)
 		M.setStatus(M.CONNECTING_FAILED,msg);
 		return nil,msg
 	end
-
+	
 	M.setStatus(M.CONNECTED,"Connected");
-
+	
 	-- signin to connect.doodle3d.com
 	local success, output = signin.signin()
 	if success then
   		log:info("Signed in")
-	else
+	else 
 		log:info("Signing in failed")
 	end
 
@@ -340,7 +363,7 @@ end
 function M.disassociate()
 
 	M.setStatus(M.NOT_CONNECTED,"Not connected");
-
+	
 	wifi.activateConfig()
 	return wifi.restart()
 end

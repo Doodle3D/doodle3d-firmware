@@ -1,7 +1,9 @@
 local log = require('util.logger')
+local utils = require('util.utils')
 local settings = require('util.settings')
 local printer = require('util.printer')
 local signin = require('network.signin')
+local wifi = require('network.wlanconfig')
 
 local M = {
 	isApi = true
@@ -19,14 +21,27 @@ function M._global_GET(request, response)
 end
 
 function M._global_POST(request, response)
+	--log:info("API:config:set")
 	response:setSuccess()
+	
+	local validation = {}
 	for k,v in pairs(request:getAll()) do
+		--log:info("  "..k..": "..v);
 		local r,m = settings.set(k, v)
 		
-		if r then response:addData(k, "ok")
-		else response:addData(k, "could not set key ('" .. m .. "')")
+		if r then 
+			--response:addData(k, "ok")
+			validation[k] = "ok"
+		else 
+			--response:addData(k, "could not save setting ('" .. m .. "')")
+			validation[k] = "could not save setting ('" .. m .. "')"
+			log:info("  m: "..utils.dump(m))
 		end
 	end
+	response:addData("validation",validation)
+	
+	local substitutedSsid = wifi.getSubstitutedSsid(settings.get('network.ap.ssid'))
+	response:addData("substituted_ssid",substitutedSsid)
 	
 	log:info("API:Network:try signing in")
   	if signin.signin() then

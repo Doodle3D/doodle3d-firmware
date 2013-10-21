@@ -13,6 +13,8 @@
 local uci = require('uci').cursor()
 local utils = require('util.utils')
 local baseconfig = require('conf_defaults')
+local utils = require('util.utils')
+local log = require('util.logger')
 
 local M = {}
 
@@ -98,8 +100,9 @@ local function isValid(value, baseTable)
 	local varType, min, max, regex, isValid = baseTable.type, baseTable.min, baseTable.max, baseTable.regex, baseTable.isValid
 
 	if isValid then 
-		local ok = isValid(value)
-		return ok or nil,"invalid value"
+		local ok,msg = isValid(value)
+		if msg == nil then msg = "invalid value" end
+		return ok or nil,msg
 	end
 
 	if varType == 'bool' then
@@ -107,18 +110,25 @@ local function isValid(value, baseTable)
 		
 	elseif varType == 'int' or varType == 'float' then
 		local numValue = tonumber(value)
-		local ok = numValue and true or false
-		ok = ok and (varType == 'float' or math.floor(numValue) == numValue)
-		if min then ok = ok and numValue >= min end
-		if max then ok = ok and numValue <= max end
-		return ok or nil,"invalid int/float value or out of range"
+		if numValue == nil then
+			return nil, "invalid number"
+		elseif varType == 'int' and math.floor(numValue) ~= numValue then
+			return nil, "invalid int"
+		elseif min and numValue < min then
+			return nil, "too low"
+		elseif max and numValue > max then
+			return nil, "too high"
+		end
 		
 	elseif varType == 'string' then
 		local ok = true
-		if min then ok = ok and value:len() >= min end
-		if max then ok = ok and value:len() <= max end
-		if regex then ok = ok and value:match(regex) ~= nil end
-		return ok or nil,"invalid string value"
+		if min and value:len() < min then
+			return nil,"too short"
+		elseif max and value:len() > max then
+			return nil,"too long"
+		elseif regex and value:match(regex) == nil then
+			return nil,"invalid value"
+		end 
 	end
 
 	return true
@@ -191,6 +201,7 @@ end
 -- @treturn bool|nil True if everything went well, nil in case of error.
 -- @treturn ?string Error message in case first return value is nil (invalid key).
 function M.set(key, value)
+	--log:info("settings:set: "..utils.dump(key))
 	key = replaceDots(key)
 
 	local r = utils.create(UCI_CONFIG_FILE)
@@ -198,11 +209,11 @@ function M.set(key, value)
 	
 	local base = getBaseKeyTable(key)
 	if not base then return nil,ERR_NO_SUCH_KEY end
-
+	
 	if M.isDefault(key) and value == nil then return true end -- key is default already
-	
+	--log:info("  not default")
 	local current = uci:get(UCI_CONFIG_NAME, UCI_CONFIG_SECTION, key)
-	
+	--log:info("  base.type: "..utils.dump(base.type))
 	if base.type == 'bool' then
 		if value ~= "" then
 			value = utils.toboolean(value)
@@ -216,15 +227,16 @@ function M.set(key, value)
 		end
 	end
 
+
+	local valid,m = isValid(value, base)
+	if not valid then
+		return nil,m
+	end
+		
 	if fromUciValue(current, base.type) == value then return true end
 
 	if value ~= nil then
-		local valid,m = isValid(value, base)
-		if (valid) then
-			uci:set(UCI_CONFIG_NAME, UCI_CONFIG_SECTION, key, toUciValue(value, base.type))
-		else
-			return nil,m
-		end
+		uci:set(UCI_CONFIG_NAME, UCI_CONFIG_SECTION, key, toUciValue(value, base.type))
 	else
 		uci:delete(UCI_CONFIG_NAME, UCI_CONFIG_SECTION, key)
 	end

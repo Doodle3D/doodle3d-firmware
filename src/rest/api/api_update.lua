@@ -13,7 +13,8 @@ local M = {
 
 function M.status(request, response)
 	updater.setLogger(log)
-	local status,msg = updater.getStatus(nil, false)
+	updater.setUseCache(false)
+	local status,msg = updater.getStatus()
 	if not status then
 		response:setFail(msg)
 		return
@@ -50,7 +51,7 @@ function M.download_POST(request, response)
 	end
 
 	updater.setLogger(log)
-	local rv,msg
+	local vEnt, rv, msg
 
 	if argClearImages then
 		rv,msg = updater.clear()
@@ -61,9 +62,6 @@ function M.download_POST(request, response)
 	end
 
 	if argClearGcode then
-		-- TODO
---[[ from api_printer.lua:
-log:debug("clearing all gcode for " .. printer:getId())
 response:addData('gcode_clear',true)
 local rv,msg = printer:clearGcode()
 
@@ -71,10 +69,18 @@ if not rv then
 	response:setError(msg)
 	return
 end
-]]--
 	end
 
-	rv,msg = updater.downloadImageFile(nil, argVersion)
+	vEnt,msg = updater.findVersion(argVersion)
+	if vEnt == nil then
+		response:setFail("error searching version index (" .. msg .. ")")
+		return
+	else if vEnt == false then
+		response:setFail("no such version")
+		return
+	end
+
+	rv,msg = updater.downloadImageFile(vEnt)
 	if not rv then
 		response:setFail(msg)
 		return
@@ -85,10 +91,19 @@ end
 
 -- if successful, this call won't return since the device will flash its memory and reboot
 function M.install_POST(request, response)
+	local argVersion = request:get("version")
 	updater.setLogger(log)
-	-- install
-	-- cross fingers
-	response:setSuccess()
+
+	if not argVersion then
+		response:setError("missing version argument")
+		return
+	end
+
+	local rv,msg = updater.flashImageVersion(argVersion)
+
+	if not rv then response:setFail("installation failed (" .. msg .. ")")
+	else response:setSuccess()
+	end
 end
 
 function M.clear_POST(request, response)

@@ -113,23 +113,6 @@ local function getState()
 	return code,msg
 end
 
--- NOTE: make sure the cache directory exists before calling this function or it will fail.
--- NOTE: this function _can_ fail but we don't expect this to happen so the return value is ignored for now
-local function setState(code, msg)
-	local s = code .. '|' .. msg
-	D("set update state: " .. M.STATE_NAMES[code] .. " ('" .. s .. "')")
-	local file,msg = io.open(M.CACHE_PATH .. '/' .. M.STATE_FILE, 'w')
-
-	if not file then
-		E("error: could not open state file for writing (" .. msg .. ")")
-		return false
-	end
-
-	file:write(s)
-	file:close()
-	return true
-end
-
 -- trim whitespace from both ends of string (from http://snippets.luacode.org/?p=snippets/trim_whitespace_from_string_76)
 local function trim(s)
 	if type(s) ~= 'string' then return s end
@@ -267,25 +250,27 @@ function M.getStatus()
 	local unknownVersion = { major = 0, minor = 0, patch = 0 }
 	local result = {}
 
+	result.currentVersion = M.getCurrentVersion()
+	result.stateCode, result.stateText = getState()
+	result.stateCode = tonumber(result.stateCode)
+	
 	local verTable,msg = M.getAvailableVersions()
 	if not verTable then
 		D("could not obtain available versions (" .. msg .. ")")
 		-- TODO: set an error state in result to signify we probably do not have internet access?
+		return false, result, msg
 	end
 
 	local newest = verTable and verTable[#verTable]
-	result.currentVersion = M.getCurrentVersion()
 	result.newestVersion = newest and newest.version or unknownVersion
-	result.stateCode, result.stateText = getState()
-	result.stateCode = tonumber(result.stateCode)
-
+	
 	if result.stateCode == M.STATE.DOWNLOADING then
 		result.progress = fileSize(M.CACHE_PATH .. '/' .. newest.sysupgradeFilename)
 		if not result.progress then result.progress = 0 end -- in case the file does not exist yet (which yields nil)
 		result.imageSize = newest.sysupgradeFileSize
 	end
 
-	return result
+	return true, result
 end
 
 -- Turns a plain-text version into a table.
@@ -454,24 +439,24 @@ function M.downloadImageFile(versionEntry, devType, isFactory)
 
 	local rv = 0
 	if doDownload then
-		setState(M.STATE.DOWNLOADING, "Downloading image (" .. filename .. ")")
+		M.setState(M.STATE.DOWNLOADING, "Downloading image (" .. filename .. ")")
 		rv = downloadFile(baseUrl .. '/images/' .. filename, M.CACHE_PATH, filename)
 	end
 
 	if rv == 0 then
 		if M.checkValidImage(versionEntry, devType, isFactory) then
-			setState(M.STATE.IMAGE_READY, "Image downloaded, ready to install (image name: " .. filename .. ")")
+			M.setState(M.STATE.IMAGE_READY, "Image downloaded, ready to install (image name: " .. filename .. ")")
 			return true
 		else
 			removeFile(M.CACHE_PATH .. '/' .. filename)
 			local ws = "Image download failed (invalid image)"
-			setState(M.STATE_DOWNLOAD_FAILED, ws)
+			M.setState(M.STATE.DOWNLOAD_FAILED, ws)
 			return nil,ws
 		end
 	else
 		local ws = wgetStatusToString(rv)
 		removeFile(M.CACHE_PATH .. '/' .. filename)
-		setState(M.STATE.DOWNLOAD_FAILED, "Image download failed (wget error: " .. ws .. ")")
+		M.setState(M.STATE.DOWNLOAD_FAILED, "Image download failed (wget error: " .. ws .. ")")
 		return nil,ws
 	end
 end
@@ -480,6 +465,7 @@ end
 -- noRetain, devType and isFactory are optional
 -- returns true or nil + wget return value
 function M.flashImageVersion(versionEntry, noRetain, devType, isFactory)
+	log:info("flashImageVersion")
 	local imgName = M.constructImageFilename(versionEntry.version, devType, isFactory)
 	local cmd = noRetain and 'sysupgrade -n ' or 'sysupgrade '
 	cmd = cmd .. M.CACHE_PATH .. '/' .. imgName
@@ -491,15 +477,15 @@ function M.flashImageVersion(versionEntry, noRetain, devType, isFactory)
 		return nil,"no valid image for requested version present"
 	end
 
-	setState(M.STATE.INSTALLING, "Installing new image (" .. imgName .. ")") -- yes this is rather pointless
+	M.setState(M.STATE.INSTALLING, "Installing new image (" .. imgName .. ")") -- yes this is rather pointless
 	local rv = runCommand(cmd) -- if everything goes to plan, this will not return
 
 	if rv == 0 then
-		setState(M.STATE.INSTALLED, "Image installed")
+		M.setState(M.STATE.INSTALLED, "Image installed")
 	else
 		-- NOTE: if cmdrv == 127, this means the command was not found
 		local cmdrv,sysrv = splitExitStatus(rv)
-		setState(M.STATE.INSTALL_FAILED, "Image installation failed (sysupgrade returned " .. cmdrv .. ", execution status: " .. sysrv .. ")")
+		M.setState(M.STATE.INSTALL_FAILED, "Image installation failed (sysupgrade returned " .. cmdrv .. ", execution status: " .. sysrv .. ")")
 	end
 
 	return (rv == 0) and true or nil,rv
@@ -511,12 +497,27 @@ function M.clear()
 	if not ccRv then return nil,ccMsg end
 
 	D("Removing " .. M.CACHE_PATH .. "/doodle3d-wifibox-*.bin")
-	setState(M.STATE.NONE, "")
+	M.setState(M.STATE.NONE, "")
 	local rv = os.execute('rm -f ' .. M.CACHE_PATH .. '/doodle3d-wifibox-*.bin')
 	return (rv == 0) and true or nil,"could not remove image files"
 end
 
+-- NOTE: make sure the cache directory exists before calling this function or it will fail.
+-- NOTE: this function _can_ fail but we don't expect this to happen so the return value is ignored for now
+function M.setState(code, msg)
+	local s = code .. '|' .. msg
+	D("set update state: " .. M.STATE_NAMES[code] .. " ('" .. s .. "')")
+	local file,msg = io.open(M.CACHE_PATH .. '/' .. M.STATE_FILE, 'w')
 
+	if not file then
+		E("error: could not open state file for writing (" .. msg .. ")")
+		return false
+	end
+
+	file:write(s)
+	file:close()
+	return true
+end
 
 
 

@@ -70,6 +70,7 @@ fi
 ### Finally make sure basic configuration is set correctly
 
 $IPKG_INSTROOT/etc/init.d/wifibox enable
+$IPKG_INSTROOT/etc/init.d/wifibox start
 
 if [ -z "$IPKG_INSTROOT" ]; then
 	echo "Enabling wifi device..."

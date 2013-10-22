@@ -14,14 +14,7 @@ rmdir /usr/share/lua/wifibox/util
 rmdir /usr/share/lua/wifibox
 rmdir /usr/share/lua
 
-# Try to remove all www directories used by the package, and intentionally leave anything non-empty alone
-rmdir /www/js/libs
-rmdir /www/js
-rmdir /www/img/buttons
-rmdir /www/img
-rmdir /www/css
-rm /www/test 2> /dev/null
-rmdir /www/cgi-bin
+#rm /www/test 2> /dev/null
 
 echo "The wifibox banner has been removed. Changes to the root profile however, have"
 echo "not been reverted, as haven't the wlan firewall zone and the radio0 device state."

@@ -109,11 +109,8 @@ define Package/wifibox/install
 	$(CP) $(WIFIBOX_BASE_DIR)/FIRMWARE-VERSION $(1)/etc/wifibox-version
 	
 ifeq ($(CONFIG_WIFIBOX_DEVEL_PACKAGE),y)
-#	$(INSTALL_DIR) $(1)/$(TGT_LUA_DIR_SUFFIX)/misc
-#	$(CP) $(WIFIBOX_BASE_DIR)/../misc/collect-code.sh $(1)/$(TGT_LUA_DIR_SUFFIX)/misc/
-
-	$(INSTALL_DIR) $(1)/$(TGT_LUA_DIR_SUFFIX)/test
-	$(CP) $(WIFIBOX_BASE_DIR)/test/* $(1)/$(TGT_LUA_DIR_SUFFIX)/test/
+#	$(INSTALL_DIR) $(1)/$(TGT_LUA_DIR_SUFFIX)/test
+#	$(CP) $(WIFIBOX_BASE_DIR)/test/* $(1)/$(TGT_LUA_DIR_SUFFIX)/test/
 #	$(LN) -s /$(TGT_LUA_DIR_SUFFIX)/test $(1)/www/
 endif
 	

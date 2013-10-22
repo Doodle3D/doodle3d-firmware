@@ -108,8 +108,9 @@ echo "Using $PKG_DEST_DIR as target directory"
 #clear directory and copy package files
 if [ ! -d $PKG_FEED_DIR ]; then mkdir $PKG_FEED_DIR; fi
 cp $PKG_SRC_DIR/wifibox*.ipk $PKG_FEED_DIR
-cp $PKG_SRC_DIR/ultifi*.ipk $PKG_FEED_DIR
+cp $PKG_SRC_DIR/doodle3d-client*.ipk $PKG_FEED_DIR
 cp $PKG_SRC_DIR/print3d*.ipk $PKG_FEED_DIR
+cp $PKG_SRC_DIR/ultifi*.ipk $PKG_FEED_DIR
 rm -f $PKG_FEED_DIR/$INDEX_FILE
 rm -f $PKG_FEED_DIR/$INDEX_GZ_FILE
 

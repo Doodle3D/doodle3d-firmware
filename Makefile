@@ -32,7 +32,7 @@ define Package/wifibox
 #	DEFAULT:=y
 	TITLE:=Doodle3D WifiBox firmware
 	URL:=http://www.doodle3d.com/wifibox
-	DEPENDS:=+lua +luafilesystem +libuci-lua +libiwinfo-lua +uhttpd +uhttpd-mod-lua +print3d
+	DEPENDS:=+lua +luafilesystem +libuci-lua +libiwinfo-lua +uhttpd +uhttpd-mod-lua +doodle3d-client +print3d
 endef
 
 define Package/wifibox/description
@@ -106,20 +106,15 @@ define Package/wifibox/install
 	$(INSTALL_BIN) $(WIFIBOX_BASE_DIR)/script/signin.sh $(1)/$(TGT_LUA_DIR_SUFFIX)/script
 	
 	$(CP) $(WIFIBOX_BASE_DIR)/script/wifibox.uci.config $(1)/etc/config/wifibox  # copy base configuration to uci config dir
-
 	$(CP) $(WIFIBOX_BASE_DIR)/FIRMWARE-VERSION $(1)/etc/wifibox-version
 	
-#	$(INSTALL_DIR) $(1)/$(TGT_LUA_DIR_SUFFIX)/www
-#	$(CP) $(WIFIBOX_BASE_DIR)/www/* $(1)/$(TGT_LUA_DIR_SUFFIX)/www/
-	$(CP) $(WIFIBOX_BASE_DIR)/www/* $(1)/www/  #copy www files directly to /www
-
 ifeq ($(CONFIG_WIFIBOX_DEVEL_PACKAGE),y)
 #	$(INSTALL_DIR) $(1)/$(TGT_LUA_DIR_SUFFIX)/misc
 #	$(CP) $(WIFIBOX_BASE_DIR)/../misc/collect-code.sh $(1)/$(TGT_LUA_DIR_SUFFIX)/misc/
 
 	$(INSTALL_DIR) $(1)/$(TGT_LUA_DIR_SUFFIX)/test
 	$(CP) $(WIFIBOX_BASE_DIR)/test/* $(1)/$(TGT_LUA_DIR_SUFFIX)/test/
-	$(LN) -s /$(TGT_LUA_DIR_SUFFIX)/test $(1)/www/
+#	$(LN) -s /$(TGT_LUA_DIR_SUFFIX)/test $(1)/www/
 endif
 	
 	

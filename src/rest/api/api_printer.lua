@@ -106,6 +106,8 @@ end
 
 function M.stop_POST(request, response)
 
+	log:info("API:printer/stop")
+
 	if not accessManager.hasControl(request.remoteAddress) then
 		response:setFail("No control access")
 		return
@@ -114,8 +116,23 @@ function M.stop_POST(request, response)
 	local argId = request:get("id")
 	local printer,msg = printerUtils.createPrinterOrFail(argId, response)
 	if not printer then return end
-
-	local endGcode = settings.get('printer.endgcode')
+	
+	-- replacing {printingTemp} and {preheatTemp} in endgcode
+	local printingTemperature  	  = settings.get('printer.temperature')
+	local printingBedTemperature  = settings.get('printer.bed.temperature')
+	local preheatTemperature      = settings.get('printer.heatup.temperature')
+	local preheatBedTemperature   = settings.get('printer.heatup.bed.temperature')
+	local endGcode 				  = settings.get('printer.endgcode')
+	
+	--log:info("  printingBedTemperature: "..utils.dump(printingBedTemperature))
+	--log:info("  preheatBedTemperature: "..utils.dump(preheatBedTemperature))
+	--log:info("  endGcode : "..utils.dump(endGcode))
+	endGcode = string.gsub(endGcode,"{printingTemp}",printingTemperature)
+	endGcode = string.gsub(endGcode,"{printingBedTemp}",printingBedTemperature)
+	endGcode = string.gsub(endGcode,"{preheatTemp}",preheatTemperature)
+	endGcode = string.gsub(endGcode,"{preheatBedTemp}",preheatBedTemperature)
+	--log:info("  >endGcode : "..utils.dump(endGcode))
+	
 	local rv,msg = printer:stopPrint(endGcode)
 
 	response:addData('id', argId)

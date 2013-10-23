@@ -16,6 +16,8 @@ function M.getController()
 	else
 		controllerIP = file:read('*a')
 		file:close()
+		--strip trailing newline (useful when manually editing controller.txt)
+		if controllerIP:find('\n') == controllerIP:len() then controllerIP = controllerIP:sub(0, -2) end
 		return controllerIP
 	end
 end

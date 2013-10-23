@@ -34,7 +34,7 @@ function M.temperature(request, response)
 		response:setError(msg)
 		return false;
 	end
-	
+
 	return true;
 end
 
@@ -56,32 +56,37 @@ function M.progress(request, response)
 		response:setError(bufferedLines)
 		return false
 	end
-	
+
 	return true;
 end
 
-function M.state(request, response)
+-- NOTE: onlyReturnState is optional and prevents response from being modified
+function M.state(request, response, onlyReturnState)
 	local argId = request:get("id")
-	response:addData('id', argId)
-	
+	if not onlyReturnState then response:addData('id', argId) end
+
 	local printer,msg = printerUtils.createPrinterOrFail(argId, response)
-	if not printer then 
-		response:setSuccess()
+	if not printer then
 		local printerState = "disconnected"
-		response:addData('state', printerState)
+		if not onlyReturnState then
+			response:setSuccess()
+			response:addData('state', printerState)
+		end
 		return true, printerState
-	else 
+	else
 		local rv,msg = printer:getState()
 		if rv then
-			response:setSuccess()
-			response:addData('state', rv)
+			if not onlyReturnState then
+				response:setSuccess()
+				response:addData('state', rv)
+			end
 			return true, rv
 		else
-			response:setError(msg)
+			if not onlyReturnState then response:setError(msg) end
 			return false
 		end
 	end
-	return true;
+	return true
 end
 
 function M.heatup_POST(request, response)
@@ -116,14 +121,14 @@ function M.stop_POST(request, response)
 	local argId = request:get("id")
 	local printer,msg = printerUtils.createPrinterOrFail(argId, response)
 	if not printer then return end
-	
+
 	-- replacing {printingTemp} and {preheatTemp} in endgcode
 	local printingTemperature  	  = settings.get('printer.temperature')
 	local printingBedTemperature  = settings.get('printer.bed.temperature')
 	local preheatTemperature      = settings.get('printer.heatup.temperature')
 	local preheatBedTemperature   = settings.get('printer.heatup.bed.temperature')
 	local endGcode 				  = settings.get('printer.endgcode')
-	
+
 	--log:info("  printingBedTemperature: "..utils.dump(printingBedTemperature))
 	--log:info("  preheatBedTemperature: "..utils.dump(preheatBedTemperature))
 	--log:info("  endGcode : "..utils.dump(endGcode))
@@ -132,7 +137,7 @@ function M.stop_POST(request, response)
 	endGcode = string.gsub(endGcode,"{preheatTemp}",preheatTemperature)
 	endGcode = string.gsub(endGcode,"{preheatBedTemp}",preheatBedTemperature)
 	--log:info("  >endGcode : "..utils.dump(endGcode))
-	
+
 	local rv,msg = printer:stopPrint(endGcode)
 
 	response:addData('id', argId)

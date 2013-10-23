@@ -6,33 +6,58 @@ arg = argStash
 
 local log = require('util.logger')
 local utils = require('util.utils')
+local accessManager = require('util.access')
+local printerAPI = require('rest.api.api_printer')
 
 local M = {
 	isApi = true
 }
 
+
+-- TODO: this function is also defined in 2 other places, combine them (and avoid require loops)
+local function operationsAccessOrFail(request, response)
+	if not accessManager.hasControl(request.remoteAddress) then
+		response:setFail("No control access")
+		return false
+	end
+
+	local rv, printerState = printerAPI.state(request, response, true)
+	if(rv == false) then
+		response:setError("Could not get printer state")
+		return false
+	end
+
+	if printerState == 'buffering' or printerState == 'printing' or printerState == 'stopping' then
+		response:setFail("Printer is busy, please wait")
+		return false
+	end
+
+	return true
+end
+
+
 function M.status(request, response)
 	updater.setLogger(log)
 	updater.setUseCache(false)
 	local success,status,msg = updater.getStatus()
-	
+
 	--response:addData('current_version', status.currentVersion)
 	response:addData('current_version', updater.formatVersion(status.currentVersion))
-	
+
 	response:addData('state_code', status.stateCode)
 	response:addData('state_text', status.stateText)
-	
+
 	if not success then
 		response:setFail(msg)
 		return
 	end
 
 	local canUpdate = updater.compareVersions(status.newestVersion, status.currentVersion) > 0
-		
+
 	--response:addData('newest_version', status.newestVersion)
 	response:addData('newest_version', updater.formatVersion(status.newestVersion))
 	response:addData('can_update', canUpdate)
-	
+
 	if status.progress then response:addData('progress', status.progress) end
 	if status.imageSize then response:addData('image_size', status.imageSize) end
 	response:setSuccess()
@@ -49,23 +74,26 @@ function M.download_POST(request, response)
 	if argClearGcode == nil then argClearGcode = true end
 	if argClearImages == nil then argClearImages = true end
 
+	-- block access to prevent potential issues with printing (e.g. out of memory)
+	if not operationsAccessOrFail(request, response) then return end
+
 	updater.setLogger(log)
-	
+
 	updater.setState(updater.STATE.DOWNLOADING,"")
-	
+
 	local vEnt, rv, msg
-	
+
 	if not argVersion then
 		local success,status,msg = updater.getStatus()
 		if not success then
 			updater.setState(updater.STATE.DOWNLOAD_FAILED, msg)
 			response:setFail(msg)
 			return
-		else 
+		else
 			argVersion = updater.formatVersion(status.newestVersion)
 		end
 	end
-	
+
 	if argClearImages then
 		rv,msg = updater.clear()
 		if not rv then
@@ -110,18 +138,20 @@ end
 -- if successful, this call won't return since the device will flash its memory and reboot
 function M.install_POST(request, response)
 	local argVersion = request:get("version")
-	updater.setLogger(log)
-	
 	log:info("API:update/install")
+
+	if not operationsAccessOrFail(request, response) then return end
+
+	updater.setLogger(log)
 	updater.setState(updater.STATE.INSTALLING,"")
-	
+
 	if not argVersion then
 		local success,status,msg = updater.getStatus()
 		if not success then
 			updater.setState(updater.STATE.INSTALL_FAILED, msg)
 			response:setFail(msg)
 			return
-		else 
+		else
 			argVersion = updater.formatVersion(status.newestVersion)
 		end
 	end
@@ -142,7 +172,7 @@ function M.install_POST(request, response)
 	if not rv then
 		updater.setState(updater.STATE.INSTALL_FAILED, "installation failed (" .. msg .. ")")
 		response:setFail("installation failed (" .. msg .. ")")
-	else 
+	else
 		response:setSuccess()
 	end
 end

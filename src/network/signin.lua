@@ -4,6 +4,7 @@ local uci = require('uci').cursor()
 local iwinfo = require('iwinfo')
 local settings = require('util.settings')
 local wifi = require("network.wlanconfig")
+local urlcode = require('util.urlcode')
 
 local M = {}
 
@@ -19,6 +20,7 @@ function M.signin()
 	end
 	
 	local wifiboxid = wifi.getSubstitutedSsid(settings.get('network.cl.wifiboxid'))
+	wifiboxid = urlcode.escape(wifiboxid)
 	
 	local cmd = "wget -q -T 2 -t 1 -O - "..baseurl.."?wifiboxid="..wifiboxid.."\\&localip="..localip;
 	local output = utils.captureCommandOutput(cmd);

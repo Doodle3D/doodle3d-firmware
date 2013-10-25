@@ -5,6 +5,7 @@ local accessManager = require('util.access')
 local printDriver = require('print3d')
 local printerUtils = require('util.printer')
 local printerAPI = require('rest.api.api_printer')
+local wifi = require('network.wlanconfig')
 
 local TMP_DIR = '/tmp'
 local LOG_COLLECT_DIRNAME = 'wifibox-logs'
@@ -112,10 +113,13 @@ end
 
 function M.status(request, response)
 
+	local ds = wifi.getDeviceState()
+	log:debug("  ssid: "..utils.dump(ds.ssid))
+	
 	local rv
 	rv, state = printerAPI.state(request, response)
 	if(rv == false) then return end
-
+	
 	if(state ~= "disconnected") then
 		rv = printerAPI.temperature(request, response)
 		if(rv == false) then return end

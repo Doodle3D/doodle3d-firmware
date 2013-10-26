@@ -84,6 +84,18 @@ M.printer_type = {
 		return printers[value] ~= nil
 	end
 }
+M.printer_bed_width = {
+	default = 220,
+	type = 'int',
+	description = '',
+	min = 0
+}
+M.printer_bed_height = {
+	default = 220,
+	type = 'int',
+	description = '',
+	min = 0
+}
 
 M.printer_baudrate = {
 	default = '115200',

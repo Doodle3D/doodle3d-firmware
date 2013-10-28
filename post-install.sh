@@ -67,6 +67,9 @@ if [ $? -gt 0 ]; then
 EOM
 fi
 
+#preserve saved sketches during firmware update
+echo "/root/sketches" >> /etc/sysupgrade.conf
+
 ### Finally make sure basic configuration is set correctly
 
 $IPKG_INSTROOT/etc/init.d/wifibox enable

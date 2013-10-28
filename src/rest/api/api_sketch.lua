@@ -140,10 +140,16 @@ function M._global_POST(request, response)
 	response:setSuccess()
 end
 
--- get info on number of sketches, used space, free space (and reserved space for printserver?)
+-- TODO: return total space used by sketches? (createSketchList() could just as well collect size info too...see lfs.attributes)
 function M.status(request, response)
 	if not createSketchDirectory(request, response) then return end
-	--return amount of sketches, free space (and space used by sketches?)
+	local sketches = createSketchList()
+
+	local listSize = table.getn(sketches)
+	response:addData('number_of_sketches', table.getn(sketches))
+	response:addData('available', getFreeDiskSpace())
+	response:addData('reserved', M.MIN_FREE_SPACE)
+
 	response:setSuccess()
 end
 

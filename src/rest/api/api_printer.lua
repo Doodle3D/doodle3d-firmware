@@ -10,6 +10,7 @@ local M = {
 	isApi = true
 }
 
+local SEQ_NUM_FILE = "/tmp/d3d-print-sequence-number.txt"
 
 function M._global(request, response)
 	-- TODO: list all printers (based on /dev/ttyACM* and /dev/ttyUSB*)
@@ -119,12 +120,17 @@ function M.stop_POST(request, response)
 	end
 
 	local argId = request:get("id")
+	local argGcode = request:get("gcode")
 	local printer,msg = printerUtils.createPrinterOrFail(argId, response)
 	if not printer then return end
-
+	
 	-- resetting sequence number
 	setSequenceNumber(-1)
 	
+	
+	
+	
+	--[[
 	-- replacing variables in endgcode
 	local printingTemperature  	  = settings.get('printer.temperature')
 	local printingBedTemperature  = settings.get('printer.bed.temperature')
@@ -134,15 +140,18 @@ function M.stop_POST(request, response)
 
 	--log:info("  printingBedTemperature: "..utils.dump(printingBedTemperature))
 	--log:info("  preheatBedTemperature: "..utils.dump(preheatBedTemperature))
-	--log:info("  >endGcode : "..utils.dump(endGcode))
 	--log:info("  endCode : "..utils.dump(endCode))
 	endCode = string.gsub(endCode,"{printingTemp}",printingTemperature)
 	endCode = string.gsub(endCode,"{printingBedTemp}",printingBedTemperature)
 	endCode = string.gsub(endCode,"{preheatTemp}",preheatTemperature)
 	endCode = string.gsub(endCode,"{preheatBedTemp}",preheatBedTemperature)
 	--log:info("  >endCode : "..utils.dump(endCode))
-
-	local rv,msg = printer:stopPrint(endCode)
+	]]--
+	
+	if(argGcode == nil) then
+		argGcode = ""
+	end
+	local rv,msg = printer:stopPrint(argGcode)
 
 	response:addData('id', argId)
 	if rv then response:setSuccess()
@@ -154,6 +163,7 @@ end
 --accepts: start(bool) (only when this argument is true will printing be started)
 function M.print_POST(request, response)
 
+	-- controll access check
 	local controllerIP = accessManager.getController()
 	local hasControl = false
 	if controllerIP == "" then
@@ -162,18 +172,38 @@ function M.print_POST(request, response)
 	elseif controllerIP == request.remoteAddress then
 		hasControl = true
 	end
-
+	
 	log:info("  hasControl: "..utils.dump(hasControl))
 	if not hasControl then
 		response:setFail("No control access")
 		return
 	end
 
+	-- arguments
 	local argId = request:get("id")
 	local argGcode = request:get("gcode")
 	local argIsFirst = utils.toboolean(request:get("first"))
 	local argStart = utils.toboolean(request:get("start"))
-
+	local argSeqNum = tonumber(request:get("seqNum"))
+	
+	-- reset sequence number?
+	if argIsFirst == true then
+		setSequenceNumber(-1)
+	end
+	
+	-- check sequence number
+	if(argSeqNum ~= nil and argSeqNum ~= "") then 
+		local prevSeqNum = getSequenceNumber()
+		
+		if(prevSeqNum+1 ~= argSeqNum) then
+			response:setError(" part isn't in sequence / has wrong sequence number")
+			return
+		end
+		setSequenceNumber(prevSeqNum+1)
+		
+		log:debug("  seqNum: "..utils.dump(prevSeqNum).." > "..(prevSeqNum+1))
+	end
+	
 	local printer,msg = printerUtils.createPrinterOrFail(argId, response)
 	if not printer then return end
 
@@ -221,6 +251,26 @@ function M.print_POST(request, response)
 	else
 		response:setSuccess()
 	end
+end
+
+function getSequenceNumber() 
+	local file, error = io.open(SEQ_NUM_FILE,'r')
+	if file == nil then
+		return -1
+	else
+		local seqNum = file:read('*a')
+		seqNum = tonumber(seqNum)
+		file:close()
+		return seqNum
+	end
+end
+
+function setSequenceNumber(num) 
+	log:info("API:printer:setSequenceNumber: "..utils.dump(num))
+	local file = io.open(SEQ_NUM_FILE,'w')
+	file:write(num)
+	file:flush()
+	file:close()
 end
 
 return M

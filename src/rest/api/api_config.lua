@@ -2,7 +2,7 @@ local log = require('util.logger')
 local utils = require('util.utils')
 local settings = require('util.settings')
 local printer = require('util.printer')
-local signin = require('network.signin')
+--local signin = require('network.signin')
 local wifi = require('network.wlanconfig')
 local accessManager = require('util.access')
 local printerAPI = require('rest.api.api_printer')
@@ -72,12 +72,13 @@ function M._global_POST(request, response)
 	local substitutedSsid = wifi.getSubstitutedSsid(settings.get('network.ap.ssid'))
 	response:addData("substituted_ssid",substitutedSsid)
 
-	log:info("API:Network:try signing in")
+	-- we now call signin seperatly trough cgi-bin
+	--[[log:info("API:Network:try signing in")
   	if signin.signin() then
   		log:info("API:Network:signin successfull")
   	else
   		log:info("API:Network:signin failed")
-  	end
+  	end]]--
 end
 
 function M.all_GET(request, response)

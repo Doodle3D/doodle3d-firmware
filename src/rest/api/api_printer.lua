@@ -122,23 +122,27 @@ function M.stop_POST(request, response)
 	local printer,msg = printerUtils.createPrinterOrFail(argId, response)
 	if not printer then return end
 
-	-- replacing {printingTemp} and {preheatTemp} in endgcode
+	-- resetting sequence number
+	setSequenceNumber(-1)
+	
+	-- replacing variables in endgcode
 	local printingTemperature  	  = settings.get('printer.temperature')
 	local printingBedTemperature  = settings.get('printer.bed.temperature')
 	local preheatTemperature      = settings.get('printer.heatup.temperature')
 	local preheatBedTemperature   = settings.get('printer.heatup.bed.temperature')
-	local endGcode 				  = settings.get('printer.endgcode')
+	local endCode 				  = settings.get('printer.endcode.marlin')
 
 	--log:info("  printingBedTemperature: "..utils.dump(printingBedTemperature))
 	--log:info("  preheatBedTemperature: "..utils.dump(preheatBedTemperature))
-	--log:info("  endGcode : "..utils.dump(endGcode))
-	endGcode = string.gsub(endGcode,"{printingTemp}",printingTemperature)
-	endGcode = string.gsub(endGcode,"{printingBedTemp}",printingBedTemperature)
-	endGcode = string.gsub(endGcode,"{preheatTemp}",preheatTemperature)
-	endGcode = string.gsub(endGcode,"{preheatBedTemp}",preheatBedTemperature)
 	--log:info("  >endGcode : "..utils.dump(endGcode))
+	--log:info("  endCode : "..utils.dump(endCode))
+	endCode = string.gsub(endCode,"{printingTemp}",printingTemperature)
+	endCode = string.gsub(endCode,"{printingBedTemp}",printingBedTemperature)
+	endCode = string.gsub(endCode,"{preheatTemp}",preheatTemperature)
+	endCode = string.gsub(endCode,"{preheatBedTemp}",preheatBedTemperature)
+	--log:info("  >endCode : "..utils.dump(endCode))
 
-	local rv,msg = printer:stopPrint(endGcode)
+	local rv,msg = printer:stopPrint(endCode)
 
 	response:addData('id', argId)
 	if rv then response:setSuccess()

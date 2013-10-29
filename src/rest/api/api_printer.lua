@@ -228,7 +228,11 @@ function M.print_POST(request, response)
 	local rv,msg
 
 	-- TODO: return errors with a separate argument like here in the rest of the code (this is how we designed the API right?)
+	local startTime = os.clock()
 	rv,msg = printer:appendGcode(argGcode)
+	local duration = os.clock()-startTime
+	log:debug("  duration: "..utils.dump(duration))
+	
 	if rv then
 		--NOTE: this does not report the number of lines, but only the block which has just been added
 		response:addData('gcode_append',argGcode:len())

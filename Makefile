@@ -72,7 +72,6 @@ endef
 # directory) to the install directory.
 
 WIFIBOX_BASE_DIR := $(PKG_BUILD_DIR)
-GPX_BASE_DIR := $(PKG_BUILD_DIR)/util/GPX.git
 TGT_LUA_DIR_SUFFIX := usr/share/lua/wifibox
 
 define Package/wifibox/install
@@ -117,10 +116,6 @@ endif
 	
 ### create links elsewhere in the system (autowifi)
 	$(LN) -s /$(TGT_LUA_DIR_SUFFIX)/script/d3dapi $(1)/www/cgi-bin
-	
-### install gpx utility
-	$(INSTALL_DIR) $(1)/usr/bin
-	$(INSTALL_BIN) $(GPX_BASE_DIR)/gpx $(1)/usr/bin
 endef
 
 define Package/wifibox/postinst

@@ -209,6 +209,10 @@ end
 
 function M.alive(request, response)
 	response:setSuccess("alive")
+	
+	local ds = wifi.getDeviceState()
+	log:debug("  ssid: "..utils.dump(ds.ssid))
+	
 end
 
 return M

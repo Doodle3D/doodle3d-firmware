@@ -33,7 +33,9 @@ local SUPPORTED_PRINTERS = {
 	robo_3d_printer = "RoBo 3D Printer",
 	shapercube = "ShaperCube",
 	tantillus = "Tantillus",
-	vision_3d_printer = "Vision 3D Printer"
+	vision_3d_printer = "Vision 3D Printer",
+	marlin_generic = "Generic Marlin Printer",
+    makerbot_generic = "Generic Makerbot Printer"
 }
 local SUPPORTED_BAUDRATES = {
 	["115200"] = "115200 bps",

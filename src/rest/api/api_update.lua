@@ -1,3 +1,7 @@
+local wifi = require('network.wlanconfig')
+local netconf = require('network.netconfig')
+local settings = require('util.settings')
+
 -- NOTE: the module 'detects' command-line invocation by existence of 'arg', so we have to make sure it is not defined.
 argStash = arg
 arg = nil
@@ -144,7 +148,10 @@ function M.install_POST(request, response)
 
 	updater.setLogger(log)
 	updater.setState(updater.STATE.INSTALLING,"")
-
+	
+	local ssid = wifi.getSubstitutedSsid(settings.get('network.ap.ssid'))
+	local rv,msg = netconf.enableAccessPoint(ssid)
+	
 	if not argVersion then
 		local success,status,msg = updater.getStatus()
 		if not success then

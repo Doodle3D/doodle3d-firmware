@@ -296,6 +296,23 @@ function M.setupAccessPoint(ssid)
 	return true
 end
 
+--- set the network configuration to accesspoint, but don't reload (used before updating)
+-- Note: this function might belong in the wlanconfig module but that would introduce
+-- a circular dependency, easiest solution is to place the function here.
+-- @tparam string ssid The SSID to use for the access point.
+-- @return True on success or nil+msg on error.
+function M.enableAccessPoint(ssid)
+	log:debug("enableAccessPoint ssid: ".. utils.dump(ssid))
+	
+	M.switchConfiguration{apnet="add_noreload"}
+	wifi.activateConfig(ssid)
+	
+	local ds = wifi.getDeviceState()
+	log:debug("    ssid: ".. utils.dump(ds.ssid))
+			
+	return true
+end
+
 --- Associates wlan device as client with the given SSID.
 -- Note: this function might belong in the wlanconfig module but that would introduce
 -- a circular dependency, easiest solution is to place the function here.

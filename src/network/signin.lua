@@ -36,6 +36,7 @@ function M.signin()
 	local localip = wifi.getLocalIP();
 	if localip == nil then
 		log:error("signin failed no local ip found")
+		M.setStatus(IDLE_STATUS,"idle")
 		return false
 	end
 	

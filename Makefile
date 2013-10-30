@@ -116,6 +116,7 @@ endif
 	
 ### create links elsewhere in the system (autowifi)
 	$(LN) -s /$(TGT_LUA_DIR_SUFFIX)/script/d3dapi $(1)/www/cgi-bin
+	$(LN) -s /root/sketches $(1)/www/
 endef
 
 define Package/wifibox/postinst

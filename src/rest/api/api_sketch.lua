@@ -15,7 +15,7 @@ local M = {
 }
 
 local NUMBER_PAD_WIDTH = 5
-local SKETCH_FILE_EXTENSION = 'sketch'
+local SKETCH_FILE_EXTENSION = 'svg'
 
 
 -- creates sketch directory, and sets response to error state on failure

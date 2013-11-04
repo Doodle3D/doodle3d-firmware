@@ -1,34 +1,40 @@
---[[--
-	TODO: finish documentation
-	This file contains all valid configuration keys, their default values and optional constraints.
-	The table names are used as configuration key names, where underscores ('_') may be used to denote semi-categories.
-	The settings interface replaces periods ('.') by underscores so for instance 'network.ap.address' will
-	be translated to 'network_ap_address'. Multi-word names should be notated as camelCase.
-	Valid fields for the tables are:
-	- default: the default value (used when the key is not set in UCI config)
-	- type: used for basic type checking, one of bool, int, float or string
-	- description: A descriptive text usable by API clients
-	- min, max, regex: optional constraints (min and max constrain value for numbers, or length for strings)
-
-	NOTE that the all-caps definitions will be changed into configuration keys, or moved to a different location
-]]--
+---
+-- This file contains all valid configuration keys, their default values and optional constraints.
+-- The table names are used as configuration key names, where underscores ('`_`') may be used to denote semi-categories.
+-- The settings interface replaces periods ('`.`') by underscores so for instance `network.ap.address` will
+-- be translated to `network_ap_address`. Multi-word names should be notated as camelCase.
+--
+-- Valid fields for the tables are:
+--
+-- - _default_: the default value (used when the key is not set in UCI config)
+-- - _type_: used for basic type checking, one of bool, int, float or string
+-- - _description_: A descriptive text usable by API clients
+-- - _min_, _max_, _regex_: optional constraints (min and max constrain value for numbers, or length for strings)
+-- - _isValid_: an optional function which should return true for valid values and false for invalid ones
+--
+-- The configuration keys themselves document themselves rather well, hence they are not included in the generated documentation.
+--
+-- NOTE: the all-caps definitions should be changed into configuration keys, or moved to a better location.
 local printer = require('util.printer')
 local log = require('util.logger')
 local utils = require('util.utils')
 
 local M = {}
 
---NOTE: pcall protects from invocation exceptions, which is what we need except
---during debugging. This flag replaces them with a normal call so we can inspect stack traces.
+--- This constant should only be true during development. It replaces `pcall` by regular `call`.
+-- Pcall protects the script from invocation exceptions, which is what we need except during debugging.
+-- When this flag is true, normal calls will be used so we can inspect stack traces.
 M.DEBUG_PCALLS = false
 
---This enables debugging of the REST API from the command-line, specify the path and optionally the request method as follows: 'p=/mod/func rq=POST'
+--- This constant enables debugging of the REST API from the command-line by emulating GET/POST requests.
+-- Specify the path and optionally the request method as follows: `d3dapi p=/mod/func r=POST`.
 M.DEBUG_API = true
 
---REST responses will contain 'module' and 'function' keys describing what was requested
+--- If enabled, REST responses will contain 'module' and 'function' keys describing what was requested.
 M.API_INCLUDE_ENDPOINT_INFO = false
 
-M.API_BASE_URL_PATH = 'doodle3d.com' -- includes any base path if necessary (e.g. 'localhost/~user')
+--- This base path is used in @{rest.response}. It includes any base path if necessary (e.g. 'localhost/~user').
+M.API_BASE_URL_PATH = 'doodle3d.com'
 
 M.network_ap_ssid = {
 	default = 'Doodle3D-%%MAC_ADDR_TAIL%%',
@@ -50,7 +56,7 @@ M.network_ap_key = {
 	type = 'string',
 	description = 'Access Point security key',
 	isValid = function(value)
-		if value == "" then 
+		if value == "" then
 			return true;
 		elseif value:len() < 8 then
 			return false, "too short"

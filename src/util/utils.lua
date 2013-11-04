@@ -1,7 +1,6 @@
---[[--
-	TODO: finish documentation
-	The unavoidable collection of utility functions.
-]]
+---
+-- The unavoidable collection of utility functions.
+-- TODO: use macros/type definitions to document rest modules (to auto-match things like 'M.<func>_NAME%')?
 
 local M = {}
 
@@ -25,7 +24,7 @@ end
 
 function M.toboolean(s)
 	if not s then return false end
-	
+
 	local b = type(s) == 'string' and s:lower() or s
 	local textTrue = (b == '1' or b == 't' or b == 'true')
 	local boolTrue = (type(b) == 'boolean' and b == true)
@@ -63,7 +62,7 @@ function M.exists(file)
 	if not file or type(file) ~= 'string' or file:len() == 0 then
 		return nil, "file must be a non-empty string"
 	end
-	
+
 	local r = io.open(file, 'r') -- ignore returned message
 	if r then r:close() end
 	return r ~= nil
@@ -72,16 +71,16 @@ end
 --creates and returns true if not exists, returns false it does, nil+msg on error
 function M.create(file)
 	local r,m = M.exists(file)
-	
+
 	if r == nil then
 		return r,m
 	elseif r == true then
 		return true
 	end
-	
+
 	r,m = io.open(file, 'a') -- append mode is probably safer in case the file does exist after all
 	if not r then return r,m end
-	
+
 	r:close()
 	return true
 end
@@ -96,10 +95,10 @@ end
 function M.readFile(filePath)
 	local f, msg, nr = io.open(filePath, 'r')
 	if not f then return nil,msg,nr end
-	
+
 	local res = f:read('*all')
 	f:close()
-	
+
 	return res
 end
 

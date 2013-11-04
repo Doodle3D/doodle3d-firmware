@@ -1,5 +1,8 @@
 #!/usr/bin/env lua
 
+--- This script provides an interface to upgrade or downgrade the Doodle3D wifibox.
+-- It can both be used as a standalone command-line tool and as a Lua library.
+
 -- TODO/NOTES:
 -- add to status: validImage: none|<version> (can use checkValidImage for this)
 -- any more TODO's across this file?
@@ -7,9 +10,8 @@
 
 -- MAYBE/LATER:
 -- add API calls to retrieve a list of all versions with their info (i.e., the result of getAvailableVersions)
--- wget: add provision (in verbose mode?) to use -v instead of -q and disable output redirection
+-- wget: add provision (in verbose mode?) to use '-v' instead of '-q' and disable output redirection
 -- document index file format (Version first, then in any order: Files: sysup; factory, FileSize: sysup; factory, MD5: sysup; factory, ChangelogStart:, ..., ChangelogEnd:)
--- remove /etc/wifibox-version on macbook...
 -- copy improved fileSize back to utils (add unit tests!)
 -- create new utils usable by updater as well as api? (remove dependencies on uci and logger etc)
 -- note: take care not to print any text in module functions, as this breaks http responses
@@ -17,18 +19,39 @@
 
 local M = {}
 
--- NOTE: 'INSTALLED' will never be returned (and probably neither will 'INSTALLING') since in that case the device is flashing or rebooting
-M.STATE = { NONE = 1, DOWNLOADING = 2, DOWNLOAD_FAILED = 3, IMAGE_READY = 4, INSTALLING = 5, INSTALLED = 6, INSTALL_FAILED = 7 }
+--- Possible states the updater can be in, they are stored in @{STATE_FILE}.
+-- @table STATE
+M.STATE = {
+	NONE = 1, -- @{STATE_FILE} does not exist
+	DOWNLOADING = 2, -- downloading is started but not finished yet
+	DOWNLOAD_FAILED = 3, -- download failed (often occurs when the wifibox is not connected to internet)
+	IMAGE_READY = 4, -- download succeeded and the image is valid
+	INSTALLING = 5, -- image is being installed (this state will probably never be returned since the box is flashing/rebooting)
+	INSTALLED = 6, -- image has been installed successfully (this state will never be returned since the box will reboot)
+	INSTALL_FAILED = 7 -- installation failed
+}
+
+-- Names for the states in @{STATE}, these are returned through the REST API.
 M.STATE_NAMES = {
 	[M.STATE.NONE] = 'none', [M.STATE.DOWNLOADING] = 'downloading', [M.STATE.DOWNLOAD_FAILED] = 'download_failed', [M.STATE.IMAGE_READY] = 'image_ready',
 	[M.STATE.INSTALLING] = 'installing', [M.STATE.INSTALLED] = 'installed', [M.STATE.INSTALL_FAILED] = 'install_failed'
 }
 
+--- The base URL to use for finding update files.
+-- This URL will usually contain both an OpenWRT feed directory and an `images`-directory.
+-- This script uses only the latter, and expects to find the file @{IMAGE_INDEX_FILE} there.
 M.DEFAULT_BASE_URL = 'http://doodle3d.com/updates'
 --M.DEFAULT_BASE_URL = 'http://localhost/~USERNAME/wifibox/updates'
+
+--- The index file containing metadata on update images.
 M.IMAGE_INDEX_FILE = 'wifibox-image.index'
+
+--- Path to the updater cache.
 M.CACHE_PATH = '/tmp/d3d-updater'
+
+--- Name of the file to store current state in, this file resides in @{CACHE_PATH}.
 M.STATE_FILE = 'update-state'
+
 M.WGET_OPTIONS = "-q -t 1 -T 30"
 --M.WGET_OPTIONS = "-v -t 1 -T 30"
 
@@ -43,7 +66,10 @@ local baseUrl = M.DEFAULT_BASE_URL -- default, can be overwritten by M.setBaseUr
 -- LOCAL FUNCTIONS --
 ---------------------
 
--- use level==1 for important messages, 0 for regular messages and -1 for less important messages
+--- Log a message with the given level, if logging is enabled for that level.
+-- Messages will be written to [stdout](http://www.cplusplus.com/reference/cstdio/stdout/), or logged using the logger set with @{setLogger}.
+-- @number lvl Level to log to, use 1 for important messages, 0 for regular messages and -1 for less important messages.
+-- @string msg The message to log.
 local function P(lvl, msg)
 	if log then
 		if lvl == -1 then log:debug(msg)
@@ -54,15 +80,28 @@ local function P(lvl, msg)
 	end
 end
 
+--- Log a debug message, this function wraps @{P}.
+-- The message will be logged with level -1 and be prefixed with '(DBG)'.
+-- @string msg The message to log.
 local function D(msg) P(-1, (log and msg or "(DBG) " .. msg)) end
 
+--- Log an error.
+-- Messages will be written to [stderr](http://www.cplusplus.com/reference/cstdio/stderr/), or logged using the logger set with @{setLogger}.
+-- @string msg The message to log.
 local function E(msg)
 	if log then log:error(msg)
 	else io.stderr:write(msg .. '\n')
 	end
 end
 
--- splits the return status from os.execute (see: http://stackoverflow.com/questions/16158436/how-to-shift-and-mask-bits-from-integer-in-lua)
+--- Splits the return status from `os.execute`, which consists of two bytes.
+--
+-- `os.execute` internally calls [system](http://linux.die.net/man/3/system),
+-- which usually returns the command exit status as high byte (see [WEXITSTATUS](http://linux.die.net/man/2/wait)).
+-- Furthermore, see [shifting bits in Lua](http://stackoverflow.com/questions/16158436/how-to-shift-and-mask-bits-from-integer-in-lua).
+-- @number exitStatus The combined exit status.
+-- @treturn number The command exit status.
+-- @treturn number The `os.execute`/[system](http://linux.die.net/man/3/system) return status.
 local function splitExitStatus(exitStatus)
 	if exitStatus == -1 then return -1,-1 end
 	local cmdStatus = math.floor(exitStatus / 256)
@@ -70,6 +109,9 @@ local function splitExitStatus(exitStatus)
 	return cmdStatus, systemStatus
 end
 
+--- Returns a human-readable message for a [wget exit status](http://www.gnu.org/software/wget/manual/wget.html#Exit-Status).
+-- @number exitStatus An exit status from wget.
+-- @treturn string|number Either the status followed by a description, or a message indicating the call was interrupted, or just the status if it was not recognized.
 local function wgetStatusToString(exitStatus)
 	local wgetStatus,systemStatus = splitExitStatus(exitStatus)
 
@@ -96,6 +138,9 @@ local function wgetStatusToString(exitStatus)
 	end
 end
 
+--- Creates the updater cache directory.
+-- @return bool|nil True, or nil on error.
+-- @return ?string A message in case of error.
 local function createCacheDirectory()
 	if os.execute('mkdir -p ' .. M.CACHE_PATH) ~= 0 then
 		return nil,"Error: could not create cache directory '" .. M.CACHE_PATH .. "'"
@@ -103,6 +148,9 @@ local function createCacheDirectory()
 	return true
 end
 
+--- Retrieves the current updater state code and message from @{STATE_FILE}.
+-- @treturn STATE The current state code (@{STATE}.NONE if no state has been set).
+-- @treturn string The current state message (empty string if no state has been set).
 local function getState()
 	local file,msg = io.open(M.CACHE_PATH .. '/' .. M.STATE_FILE, 'r')
 	if not file then return M.STATE.NONE,"" end
@@ -113,13 +161,23 @@ local function getState()
 	return code,msg
 end
 
--- trim whitespace from both ends of string (from http://snippets.luacode.org/?p=snippets/trim_whitespace_from_string_76)
+--- Trims whitespace from both ends of a string.
+-- See [this Lua snippet](http://snippets.luacode.org/?p=snippets/trim_whitespace_from_string_76).
+-- @string s The text to trim.
+-- @treturn string s, with whitespace trimmed.
 local function trim(s)
 	if type(s) ~= 'string' then return s end
 	return (s:find('^%s*$') and '' or s:match('^%s*(.*%S)'))
 end
 
--- from utils.lua
+--- Read the contents of a file.
+--
+-- TODO: this file has been copied from @{util.utils}.lua and should be merged again.
+-- @string filePath The file to read.
+-- @bool trimResult Whether or not to trim the read data.
+-- @treturn bool|nil True, or nil on error.
+-- @treturn ?string A descriptive message on error.
+-- @treturn ?number TODO: find out why this value is returned.
 local function readFile(filePath, trimResult)
 	local f, msg, nr = io.open(filePath, 'r')
 	if not f then return nil,msg,nr end
@@ -134,7 +192,11 @@ local function readFile(filePath, trimResult)
 	return res
 end
 
--- from utils.lua
+--- Reports whether or not a file exists.
+--
+-- TODO: this file has been copied from @{util.utils}.lua and should be merged again.
+-- @string file The file to report about.
+-- @treturn bool True if the file exists, false otherwise.
 local function exists(file)
 	if not file or type(file) ~= 'string' or file:len() == 0 then
 		return nil, "file must be a non-empty string"
@@ -145,8 +207,11 @@ local function exists(file)
 	return r ~= nil
 end
 
--- from utils.lua
---argument: either an open file or a filename
+--- Reports the size of a file or file handle.
+--
+-- TODO: this file has been copied from @{util.utils}.lua and should be merged again.
+-- @param file A file path or open file handle.
+-- @treturn number Size of the file.
 local function fileSize(file)
 	local size = nil
 	if type(file) == 'file' then
@@ -164,18 +229,27 @@ local function fileSize(file)
 	return size
 end
 
--- returns return value of command
+--- Runs an arbitrary shell command.
+-- @string command The command to run.
+-- @bool dryRun Only log a message if true, otherwise run the command and log a message.
+-- @treturn number Exit status of of command or -1 if dryRun is true.
 local function runCommand(command, dryRun)
 	D("about to run: '" .. command .. "'")
 	return (not dryRun) and os.execute(command) or -1
 end
 
+--- Removes a file.
+-- @string filePath The file to remove.
 local function removeFile(filePath)
 	return runCommand('rm ' .. filePath)
 end
 
--- returns return value of wget (or nil if saveDir is nil or empty), filename is optional
--- NOTE: leaving out filename will cause issues with files not being overwritten but suffixed with '.1', '.2',etc instead
+--- Downloads a file and stores it locally.
+-- @string url The full URL to download.
+-- @string saveDir The path at which to save the downloaded file.
+-- @string[opt] filename File name to save as, note that leaving this out has issues with files not being overwritten but suffixed with '.1', '.2',etc instead.
+-- @treturn number|nil Exit status of wget command or nil on error.
+-- @treturn ?string Descriptive message if saveDir is nil or empty.
 local function downloadFile(url, saveDir, filename)
 	if not saveDir or saveDir:len() == 0 then return nil, "saveDir must be non-empty" end
 	local outArg = (filename:len() > 0) and (' -O' .. filename) or ''
@@ -186,6 +260,10 @@ local function downloadFile(url, saveDir, filename)
 	end
 end
 
+--- Parses command-line arguments and returns a table containing information distilled from them.
+-- @tab arglist A table in the same form as the [arg table](http://www.lua.org/pil/1.4.html) created by Lua.
+-- @treturn tabla|nil A table containing information on what to do, or nil if invalid arguments were specified.
+-- @treturn ?string Descriptive message on error.
 local function parseCommandlineArguments(arglist)
 	local result = { verbosity = 0, baseUrl = M.DEFAULT_BASE_URL, action = nil }
 	local nextIsVersion, nextIsUrl = false, false
@@ -233,18 +311,35 @@ end
 -- MODULE FUNCTIONS --
 ----------------------
 
+--- Enables use of the given @{util.logger} object, otherwise `stdout`/`stderr` will be used.
+-- @tparam util.logger logger The logger to log future messages to.
 function M.setLogger(logger)
 	log = logger
 end
 
+--- Controls whether or not to use pre-existing files over (re-)downloading them.
+--
+-- Note that the mechanism is currently naive, (e.g., there are no mechanisms like maximum cache age).
+-- @bool use If true, try not to download anything unless necessary.
 function M.setUseCache(use)
 	useCache = use
 end
 
+--- Sets the base URL to use for finding update images, defaults to @{DEFAULT_BASE_URL}.
+-- @string url The new base URL to use.
 function M.setBaseUrl(url)
 	baseUrl = url
 end
 
+--- Returns a table with information about current update status of the wifibox.
+--
+-- The result table will contain at least the current version, current state code and text.
+-- If the box has internet access, it will also include the newest version available.
+-- If an image is currently being downloaded, progress information will also be included.
+--
+-- @treturn bool True if status has been determined fully, false if not.
+-- @treturn table The result table.
+-- @treturn ?string Descriptive message in case the result table is not complete.
 function M.getStatus()
 	if not baseUrl then baseUrl = M.DEFAULT_BASE_URL end
 	local unknownVersion = { major = 0, minor = 0, patch = 0 }
@@ -253,7 +348,7 @@ function M.getStatus()
 	result.currentVersion = M.getCurrentVersion()
 	result.stateCode, result.stateText = getState()
 	result.stateCode = tonumber(result.stateCode)
-	
+
 	local verTable,msg = M.getAvailableVersions()
 	if not verTable then
 		D("could not obtain available versions (" .. msg .. ")")
@@ -263,7 +358,7 @@ function M.getStatus()
 
 	local newest = verTable and verTable[#verTable]
 	result.newestVersion = newest and newest.version or unknownVersion
-	
+
 	if result.stateCode == M.STATE.DOWNLOADING then
 		result.progress = fileSize(M.CACHE_PATH .. '/' .. newest.sysupgradeFilename)
 		if not result.progress then result.progress = 0 end -- in case the file does not exist yet (which yields nil)
@@ -525,6 +620,10 @@ end
 -- MAIN --
 ----------
 
+--- The main function which will be called in standalone mode.
+-- At the end of the file, this function will be invoked only if `arg` is defined,
+-- so this file can also be used as a library.
+-- Command-line arguments are expected to be present in the global `arg` variable.
 local function main()
 	local argTable,msg = parseCommandlineArguments(arg)
 
@@ -662,7 +761,7 @@ local function main()
 	os.exit(0)
 end
 
--- only execute the main function if an arg table is present, this enables usage both as module and as standalone script
+--- Only execute the main function if an arg table is present, this enables usage both as module and as standalone script.
 if arg ~= nil then main() end
 
 return M

@@ -10,7 +10,16 @@ HTML_PATH=$WIFIBOX_BASE_DIR/docs
 SRC_DIR=$WIFIBOX_BASE_DIR/src
 FILESPEC=$WIFIBOX_BASE_DIR/src #replace by config.ld so we can also specify README.md?
 
-$LDOC -d $HTML_PATH $FILESPEC -a -f markdown $@
+LUA_VERSION=`lua -v 2>&1 | awk -F" " '{print $2}'`
+
+echo $LUA_VERSION | grep -q "^5.2"
+if [ $? -ne 0 ]; then
+	echo "Lua 5.2 is needed to run this script (as well as luarocks), you have $LUA_VERSION."
+	exit 1
+fi
+
+#$LDOC -d $HTML_PATH $FILESPEC -a -f markdown $@
+$LDOC .
 
 if [ $? -eq 127 ]; then
 	echo "$0: It looks like the ldoc program could not be found, please configure the LDOC variable correctly and make sure ldoc is installed on your system."

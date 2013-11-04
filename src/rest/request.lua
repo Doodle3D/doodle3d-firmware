@@ -1,3 +1,5 @@
+---
+-- This object represents an HTTP request object, part of the REST API.
 local util = require('util.utils') -- required for string:split()
 local urlcode = require('util.urlcode')
 local confDefaults = require('conf_defaults')

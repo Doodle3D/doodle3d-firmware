@@ -1,8 +1,5 @@
---[[--
-	TODO: ldoc: @{} ref in init() tformat
-	TODO: use macros/type definitions to document rest modules (to auto-match things like 'M.<func>_NAME%')?
-	TODO: finish documentation
-]]
+---
+-- Logging facilities.
 
 local utils = require('util.utils')
 
@@ -10,7 +7,8 @@ local M = {}
 
 local logLevel, logVerbose, logStream
 
---- Available log levels.
+--- Available log levels
+-- @table LEVEL
 M.LEVEL = {
 	'debug', -- for debug messages
 	'info', -- for informational messages
@@ -34,10 +32,10 @@ local function log(level, msg, verbose)
 		local name = i.name or "(nil)"
 		local vVal = 'nil'
 		local m = (type(msg) == 'string') and msg or utils.dump(msg)
-		
+
 		if v then logStream:write(now .. " (" .. M.LEVEL[level] .. ")     " .. m .. "  [" .. name .. "@" .. i.short_src .. ":" .. i.linedefined .. "]\n")
 		else logStream:write(now .. " (" .. M.LEVEL[level] .. ")     " .. m .. "\n") end
-		
+
 		logStream:flush()
 	end
 end

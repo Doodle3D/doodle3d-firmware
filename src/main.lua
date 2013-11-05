@@ -1,3 +1,5 @@
+---
+-- Entry code of the REST API. This sets up the environment, processes a REST request and responds appropiately.
 package.path = package.path .. ';/usr/share/lua/wifibox/?.lua'
 
 local confDefaults = require('conf_defaults')
@@ -208,11 +210,11 @@ local function main(environment)
 end
 
 
---- Main firmware entry point.
--- This is either used by uhttp-mod-lua directly, or by the d3dapi cgi-bin wrapper
--- script which builds the env table from the shell environment. The wrapper script
--- also handles command-line invocation.
--- @tparam table The CGI environment table.
+--- Firmware entry point.
+-- This is either used by [uhttp-mod-lua](http://wiki.openwrt.org/doc/uci/uhttpd#embedded.lua)
+-- directly, or by the d3dapi cgi-bin wrapper script which builds the env table
+-- from the shell environment. The wrapper script also handles command-line invocation.
+-- @tparam table env The CGI environment table.
 -- @treturn number A Z+ return value suitable to return from wrapper script. Note that this value is ignored by uhttpd-mod-lua.
 function handle_request(env)
 	local s, msg = init(env)

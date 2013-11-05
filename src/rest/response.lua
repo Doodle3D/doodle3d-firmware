@@ -97,12 +97,13 @@ end
 --- Adds a data item to the response, this will be included under the `data` item of the json text.
 --
 -- NOTE: To add nested data with this method, it is necessary to precreate the table
--- and then add that with its root key. (e.g., `response:addData('f_values', {f1=3, f2='x'})`)
+-- and then add that with its root key (see usage).
 --
 -- After calling this, any binary data set by @{M:setBinaryFileData} will not be sent anymore.
 --
 -- @string k The key of the item to set.
 -- @param v The value to set.
+-- @usage response:addData('f_values', {f1=3, f2='x'})
 function M:addData(k, v)
 	self.body.data[k] = v
 	self.binaryData = nil

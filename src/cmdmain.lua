@@ -1,17 +1,20 @@
---- This file wraps handle_request(env) in main.lua for command-line or CGI usage.
+---
+-- This file wraps @{main.handle_request} in main.lua for command-line or CGI usage.
 -- It emulates the env table usually constructed by uhttpd-mod-lua.
 local main = require('main')
 
---- Create an environment table mimicking the table uhttpd-mod-lua passes into handle_request().
--- The table is created using shell environment variables leaving out only 'DOCUMENT_ROOT',
--- 'SCRIPT_PATH' and the regular shell variables (e.g. IFS, HOME and PS1).
--- Fields present in the 'real' env table but not in this one are: 'HTTP_VERSION'
--- and another table 'headers' which is mostly mirrored by the 'HTTP_*' fields.
--- Note that the 'headers' table may contain extra fields (e.g. 'cache-control').
+--- Create an environment table mimicking the table uhttpd-mod-lua passes into @{main.handle_request}.
+--
+-- The table is created using shell environment variables leaving out only 'DOCUMENT\_ROOT',
+-- 'SCRIPT\_PATH' and the regular shell variables (e.g., IFS, HOME and PS1).
+--
+-- Fields present in the 'real' env table but not in this one are: 'HTTP\_VERSION'
+-- and another table 'headers' which is mostly mirrored by the 'HTTP\_*' fields.
+-- Note that the 'headers' table may contain extra fields (e.g., 'cache-control').
 -- @treturn table An environment table created from shell environment variables.
 local function createEnvTableFromShellEnvironment()
 	local environ = {}
-	
+
 	environ['CONTENT_LENGTH'] = os.getenv('CONTENT_LENGTH') or ''
 	environ['CONTENT_TYPE'] = os.getenv('CONTENT_TYPE') or ''
 	environ['GATEWAY_INTERFACE'] = os.getenv('GATEWAY_INTERFACE') or ''
@@ -40,7 +43,7 @@ local function createEnvTableFromShellEnvironment()
 	environ['SERVER_PORT'] = os.getenv('SERVER_PORT') or ''
 	environ['SERVER_PROTOCOL'] = os.getenv('SERVER_PROTOCOL') or ''
 	environ['SERVER_SOFTWARE'] = os.getenv('SERVER_SOFTWARE') or ''
-	
+
 	return environ
 end
 

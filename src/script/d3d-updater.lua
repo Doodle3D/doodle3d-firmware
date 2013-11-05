@@ -261,8 +261,8 @@ local function downloadFile(url, saveDir, filename)
 end
 
 --- Parses command-line arguments and returns a table containing information distilled from them.
--- @tab arglist A table in the same form as the [arg table](http://www.lua.org/pil/1.4.html) created by Lua.
--- @treturn tabla|nil A table containing information on what to do, or nil if invalid arguments were specified.
+-- @tparam table arglist A table in the same form as the [arg table](http://www.lua.org/pil/1.4.html) created by Lua.
+-- @treturn table|nil A table containing information on what to do, or nil if invalid arguments were specified.
 -- @treturn ?string Descriptive message on error.
 local function parseCommandlineArguments(arglist)
 	local result = { verbosity = 0, baseUrl = M.DEFAULT_BASE_URL, action = nil }
@@ -302,6 +302,16 @@ local function parseCommandlineArguments(arglist)
 	if nextIsUrl then return nil, "missing required URL argument" end
 
 	return result
+end
+
+--- Returns the [MD5](http://en.wikipedia.org/wiki/MD5) hash for a given file.
+--
+-- NOTE: this function is not implemented, and a better hash function should probably be chosen anyway.
+-- @string filepath The path of which to calculate the MD5-sum.
+-- @treturn nil
+local function md5sum(filepath)
+	return nil
+	-- TODO [osx: md5 -q <file>], [linux: ?]
 end
 
 
@@ -368,9 +378,9 @@ function M.getStatus()
 	return true, result
 end
 
--- Turns a plain-text version into a table.
--- tables as argument are ignored so you can safely pass in an already parsed
--- version and expect it back unmodified.
+--- Turns a plain-text version as returned by @{formatVersion} into a table.
+-- @tparam string|table versionText The version string to parse, if it is already a table, it is returned as-is.
+-- @treturn table A parse version.
 function M.parseVersion(versionText)
 	if type(versionText) == 'table' then return versionText end
 	if not versionText or versionText:len() == 0 then return nil end
@@ -381,15 +391,18 @@ function M.parseVersion(versionText)
 	return { ['major'] = major, ['minor'] = minor, ['patch'] = patch }
 end
 
--- Formats a version as returned by parseVersion().
--- Strings are returned unmodified, so an 'already formatted' version can be
--- passed in safely and expected back unmodified.
+--- Formats a version as returned by @{parseVersion}.
+-- @tparam table|string version The version to format, if it is already a string, that will be returned unmodified.
+-- @treturn string A formatted version.
 function M.formatVersion(version)
 	if type(version) == 'string' then return version end
 	return version.major .. "." .. version.minor .. "." .. version.patch
 end
 
--- expects two tables as created by M.parseVersion()
+--- Compares two versions.
+-- @tparam table versionA A version as returned by @{parseVersion}.
+-- @tparam table versionB A version as returned by @{parseVersion}.
+-- @treturn number -1 if versionA is smaller than versionB, 0 if versions are equal or 1 if versionA is larger than versionB.
 function M.compareVersions(versionA, versionB)
 	if type(versionA) ~= 'table' or type(versionB) ~= 'table' then return nil end
 	local diff = versionA.major - versionB.major
@@ -398,7 +411,11 @@ function M.compareVersions(versionA, versionB)
 	return diff > 0 and 1 or (diff < 0 and -1 or 0)
 end
 
--- verTable is optional, getAvailableVersions will be used to obtain it if nil
+--- Returns information on a version if it can be found in a collection of versions as returned by @{getAvailableVersions}.
+-- @tparam table version The version to look for.
+-- @tparam table[opt] verTable A table containing a collection of versions, if not passed in, it will be obtained using @{getAvailableVersions}.
+-- @treturn table|nil Version information table found in the collection, or nil on error or if not found.
+-- @treturn string Descriptive message in case of error or if the version could not be found.
 function M.findVersion(version, verTable)
 	local msg = nil
 	version = M.parseVersion(version)
@@ -412,7 +429,12 @@ function M.findVersion(version, verTable)
 	return nil,"no such version"
 end
 
--- version may be a table or a string, devtype and isFactory are optional
+--- Creates an image file name based on given properties.
+-- The generated name has the following form: `doodle3d-wifibox-<version>-<deviceType>-<'factory'|'sysupgrade'>.bin`.
+-- @tparam table|string version The version of the image.
+-- @string[opt] devType Openwrt device identifier (defaults to 'tl-mr3020').
+-- @bool[opt] isFactory Switches between factory or sysupgrade image name.
+-- @treturn string The constructed file name.
 function M.constructImageFilename(version, devType, isFactory)
 	local sf = isFactory and 'factory' or 'sysupgrade'
 	local v = M.formatVersion(version)
@@ -420,11 +442,16 @@ function M.constructImageFilename(version, devType, isFactory)
 	return 'doodle3d-wifibox-' .. M.formatVersion(v) .. '-' .. dt .. '-' .. sf .. '.bin'
 end
 
---TODO: move up to locals
-local function md5sum(filepath)
-	-- TODO [osx: md5 -q <file>], [linux: ?]
-end
-
+--- Checks whether a valid image file is present in @{CACHE_PATH} for the given image properties.
+-- The versionEntry table will be augmented with an `isValid` key.
+--
+-- NOTE: currently, this function only checks the image exists and has the correct size.
+-- Sysupgrade will perform integrity checks, so this is not a major issue.
+--
+-- @tparam table versionEntry A version information table.
+-- @string[opt] devType Image device type, see @{constructImageFilename}.
+-- @bool[opt] isFactory Image type, see @{constructImageFilename}.
+-- @treturn bool True if a valid image is present, false otherwise.
 function M.checkValidImage(versionEntry, devType, isFactory)
 	local filename = M.constructImageFilename(versionEntry.version, devType, isFactory)
 	--return versionEntry.md5 == md5sum(M.CACHE_PATH .. '/' .. filename)
@@ -433,19 +460,23 @@ function M.checkValidImage(versionEntry, devType, isFactory)
 	return versionEntry.isValid
 end
 
--- returns a plain text version
+--- Returns the current wifibox version text, extracted from `/etc/wifibox-version`.
+-- @treturn string Current version as plain-text.
 function M.getCurrentVersionText()
 	local res,msg,nr = readFile('/etc/wifibox-version', true)
 	if res then return res else return nil,msg,nr end
 end
 
--- returns a table with major, minor and patch as keys
+--- Returns the current wifibox version as a table with major, minor and patch as keys.
+-- @treturn table Current version as version table.
 function M.getCurrentVersion()
 	local vt,msg = M.getCurrentVersionText()
 	return vt and M.parseVersion(vt) or nil,msg
 end
 
--- returns an indexed (and sorted) table containing version tables
+--- Returns an indexed and sorted table containing version information tables.
+-- The information is obtained from the either cached or downloaded image index (@{IMAGE_INDEX_FILE}).
+-- @treturn table A table with a collection of version information tables.
 function M.getAvailableVersions()
 	if not baseUrl then baseUrl = M.DEFAULT_BASE_URL end
 	local indexFilename = M.CACHE_PATH .. '/' .. M.IMAGE_INDEX_FILE
@@ -515,8 +546,12 @@ function M.getAvailableVersions()
 	return result
 end
 
--- devtype and isFactory are optional
--- returns true or nil+msg or nil + return value from wget
+--- Attempts to download an image file with the requested properties.
+-- @tparam table versionEntry A version information table.
+-- @string[opt] devType Image device type, see @{constructImageFilename}.
+-- @bool[opt] isFactory Image type, see @{constructImageFilename}.
+-- @treturn bool|nil True if successful, or nil on error.
+-- @treturn ?string|number (optional) Descriptive message on general error, or wget exit status.
 function M.downloadImageFile(versionEntry, devType, isFactory)
 	if not baseUrl then baseUrl = M.DEFAULT_BASE_URL end
 	local filename = M.constructImageFilename(versionEntry.version, devType, isFactory)
@@ -556,9 +591,15 @@ function M.downloadImageFile(versionEntry, devType, isFactory)
 	end
 end
 
--- this function will not return if everything goes to plan
--- noRetain, devType and isFactory are optional
--- returns true or nil + wget return value
+--- Issues a [sysupgrade](http://wiki.openwrt.org/doc/howto/generic.sysupgrade) command with a wifibox image file.
+--
+-- This function will not return if it does its job successfully, the device will flash and reboot instead.
+-- @tparam table versionEntry A version information table.
+-- @bool[opt] noRetain If true, do not keep files in overlay filesystem (i.e., the '-n' switch in sysupgrade).
+-- @string[opt] devType Image device type, see @{constructImageFilename}.
+-- @bool[opt] isFactory Image type, see @{constructImageFilename}.
+-- @treturn bool|nil True on success (with the 'exception' as noted above) or nil on error.
+-- @treturn ?string|number (optional) Descriptive message or sysupgrade exit status on error.
 function M.flashImageVersion(versionEntry, noRetain, devType, isFactory)
 	log:info("flashImageVersion")
 	local imgName = M.constructImageFilename(versionEntry.version, devType, isFactory)
@@ -586,7 +627,9 @@ function M.flashImageVersion(versionEntry, noRetain, devType, isFactory)
 	return (rv == 0) and true or nil,rv
 end
 
---returns true on success, or nil+msg otherwise
+--- Clears '*.bin' in the @{CACHE_PATH} directory.
+-- @treturn bool|nil True on success, or nil on error.
+-- @treturn ?string Descriptive message on error.
 function M.clear()
 	local ccRv,ccMsg = createCacheDirectory()
 	if not ccRv then return nil,ccMsg end
@@ -597,8 +640,15 @@ function M.clear()
 	return (rv == 0) and true or nil,"could not remove image files"
 end
 
--- NOTE: make sure the cache directory exists before calling this function or it will fail.
--- NOTE: this function _can_ fail but we don't expect this to happen so the return value is ignored for now
+--- Set updater state.
+--
+-- NOTE: make sure the cache directory  @{CACHE_PATH} exists before calling this function or it will fail.
+--
+-- NOTE: this function _can_ fail but this is not expected to happen so the return value is mostly ignored for now.
+--
+-- @number code The @{STATE} code to set.
+-- @string msg The accompanying state message to set.
+-- @treturn bool True on success or false if the state file could not be opened for writing.
 function M.setState(code, msg)
 	local s = code .. '|' .. msg
 	D("set update state: " .. M.STATE_NAMES[code] .. " ('" .. s .. "')")

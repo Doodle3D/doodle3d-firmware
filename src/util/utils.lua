@@ -1,10 +1,16 @@
 ---
 -- The unavoidable collection of utility functions.
--- TODO: use macros/type definitions to document rest modules (to auto-match things like 'M.<func>_NAME%')?
+--
+-- Functions in this file are accompanied by unit tests, please study those
+-- to see how utility functions are expected to behave.
 
 local M = {}
 
 
+--- Splits a string on a given divider character.
+-- @string[opt=':'] div The divider character to use.
+-- @return An array containing the resultant substrings.
+-- @usage local str = "a,b,c"; local parts = str:split(',')
 function string:split(div)
 	local div, pos, arr = div or ':', 0, {}
 	for st,sp in function() return self:find(div, pos, true) end do
@@ -15,6 +21,9 @@ function string:split(div)
 	return arr
 end
 
+--- Returns the size of an open file handle.
+-- @param file File handle to report about.
+-- @treturn number Size of the file, determined by seeking to the end.
 function M.fileSize(file)
 	local current = file:seek()
 	local size = file:seek('end')
@@ -22,6 +31,11 @@ function M.fileSize(file)
 	return size
 end
 
+--- Convert an object to boolean.
+-- String values which will yield true are (case insensitive): '1', 't' and 'true'.
+-- Boolean true and numbers other than 0 also yield true, everything else yields false.
+-- @param s The object to convert.
+-- @treturn bool The converted value.
 function M.toboolean(s)
 	if not s then return false end
 
@@ -32,6 +46,10 @@ function M.toboolean(s)
 	return textTrue or boolTrue or numTrue
 end
 
+--- Stringifies the given object.
+-- Note that self-referencing objects will cause an endless loop with the current implementation.
+-- @param o The object to convert.
+-- @treturn string Stringified version of o.
 function M.dump(o)
 	if type(o) == 'table' then
 		local s = '{ '
@@ -58,6 +76,10 @@ function M.getUciSectionName(config, type)
 	return sname
 end
 
+--- Reports whether or not a file exists. This is done by trying to open it.
+-- @tparam string file Filename to report about.
+-- @treturn bool|nil True if the file exists, false otherwise or nil on invalid argument.
+-- @treturn ?string Descriptive message on error.
 function M.exists(file)
 	if not file or type(file) ~= 'string' or file:len() == 0 then
 		return nil, "file must be a non-empty string"
@@ -68,7 +90,10 @@ function M.exists(file)
 	return r ~= nil
 end
 
---creates and returns true if not exists, returns false it does, nil+msg on error
+--- Creates a file if it does not exist yet.
+-- @string file Path and name of the file to create.
+-- @treturn bool|nil True if the file has been created, false if it already existed or nil on error
+-- @treturn ?string Descriptive message on error
 function M.create(file)
 	local r,m = M.exists(file)
 
@@ -85,7 +110,12 @@ function M.create(file)
 	return true
 end
 
---FIXME: somehow protect this function from running arbitrary commands
+--- Create a symlink on the file system.
+-- _Note_ that this function contains a potential security leak as it uses os.execute with given parameters.
+-- @string from Source path for the symlink.
+-- @string to Target path for the symlink.
+-- @return The return value from @{os.execute}, or -1 on invalid parameter(s).
+-- @fixme: somehow protect this function from running arbitrary commands
 function M.symlink(from, to)
 	if from == nil or from == '' or to == nil or to == '' then return -1 end
 	local x = 'ln -s ' .. from .. ' ' .. to
@@ -102,12 +132,15 @@ function M.readFile(filePath)
 	return res
 end
 
--- TODO: this function has been duplicated from rest/api/api_system.lua
+--- Runs a command and captures its output using @{io.popen}.
+-- @string cmd The command to run.
+-- @treturn string Output of the command that was run.
+-- @todo: this function has been duplicated from rest/api/api_system.lua
 function M.captureCommandOutput(cmd)
 	local f = assert(io.popen(cmd, 'r'))
 	local output = assert(f:read('*all'))
 	f:close()
-	return output;
+	return output
 end
 
 return M

@@ -1,5 +1,8 @@
 ---
--- Entry code of the REST API. This sets up the environment, processes a REST request and responds appropiately.
+-- Entry code of the REST API and secondary functionality.
+-- Primarily, this sets up the environment, processes a REST request and responds appropiately.
+-- Secondary functions are to auto-switch between access point and client (@{setupAutoWifiMode})
+-- and to signin to [connect.doodle3d.com](http://connect.doodle3d.com/) (@{network.signin}).
 package.path = package.path .. ';/usr/share/lua/wifibox/?.lua'
 
 local confDefaults = require('conf_defaults')
@@ -15,6 +18,11 @@ local Signin = require('network.signin')
 local postData = nil
 
 
+--- Switches to wifi client mode or to access point mode based on availability of known wifi networks.
+--
+-- If the configuration has actively been set to access point mode, that will always be selected.
+-- If not, it will be attempted to connect to a known network (in order of recency) and only if
+-- that fails, access point mode will be selected as fall-back.
 local function setupAutoWifiMode()
 	-- expects list with tables containing 'ssid' key as values and returns index key if found or nil if not found
 	local function findSsidInList(list, name)
@@ -84,6 +92,11 @@ local function setupAutoWifiMode()
 	return nil, "autowifi: uh oh - bad situation in autowifi function"
 end
 
+--- Initializes the logging system to use the file and level defined in the system settings.
+-- The settings used are `logfile` and `loglevel`. The former may either be a
+-- reular file path, or `<stdout>` or `<stderr>`.
+-- @see util.settings.getSystemKey
+-- @treturn bool True on success, false on error.
 local function setupLogger()
 	local logStream = io.stderr -- use stderr as hard-coded default target
 	local logLevel = log.LEVEL.debug -- use debug logging as hard-coded default level
@@ -135,6 +148,9 @@ local function setupLogger()
 	return rv
 end
 
+--- Initializes the environment.
+-- The logger is set up, any POST data is read and several other subsystems are initialized.
+-- @tparam table environment The 'shell' environment containing all CGI variables. Note that @{cmdmain} simulates this.
 local function init(environment)
 	setupLogger()
 
@@ -162,6 +178,9 @@ local function init(environment)
 	return true
 end
 
+--- Decides what action to take based on shell/CGI parameters.
+-- Either executes a REST request, or calls @{setupAutoWifiMode} or @{network.signin}.
+-- @tparam table environment The CGI environment table.
 local function main(environment)
 	local rq = RequestClass.new(environment, postData, confDefaults.DEBUG_API)
 
@@ -210,7 +229,8 @@ local function main(environment)
 end
 
 
---- Firmware entry point.
+--- Firmware entry point. Runs @{init} and calls @{main}.
+--
 -- This is either used by [uhttp-mod-lua](http://wiki.openwrt.org/doc/uci/uhttpd#embedded.lua)
 -- directly, or by the d3dapi cgi-bin wrapper script which builds the env table
 -- from the shell environment. The wrapper script also handles command-line invocation.

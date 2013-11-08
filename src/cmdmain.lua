@@ -8,6 +8,8 @@ local main = require('main')
 -- The table is created using shell environment variables leaving out only 'DOCUMENT\_ROOT',
 -- 'SCRIPT\_PATH' and the regular shell variables (e.g., IFS, HOME and PS1).
 --
+-- See [information on CGI environment variables](http://techpubs.sgi.com/library/dynaweb_docs/0530/SGI_Developer/books/NetscapeSrv_PG/sgi_html/ch01.html).
+--
 -- Fields present in the 'real' env table but not in this one are: 'HTTP\_VERSION'
 -- and another table 'headers' which is mostly mirrored by the 'HTTP\_*' fields.
 -- Note that the 'headers' table may contain extra fields (e.g., 'cache-control').

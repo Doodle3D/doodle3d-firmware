@@ -2,6 +2,7 @@ local lfs = require('lfs')
 local log = require('util.logger')
 local utils = require('util.utils')
 local accessManager = require('util.access')
+local usb = require('util.usb')
 local printDriver = require('print3d')
 local printerUtils = require('util.printer')
 local printerAPI = require('rest.api.api_printer')
@@ -106,7 +107,7 @@ function M.access(request, response)
 	local hasControl = accessManager.hasControl(request.remoteAddress)
 	response:setSuccess()
 
-	response:addData('has_control', hasControl)
+	response:addData('has_control', hasControl) 
 
 	return true
 end
@@ -114,17 +115,9 @@ end
 function M.usb(request, response)
 	
 	response:setSuccess()
-	
-	local file, error = io.open("/sys/devices/platform/ehci-platform/usb1/1-1/speed",'r')
-	if file ~= nil then
-		local speed = file:read('*a')
-		file:close()
-		speed = tonumber(speed)
+	local speed, highSpeed = usb.getInfo()
+	if speed ~= nil then
 		response:addData('speed', speed)
-		
-		-- check usb device speed
-		-- http://stackoverflow.com/questions/1957589/usb-port-speed-linux
-		local highSpeed = (speed == 480)
 		response:addData('highSpeed', highSpeed)
 	end
 end
@@ -145,8 +138,11 @@ function M.status(request, response)
 		if(rv == false) then return end
 		rv = M.access(request, response)
 		if(rv == false) then return end
+		local speed, highSpeed = usb.getInfo()
+		if speed ~= nil then
+			response:addData('usb_highSpeed', highSpeed)
+		end
 	end
-	response:addData('v', 10)
 end
 
 return M

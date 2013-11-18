@@ -111,6 +111,24 @@ function M.access(request, response)
 	return true
 end
 
+function M.usb(request, response)
+	
+	response:setSuccess()
+	
+	local file, error = io.open("/sys/devices/platform/ehci-platform/usb1/1-1/speed",'r')
+	if file ~= nil then
+		local speed = file:read('*a')
+		file:close()
+		speed = tonumber(speed)
+		response:addData('speed', speed)
+		
+		-- check usb device speed
+		-- http://stackoverflow.com/questions/1957589/usb-port-speed-linux
+		local highSpeed = (speed == 480)
+		response:addData('highSpeed', highSpeed)
+	end
+end
+
 function M.status(request, response)
 
 	local ds = wifi.getDeviceState()

@@ -88,6 +88,15 @@ function M.all_GET(request, response)
 	end
 end
 
+function M.resetall_POST(request, response)
+	response:setSuccess()
+	settings.resetAll()
+	
+	for k,v in pairs(settings.getAll()) do
+		response:addData(k,v)
+	end
+end
+
 function M.supportedprinters_GET(request, response)
 	response:setSuccess()
 	for k,v in pairs(printer.supportedPrinters()) do

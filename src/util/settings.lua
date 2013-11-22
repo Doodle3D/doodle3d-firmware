@@ -239,6 +239,32 @@ function M.set(key, value)
 	return true
 end
 
+--- Reset all settings to their default values 
+-- @string key The key to set.
+-- @treturn bool|nil True if everything went well, nil in case of error.
+function M.resetAll()
+	log:info("settings:resetAll")
+	for k,_ in pairs(baseconfig) do
+		if not k:match('^[A-Z_]*$') then --TEMP: skip 'constants', which should be moved anyway
+			M.reset(k)
+		end
+	end
+	return true
+end
+
+--- Reset setting to default value 
+-- @string key The key to reset.
+-- @treturn bool|nil True if everything went well, nil in case of error.
+function M.reset(key)
+	log:info("settings:reset")
+	
+	--log:info("  key: "..utils.dump(key))
+	uci:delete(UCI_CONFIG_NAME, UCI_CONFIG_SECTION, key)
+	uci:commit(UCI_CONFIG_NAME)
+	return true
+end
+
+
 --- Returns a UCI configuration key from the system section.
 -- @string key The key for which to return the value, must be non-empty.
 -- @return Requested value or false if it does not exist or nil on invalid key.

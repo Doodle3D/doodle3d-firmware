@@ -140,10 +140,10 @@ end
 --- Looks up the table in @{subconf_defaults}.lua corresponding to a key.
 -- @string key The key for which to return the base table.
 -- @treturn table The base table for key, or nil if it does not exist.
-local function getSubBaseKeyTable(key)
+--[[local function getSubBaseKeyTable(key)
 	local base = subconfig[key]
 	return type(base) == 'table' and base.default ~= nil and base or nil
-end
+end]]--
 
 
 --- Returns the value of the requested key if it exists.
@@ -173,13 +173,11 @@ function M.get(key)
 	    log:info("  base.subSection: "..utils.dump(base.subSection))
 	    log:info("  section: "..utils.dump(section))
 	    log:info("  key: "..utils.dump(key))
-		local subsectionBaseKey = section.."_"..key
-		local subsectionBase = getSubBaseKeyTable(subsectionBaseKey)
-		log:info("  subsection base key: "..utils.dump(subsectionBaseKey))
-		log:info("  subsection base: "..utils.dump(subsectionKey))
-		if subsectionBase ~= nil and subsectionBase.default ~= nil then
-			log:info("  returning subsection base default: "..utils.dump(subsectionBase.default))
-			return subsectionBase.default
+		log:info("  subDefault key: "..utils.dump("default_"..section))
+		local subDefault = base["default_"..section]
+		if subDefault ~= nil then
+			log:info("  returning subsection default: "..utils.dump(subDefault))
+			return subDefault
 		end
 	end
 	log:info("  returning default: "..utils.dump(base.default))

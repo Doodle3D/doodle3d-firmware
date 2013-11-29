@@ -91,7 +91,7 @@ function M:setError(msg)
 	self.body.status = 'error'
 	if msg ~= '' then self.body.msg = msg end
 
-	self:addData('more_info', 'http://' .. defaults.API_BASE_URL_PATH .. '/wiki/wiki/communication-api')
+	self:addData('more_info', 'http://' .. defaults.API_BASE_URL_PATH .. '/api')
 end
 
 --- Adds a data item to the response, this will be included under the `data` item of the json text.

@@ -76,10 +76,12 @@ function M.logfiles(request, response)
 	-- copy relevant openwrt configuration files
 	rv,msg = lfs.mkdir(LOG_COLLECT_DIR .. '/config')
 	for _,v in pairs(UCI_CONFIG_FILES_TO_SAVE) do
+		local srcFile = '/etc/config/' .. v
 		local tgtFile = LOG_COLLECT_DIR .. '/config/' .. v
-		rv,sig,code = redirectedExecute('cp ' .. '/etc/config/' .. v .. ' ' .. tgtFile)
-		if v == 'wireless' then
-			rv,sig,code = os.execute("sed \"s/option key '.*'/option key '...'/g\" " .. tgtFile .. " > " .. tgtFile .. '.2')
+		if v ~= 'wireless' then
+			rv,sig,code = redirectedExecute('cp ' .. srcFile .. ' ' .. tgtFile)
+		else
+			rv,sig,code = os.execute("sed \"s/option key '.*'/option key '...'/g\" " .. srcFile .. " > " .. tgtFile)
 		end
 	end
 

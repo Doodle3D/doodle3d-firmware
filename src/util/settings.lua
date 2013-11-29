@@ -4,6 +4,7 @@
 -- if no value is stored in the UCI config. The UCI config file is `/etc/config/wifibox`.
 -- The default values guarantee there will always be a set of reasonable settings
 -- to use and provide a clear overview of all existing configuration keys as well.
+-- uci api: http://wiki.openwrt.org/doc/techref/uci, http://luci.subsignal.org/api/luci/modules/luci.model.uci.html
 local uci = require('uci').cursor()
 local utils = require('util.utils')
 local baseconfig = require('conf_defaults')
@@ -284,9 +285,9 @@ end
 -- @treturn bool|nil True if everything went well, nil in case of error.
 function M.resetAll()
 	log:info("settings:resetAll")
-		end
 
 	local allSections = uci:get_all(UCI_CONFIG_NAME)
+	log:info("  allSections: "..utils.dump(allSections))
 	
 	for key,value in pairs(allSections) do 
 		if key ~= "system" and not key:match('^[A-Z_]*$') then --TEMP: skip 'constants', which should be moved anyway
@@ -306,10 +307,30 @@ end
 -- @string key The key to reset.
 -- @treturn bool|nil True if everything went well, nil in case of error.
 function M.reset(key)
-	log:info("settings:reset")
+	log:info("settings:reset: "..utils.dump(key))
 	
-	--log:info("  key: "..utils.dump(key))
-	uci:delete(UCI_CONFIG_NAME, UCI_CONFIG_SECTION, key)
+	--uci:foreach(UCI_CONFIG_NAME,UCI_CONFIG_TYPE)
+	--uci:delete(UCI_CONFIG_NAME, UCI_CONFIG_SECTION, key)
+	
+	key = replaceDots(key)
+	local base = getBaseKeyTable(key)
+	if not base then return nil,ERR_NO_SUCH_KEY end
+	
+	local section = UCI_CONFIG_SECTION;
+	if base.subSection ~= nil then 
+		log:info("  base.subSection: "..utils.dump(base.subSection))
+		section = M.get(base.subSection)
+	end
+	log:info("  section: "..utils.dump(section))
+	
+	local uciV = fromUciValue(uci:get(UCI_CONFIG_NAME, section, key), base.type)
+	log:info("  uciV: "..utils.dump(uciV))
+	
+	uci:delete(UCI_CONFIG_NAME, section, key)
+	
+	local uciV = fromUciValue(uci:get(UCI_CONFIG_NAME, section, key), base.type)
+	log:info("  >uciV: "..utils.dump(uciV))
+	
 	uci:commit(UCI_CONFIG_NAME)
 	return true
 end

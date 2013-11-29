@@ -88,7 +88,21 @@ function M.all_GET(request, response)
 	end
 end
 
+function M.reset_POST(request, response)
+	--log:info("API:reset");
+	if not operationsAccessOrFail(request, response) then return end
+	response:setSuccess()
+	
+	for k,v in pairs(request:getAll()) do
+		--log:info("  "..k..": "..v);
+		local r,m = settings.reset(k);
+		if r ~= nil then response:addData(k, "ok")
+		else response:addData(k, "could not reset key ('" .. m .. "')") end
+	end
+end
+
 function M.resetall_POST(request, response)
+	if not operationsAccessOrFail(request, response) then return end
 	response:setSuccess()
 	settings.resetAll()
 	

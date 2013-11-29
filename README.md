@@ -1,7 +1,7 @@
 WiFi box OpenWRT firmware package
 =================================
 
-General documentation can be found on the wiki: <http://doodle3d.com/wiki>. Source code documentation can be generated, see below.
+General documentation can be found on the wiki: <http://doodle3d.com/help/wiki>. Source code documentation can be generated, see below.
 
 Documentation
 -------------

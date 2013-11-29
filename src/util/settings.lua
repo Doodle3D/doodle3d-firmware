@@ -284,11 +284,21 @@ end
 -- @treturn bool|nil True if everything went well, nil in case of error.
 function M.resetAll()
 	log:info("settings:resetAll")
-	for k,_ in pairs(baseconfig) do
-		if not k:match('^[A-Z_]*$') then --TEMP: skip 'constants', which should be moved anyway
-			M.reset(k)
 		end
+
+	local allSections = uci:get_all(UCI_CONFIG_NAME)
+	
+	for key,value in pairs(allSections) do 
+		if key ~= "system" and not key:match('^[A-Z_]*$') then --TEMP: skip 'constants', which should be moved anyway
+			log:info("  section: "..utils.dump(key))
+			uci:delete(UCI_CONFIG_NAME,key)
+		end 
 	end
+	uci:commit(UCI_CONFIG_NAME)
+	
+	local allSections = uci:get_all(UCI_CONFIG_NAME)
+	log:info("  >allSections: "..utils.dump(allSections))
+	
 	return true
 end
 

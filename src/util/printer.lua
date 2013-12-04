@@ -5,6 +5,7 @@ local printDriver = require('print3d')
 local SUPPORTED_PRINTERS = {
 	rigidbot = "Rigidbot",
 	ultimaker = "Ultimaker",
+	ultimaker2 = "Ultimaker2",
 	makerbot_replicator2 = "MakerBot Replicator2",
 	makerbot_thingomatic = "MakerBot Thing-o-matic",
 	printrbot = "Printrbot",

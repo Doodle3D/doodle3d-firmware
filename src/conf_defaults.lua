@@ -249,7 +249,7 @@ M.printer_retraction_amount = {
 }
 
 M.printer_enableTraveling = {
-	default = false,
+	default = true,
 	type = 'bool',
 	description = ''
 }

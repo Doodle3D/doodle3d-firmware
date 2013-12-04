@@ -8,7 +8,6 @@
 local uci = require('uci').cursor()
 local utils = require('util.utils')
 local baseconfig = require('conf_defaults')
-local subconfig = require('subconf_defaults')
 local utils = require('util.utils')
 local log = require('util.logger')
 

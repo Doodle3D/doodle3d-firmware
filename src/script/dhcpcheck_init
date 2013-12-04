@@ -1,0 +1,16 @@
+#!/bin/sh /etc/rc.common
+
+# start after all other scripts
+START=99
+
+LOGGER="logger -t dhcpcheck -p 6"
+
+boot() {
+	logread | grep "192.168.10.249, lease time 12h"
+	if [ $? -ne 0 ]; then
+		$LOGGER "Applying workaround for dhcp/dnsmasq issue. See: https://github.com/Doodle3D/doodle3d-client/issues/66"
+		/etc/init.d/dnsmasq reload
+	else
+		$LOGGER "DHCP configuration is in order, not doing anything"
+	fi
+}

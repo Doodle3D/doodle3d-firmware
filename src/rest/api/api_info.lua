@@ -12,7 +12,18 @@ local LOG_COLLECT_DIRNAME = 'wifibox-logs'
 local LOG_COLLECT_DIR = TMP_DIR .. '/' .. LOG_COLLECT_DIRNAME
 local WIFIBOX_LOG_FILENAME = 'wifibox.log'
 local WIFIBOX_LOG_FILE = TMP_DIR .. '/' .. WIFIBOX_LOG_FILENAME
+
 local SYSLOG_FILENAME = 'syslog'
+local PROCESS_LIST_FILENAME = 'processes'
+local MEMINFO_FILENAME = 'meminfo'
+local MOUNTS_FILENAME = 'mounts'
+local DISKFREE_FILENAME = 'diskfree'
+
+local UCI_CONFIG_FILES_TO_SAVE = { 'dhcp', 'firewall', 'network', 'system', 'wifibox', 'wireless' }
+
+local USB_DIRTREE_COMMAND = "ls -R /sys/devices/platform/ehci-platform/usb1 | grep \":$\" | sed -e 's/:$//' -e 's/[^-][^\\/]*\\//--/g' -e 's/^/   /' -e 's/-/|/'"
+local USB_DIRTREE_FILENAME = 'sys_devices_platform_ehci-platform_usb1.tree'
+
 local PRINT3D_BASEPATH = '/tmp'
 local PRINT3D_LOG_FILENAME_PREFIX = 'print3d-'
 local PRINT3D_LOG_FILENAME_SUFFIX = '.log'
@@ -33,30 +44,62 @@ end
 
 -- TODO: redirect stdout+stderr; handle errors
 function M.logfiles(request, response)
-	local rv,msg = lfs.mkdir(LOG_COLLECT_DIR)
-	local rv,msg = lfs.chdir(TMP_DIR)
+	local rv,sig,code,msg = nil,nil,nil,nil
+
+	rv,msg = lfs.mkdir(LOG_COLLECT_DIR)
+	rv,msg = lfs.chdir(TMP_DIR)
 
 
 	--[[ create temporary files ]]--
 
-	local rv,sig,code = redirectedExecute('cp ' .. WIFIBOX_LOG_FILE .. ' ' .. LOG_COLLECT_DIR)
+	-- copy wifibox API-script log
+	rv,sig,code = redirectedExecute('cp ' .. WIFIBOX_LOG_FILE .. ' ' .. LOG_COLLECT_DIR)
 
-	local rv,sig,code = os.execute('logread > ' .. LOG_COLLECT_DIR .. '/' .. SYSLOG_FILENAME)
+	-- capture syslog
+	rv,sig,code = os.execute('logread > ' .. LOG_COLLECT_DIR .. '/' .. SYSLOG_FILENAME)
 
+	-- capture running processes
+	rv,sig,code = os.execute('ps -w > ' .. LOG_COLLECT_DIR .. '/' .. PROCESS_LIST_FILENAME)
+
+	-- capture info on RAM memory
+	rv,sig,code = os.execute('cat /proc/meminfo > ' .. LOG_COLLECT_DIR .. '/' .. MEMINFO_FILENAME)
+
+	-- capture info on mounted file systems
+	rv,sig,code = os.execute('mount > ' .. LOG_COLLECT_DIR .. '/' .. MOUNTS_FILENAME)
+
+	-- capture info on free disk space
+	rv,sig,code = os.execute('df -h > ' .. LOG_COLLECT_DIR .. '/' .. DISKFREE_FILENAME)
+
+	-- list directory structure for primary USB controller
+	rv,sig,code = os.execute(USB_DIRTREE_COMMAND .. ' > ' .. LOG_COLLECT_DIR .. '/' .. USB_DIRTREE_FILENAME)
+
+	-- copy relevant openwrt configuration files
+	rv,msg = lfs.mkdir(LOG_COLLECT_DIR .. '/config')
+	for _,v in pairs(UCI_CONFIG_FILES_TO_SAVE) do
+		local srcFile = '/etc/config/' .. v
+		local tgtFile = LOG_COLLECT_DIR .. '/config/' .. v
+		if v ~= 'wireless' then
+			rv,sig,code = redirectedExecute('cp ' .. srcFile .. ' ' .. tgtFile)
+		else
+			rv,sig,code = os.execute("sed \"s/option key '.*'/option key '...'/g\" " .. srcFile .. " > " .. tgtFile)
+		end
+	end
+
+	-- collect and copy print3d server logs
 	for file in lfs.dir(PRINT3D_BASEPATH) do
 		if file:find(PRINT3D_LOG_FILENAME_PREFIX) == 1 and file:find(PRINT3D_LOG_FILENAME_SUFFIX) ~= nil then
 			local srcLogFile = PRINT3D_BASEPATH .. '/' .. file
 			local tgtLogFile = LOG_COLLECT_DIR .. '/' .. file
-				local rv,sig,code = redirectedExecute('cp ' .. srcLogFile .. ' ' .. tgtLogFile)
+			rv,sig,code = redirectedExecute('cp ' .. srcLogFile .. ' ' .. tgtLogFile)
 			end
 		end
 
-	local rv,sig,code = redirectedExecute('tar czf ' .. LOG_COLLECT_ARCHIVE_FILE .. ' ' .. LOG_COLLECT_DIRNAME) --returns 0 success, 1 error
+	rv,sig,code = redirectedExecute('tar czf ' .. LOG_COLLECT_ARCHIVE_FILE .. ' ' .. LOG_COLLECT_DIRNAME) --returns 0 success, 1 error
 
 
 	--[[ add response content ]]--
 
-	local rv,msg = response:setBinaryFileData(LOG_COLLECT_ARCHIVE_FILE, LOG_COLLECT_ARCHIVE_FILENAME, 'application/x-compressed')
+	rv,msg = response:setBinaryFileData(LOG_COLLECT_ARCHIVE_FILE, LOG_COLLECT_ARCHIVE_FILENAME, 'application/x-compressed')
 	if not rv then
 		response:setError("could not set binary data from file '" .. LOG_COLLECT_ARCHIVE_FILE .. "' (" .. msg .. ")")
 	else
@@ -69,17 +112,24 @@ function M.logfiles(request, response)
 	for file in lfs.dir(LOG_COLLECT_DIR) do
 		if file:find(PRINT3D_LOG_FILENAME_PREFIX) == 1 and file:find(PRINT3D_LOG_FILENAME_SUFFIX) ~= nil then
 			local tgtLogFile = LOG_COLLECT_DIR .. '/' .. file
-			local rv,sig,code = redirectedExecute('rm ' .. tgtLogFile)
+			rv,sig,code = redirectedExecute('rm ' .. tgtLogFile)
 		end
 	end
 
-	local rv,sig,code = redirectedExecute('rm ' .. LOG_COLLECT_DIR .. '/' .. WIFIBOX_LOG_FILENAME)
+	rv,sig,code = redirectedExecute('rm ' .. LOG_COLLECT_DIR .. '/config/*')
+	rv,msg = lfs.rmdir(LOG_COLLECT_DIR .. '/config')
 
-	local rv,sig,code = redirectedExecute('rm ' .. LOG_COLLECT_DIR .. '/' .. SYSLOG_FILENAME)
+	rv,sig,code = redirectedExecute('rm ' .. LOG_COLLECT_DIR .. '/' .. USB_DIRTREE_FILENAME)
+	rv,sig,code = redirectedExecute('rm ' .. LOG_COLLECT_DIR .. '/' .. DISKFREE_FILENAME)
+	rv,sig,code = redirectedExecute('rm ' .. LOG_COLLECT_DIR .. '/' .. MOUNTS_FILENAME)
+	rv,sig,code = redirectedExecute('rm ' .. LOG_COLLECT_DIR .. '/' .. MEMINFO_FILENAME)
+	rv,sig,code = redirectedExecute('rm ' .. LOG_COLLECT_DIR .. '/' .. PROCESS_LIST_FILENAME)
+	rv,sig,code = redirectedExecute('rm ' .. LOG_COLLECT_DIR .. '/' .. SYSLOG_FILENAME)
+	rv,sig,code = redirectedExecute('rm ' .. LOG_COLLECT_DIR .. '/' .. WIFIBOX_LOG_FILENAME)
 
-	local rv,msg = lfs.rmdir(LOG_COLLECT_DIR)
+	rv,msg = lfs.rmdir(LOG_COLLECT_DIR)
 
-	local rv,sig,code = redirectedExecute('rm ' .. LOG_COLLECT_ARCHIVE_FILE)
+	rv,sig,code = redirectedExecute('rm ' .. LOG_COLLECT_ARCHIVE_FILE)
 end
 
 function M.access(request, response)

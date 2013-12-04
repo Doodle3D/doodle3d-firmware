@@ -74,6 +74,7 @@ echo "/root/sketches" >> /etc/sysupgrade.conf
 
 $IPKG_INSTROOT/etc/init.d/wifibox enable
 $IPKG_INSTROOT/etc/init.d/wifibox start
+$IPKG_INSTROOT/etc/init.d/dhcpcheck enable
 
 if [ -z "$IPKG_INSTROOT" ]; then
 	echo "Enabling wifi device..."

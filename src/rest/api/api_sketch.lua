@@ -43,7 +43,7 @@ local function createSketchList()
 
 	for item in lfs.dir(M.SKETCH_DIR) do
 		if item ~= '.' and item ~= '..' then
-			local idx = item:match('^(%d+)\.sketch$')
+			local idx = item:match('^(%d+)\.'..SKETCH_FILE_EXTENSION..'$')
 			if idx and idx:len() == NUMBER_PAD_WIDTH then
 				table.insert(result, tonumber(idx))
 			end

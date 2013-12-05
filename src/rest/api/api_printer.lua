@@ -89,6 +89,15 @@ function M.state(request, response, onlyReturnState)
 	return true
 end
 
+-- retrieve a list of 3D printers currently supported
+function M.listall(request, response)
+	response:setSuccess()
+	response:addData('printers', printerUtils.supportedPrinters())
+	return true
+end
+
+
+
 function M.heatup_POST(request, response)
 
 	if not accessManager.hasControl(request.remoteAddress) then

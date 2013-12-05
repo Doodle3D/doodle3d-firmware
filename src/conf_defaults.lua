@@ -93,15 +93,22 @@ M.printer_type = {
 	end
 }
 
-M.printer_bed_width = {
-	default = 220,
+M.printer_dimensions_x = {
+	default = 200,
 	subSection = 'printer_type',
 	type = 'int',
 	description = '',
 	min = 0
 }
-M.printer_bed_height = {
-	default = 220,
+M.printer_dimensions_y = {
+	default = 200,
+	subSection = 'printer_type',
+	type = 'int',
+	description = '',
+	min = 0
+}
+M.printer_dimensions_z = {
+	default = 200,
 	subSection = 'printer_type',
 	type = 'int',
 	description = '',
@@ -256,12 +263,12 @@ M.printer_enableTraveling = {
 	description = ''
 }
 
-M.printer_maxObjectHeight = {
-	default = 150,
-	type = 'int',
-	description = 'Maximum height that will be printed',
-	min = 0
-}
+-- M.printer_maxObjectHeight = {
+-- 	default = 150,
+-- 	type = 'int',
+-- 	description = 'Maximum height that will be printed',
+-- 	min = 0
+-- }
 
 M.printer_screenToMillimeterScale = {
 	default = 0.3,

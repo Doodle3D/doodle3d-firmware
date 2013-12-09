@@ -150,7 +150,7 @@ end]]--
 -- @p key The key to return the associated value for.
 -- @return The associated value, beware (!) that this may be boolean false for keys of 'bool' type.
 function M.get(key)
-	log:info("settings:get: "..utils.dump(key))
+	--log:info("settings:get: "..utils.dump(key))
 	key = replaceDots(key)
 	local base = getBaseKeyTable(key)
 
@@ -158,29 +158,21 @@ function M.get(key)
 	
 	local section = UCI_CONFIG_SECTION;
 	if base.subSection ~= nil then 
-		log:info("  base.subSection: "..utils.dump(base.subSection))
 		section = M.get(base.subSection)
 	end
-	log:info("  section: "..utils.dump(section))
 	
 	local uciV = fromUciValue(uci:get(UCI_CONFIG_NAME, section, key), base.type)
-	log:info("  uciV: "..utils.dump(uciV))
-	
 	if uciV ~= nil then
-		log:info("  returning uciV: "..utils.dump(uciV)) 
+		-- returning value from uci 
 		return uciV
 	elseif base.subSection ~= nil then 
-	    log:info("  base.subSection: "..utils.dump(base.subSection))
-	    log:info("  section: "..utils.dump(section))
-	    log:info("  key: "..utils.dump(key))
-		log:info("  subDefault key: "..utils.dump("default_"..section))
 		local subDefault = base["default_"..section]
 		if subDefault ~= nil then
-			log:info("  returning subsection default: "..utils.dump(subDefault))
+			-- returning subsection default value
 			return subDefault
 		end
 	end
-	log:info("  returning default: "..utils.dump(base.default))
+	-- returning default value
 	return base.default
 end
 
@@ -263,11 +255,9 @@ function M.set(key, value)
 	
 	local section = UCI_CONFIG_SECTION;
 	if base.subSection ~= nil then 
-		log:info("  base.subSection: "..utils.dump(base.subSection))
 		section = M.get(base.subSection)
 		uci:set(UCI_CONFIG_NAME, section, UCI_CONFIG_TYPE)
 	end
-	log:info("  section: "..utils.dump(section))
 
 	if value ~= nil then
 		uci:set(UCI_CONFIG_NAME, section, key, toUciValue(value, base.type))
@@ -286,18 +276,13 @@ function M.resetAll()
 	log:info("settings:resetAll")
 
 	local allSections = uci:get_all(UCI_CONFIG_NAME)
-	log:info("  allSections: "..utils.dump(allSections))
 	
 	for key,value in pairs(allSections) do 
 		if key ~= "system" and not key:match('^[A-Z_]*$') then --TEMP: skip 'constants', which should be moved anyway
-			log:info("  section: "..utils.dump(key))
 			uci:delete(UCI_CONFIG_NAME,key)
 		end 
 	end
 	uci:commit(UCI_CONFIG_NAME)
-	
-	local allSections = uci:get_all(UCI_CONFIG_NAME)
-	log:info("  >allSections: "..utils.dump(allSections))
 	
 	return true
 end
@@ -306,7 +291,7 @@ end
 -- @string key The key to reset.
 -- @treturn bool|nil True if everything went well, nil in case of error.
 function M.reset(key)
-	log:info("settings:reset: "..utils.dump(key))
+	--log:info("settings:reset: "..utils.dump(key))
 	
 	--uci:foreach(UCI_CONFIG_NAME,UCI_CONFIG_TYPE)
 	--uci:delete(UCI_CONFIG_NAME, UCI_CONFIG_SECTION, key)
@@ -317,18 +302,10 @@ function M.reset(key)
 	
 	local section = UCI_CONFIG_SECTION;
 	if base.subSection ~= nil then 
-		log:info("  base.subSection: "..utils.dump(base.subSection))
 		section = M.get(base.subSection)
 	end
-	log:info("  section: "..utils.dump(section))
-	
-	local uciV = fromUciValue(uci:get(UCI_CONFIG_NAME, section, key), base.type)
-	log:info("  uciV: "..utils.dump(uciV))
 	
 	uci:delete(UCI_CONFIG_NAME, section, key)
-	
-	local uciV = fromUciValue(uci:get(UCI_CONFIG_NAME, section, key), base.type)
-	log:info("  >uciV: "..utils.dump(uciV))
 	
 	uci:commit(UCI_CONFIG_NAME)
 	return true

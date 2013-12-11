@@ -149,6 +149,7 @@ function M:send()
 	printHeaderLine("Status", self.httpStatusCode .. " " .. self.httpStatusText)
 	printHeaderLine("Content-Type", self.contentType)
 	printHeaderLine("Access-Control-Allow-Origin", "*")
+	printHeaderLine("Expires", "-1")
 
 	if self.binaryData == nil then
 		io.write("\r\n")

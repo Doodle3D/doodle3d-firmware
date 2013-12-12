@@ -16,7 +16,7 @@ IncludeWithNewlines = $(subst ¤,$(newline),$(shell cat $1 | tr '\n' '¤'))
 # Name and release number of this package
 PKG_NAME := wifibox
 PKG_VERSION := 0.1.1
-PKG_RELEASE := 7
+PKG_RELEASE := 8
 
 # This specifies the directory where we're going to build the program.  
 # The root build directory, $(BUILD_DIR), is by default the build_mipsel 
@@ -55,6 +55,7 @@ endef
 define Build/Prepare
 	mkdir -p $(PKG_BUILD_DIR)
 	$(CP) -r ./src/* $(PKG_BUILD_DIR)/
+	$(CP) -r ./ReleaseNotes.md $(PKG_BUILD_DIR)/
 endef
 
 define Build/Configure
@@ -87,6 +88,7 @@ define Package/wifibox/install
 	#$(INSTALL_DIR) $(1)/etc
 	$(INSTALL_DIR) $(1)/etc/init.d
 	$(INSTALL_DIR) $(1)/etc/config
+	#$(INSTALL_DIR) $(1)/www
 	$(INSTALL_DIR) $(1)/www/cgi-bin
 	
 ### create all files in /usr/share/lua/autowifi (autowifi)
@@ -107,6 +109,10 @@ define Package/wifibox/install
 	
 	$(CP) $(WIFIBOX_BASE_DIR)/script/wifibox.uci.config $(1)/etc/config/wifibox  # copy base configuration to uci config dir
 	$(CP) $(WIFIBOX_BASE_DIR)/FIRMWARE-VERSION $(1)/etc/wifibox-version
+
+	echo "<html><body><pre><code>" > $(1)/www/ReleaseNotes.html
+	cat $(WIFIBOX_BASE_DIR)/ReleaseNotes.md >> $(1)/www/ReleaseNotes.html
+	echo "</code></pre></body></html>" >> $(1)/www/ReleaseNotes.html
 	
 ifeq ($(CONFIG_WIFIBOX_DEVEL_PACKAGE),y)
 #	$(INSTALL_DIR) $(1)/$(TGT_LUA_DIR_SUFFIX)/test

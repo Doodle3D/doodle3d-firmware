@@ -3,7 +3,7 @@
 # start after networking
 START=22
 
-LOGGER="logger -s -t autowifi -p 6"
+LOGGER="logger -t autowifi -p 6"
 
 boot() {
 	sleep 1

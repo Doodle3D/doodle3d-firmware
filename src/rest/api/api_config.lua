@@ -88,7 +88,28 @@ function M.all_GET(request, response)
 	end
 end
 
+--- Reset specific setting to default value
+-- When an setting has a subSection only the setting in it's current subSection is reset. 
+-- For example you want to reset setting _printer.startcode_ 
+-- and it has it's _subSection_ set to 'printer_type' 
+-- and printer.type is set to 'ultimaker' then 
+-- only the printer.startcode under the ultimaker subsection is removed.
+function M.reset_POST(request, response)
+	--log:info("API:reset");
+	if not operationsAccessOrFail(request, response) then return end
+	response:setSuccess()
+	
+	for k,v in pairs(request:getAll()) do
+		--log:info("  "..k..": "..v);
+		local r,m = settings.reset(k);
+		if r ~= nil then response:addData(k, "ok")
+		else response:addData(k, "could not reset key ('" .. m .. "')") end
+	end
+end
+
+--- Reset all settings to default value 
 function M.resetall_POST(request, response)
+	if not operationsAccessOrFail(request, response) then return end
 	response:setSuccess()
 	settings.resetAll()
 	

@@ -68,12 +68,13 @@ EOM
 fi
 
 #preserve saved sketches during firmware update
-echo "/root/sketches" >> /etc/sysupgrade.conf
+echo "/root/sketches" >> $IPKG_INSTROOT/etc/sysupgrade.conf
 
 ### Finally make sure basic configuration is set correctly
 
 $IPKG_INSTROOT/etc/init.d/wifibox enable
 $IPKG_INSTROOT/etc/init.d/wifibox start
+$IPKG_INSTROOT/etc/init.d/dhcpcheck enable
 
 if [ -z "$IPKG_INSTROOT" ]; then
 	echo "Enabling wifi device..."

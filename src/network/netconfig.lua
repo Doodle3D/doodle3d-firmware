@@ -321,7 +321,7 @@ end
 -- @tparam boolean recreate If true, a new UCI configuration based on scan data will always be created, otherwise an attempt will be made to use an existing configuration.
 -- @return True on success or nil+msg on error.
 function M.associateSsid(ssid, passphrase, recreate)
-	log:info("netconfig:associateSsid: "..(ssid or "<nil>")..", "..(passphrase or "<nil>")..", "..(recreate or "<nil>"))
+	log:info("netconfig:associateSsid: "..(ssid or "<nil>")..", "..(recreate or "<nil>"))
 	
 	M.setStatus(M.CONNECTING,"Connecting...");
 	

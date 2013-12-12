@@ -4,6 +4,7 @@
 -- if no value is stored in the UCI config. The UCI config file is `/etc/config/wifibox`.
 -- The default values guarantee there will always be a set of reasonable settings
 -- to use and provide a clear overview of all existing configuration keys as well.
+-- uci api: http://wiki.openwrt.org/doc/techref/uci, http://luci.subsignal.org/api/luci/modules/luci.model.uci.html
 local uci = require('uci').cursor()
 local utils = require('util.utils')
 local baseconfig = require('conf_defaults')
@@ -136,23 +137,43 @@ local function getBaseKeyTable(key)
 	return type(base) == 'table' and base.default ~= nil and base or nil
 end
 
+--- Looks up the table in @{subconf_defaults}.lua corresponding to a key.
+-- @string key The key for which to return the base table.
+-- @treturn table The base table for key, or nil if it does not exist.
+--[[local function getSubBaseKeyTable(key)
+	local base = subconfig[key]
+	return type(base) == 'table' and base.default ~= nil and base or nil
+end]]--
+
 
 --- Returns the value of the requested key if it exists.
 -- @p key The key to return the associated value for.
 -- @return The associated value, beware (!) that this may be boolean false for keys of 'bool' type.
 function M.get(key)
+	--log:info("settings:get: "..utils.dump(key))
 	key = replaceDots(key)
 	local base = getBaseKeyTable(key)
 
 	if not base then return nil,ERR_NO_SUCH_KEY end
-
-	local v = base.default
-	local uciV = fromUciValue(uci:get(UCI_CONFIG_NAME, UCI_CONFIG_SECTION, key), base.type)
-
-	local actualV = v
-	if uciV ~= nil then actualV = uciV end
-
-	return actualV
+	
+	local section = UCI_CONFIG_SECTION;
+	if base.subSection ~= nil then 
+		section = M.get(base.subSection)
+	end
+	
+	local uciV = fromUciValue(uci:get(UCI_CONFIG_NAME, section, key), base.type)
+	if uciV ~= nil then
+		-- returning value from uci 
+		return uciV
+	elseif base.subSection ~= nil then 
+		local subDefault = base["default_"..section]
+		if subDefault ~= nil then
+			-- returning subsection default value
+			return subDefault
+		end
+	end
+	-- returning default value
+	return base.default
 end
 
 --- Returns all configuration keys with their current values.
@@ -206,7 +227,7 @@ function M.set(key, value)
 
 	if M.isDefault(key) and value == nil then return true end -- key is default already
 	--log:info("  not default")
-	local current = uci:get(UCI_CONFIG_NAME, UCI_CONFIG_SECTION, key)
+	
 	--log:info("  base.type: "..utils.dump(base.type))
 	if base.type == 'bool' then
 		if value ~= "" then
@@ -227,12 +248,21 @@ function M.set(key, value)
 		return nil,m
 	end
 
-	if fromUciValue(current, base.type) == value then return true end
+	--local current = uci:get(UCI_CONFIG_NAME, UCI_CONFIG_SECTION, key)
+	local current = M.get(key)
+	--if fromUciValue(current, base.type) == value then return true end
+	if current == value then return true end
+	
+	local section = UCI_CONFIG_SECTION;
+	if base.subSection ~= nil then 
+		section = M.get(base.subSection)
+		uci:set(UCI_CONFIG_NAME, section, UCI_CONFIG_TYPE)
+	end
 
 	if value ~= nil then
-		uci:set(UCI_CONFIG_NAME, UCI_CONFIG_SECTION, key, toUciValue(value, base.type))
+		uci:set(UCI_CONFIG_NAME, section, key, toUciValue(value, base.type))
 	else
-		uci:delete(UCI_CONFIG_NAME, UCI_CONFIG_SECTION, key)
+		uci:delete(UCI_CONFIG_NAME, section, key)
 	end
 
 	uci:commit(UCI_CONFIG_NAME)
@@ -244,11 +274,16 @@ end
 -- @treturn bool|nil True if everything went well, nil in case of error.
 function M.resetAll()
 	log:info("settings:resetAll")
-	for k,_ in pairs(baseconfig) do
-		if not k:match('^[A-Z_]*$') then --TEMP: skip 'constants', which should be moved anyway
-			M.reset(k)
-		end
+
+	local allSections = uci:get_all(UCI_CONFIG_NAME)
+	
+	for key,value in pairs(allSections) do 
+		if key ~= "system" and not key:match('^[A-Z_]*$') then --TEMP: skip 'constants', which should be moved anyway
+			uci:delete(UCI_CONFIG_NAME,key)
+		end 
 	end
+	uci:commit(UCI_CONFIG_NAME)
+	
 	return true
 end
 
@@ -256,10 +291,22 @@ end
 -- @string key The key to reset.
 -- @treturn bool|nil True if everything went well, nil in case of error.
 function M.reset(key)
-	log:info("settings:reset")
+	--log:info("settings:reset: "..utils.dump(key))
 	
-	--log:info("  key: "..utils.dump(key))
-	uci:delete(UCI_CONFIG_NAME, UCI_CONFIG_SECTION, key)
+	--uci:foreach(UCI_CONFIG_NAME,UCI_CONFIG_TYPE)
+	--uci:delete(UCI_CONFIG_NAME, UCI_CONFIG_SECTION, key)
+	
+	key = replaceDots(key)
+	local base = getBaseKeyTable(key)
+	if not base then return nil,ERR_NO_SUCH_KEY end
+	
+	local section = UCI_CONFIG_SECTION;
+	if base.subSection ~= nil then 
+		section = M.get(base.subSection)
+	end
+	
+	uci:delete(UCI_CONFIG_NAME, section, key)
+	
 	uci:commit(UCI_CONFIG_NAME)
 	return true
 end

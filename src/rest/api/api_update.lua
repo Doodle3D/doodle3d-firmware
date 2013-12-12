@@ -2,7 +2,7 @@ local wifi = require('network.wlanconfig')
 local netconf = require('network.netconfig')
 local settings = require('util.settings')
 
--- NOTE: the module 'detects' command-line invocation by existence of 'arg', so we have to make sure it is not defined.
+-- NOTE: the updater module 'detects' command-line invocation by existence of 'arg', so we have to make sure it is not defined.
 argStash = arg
 arg = nil
 local updater = require('script.d3d-updater')
@@ -140,18 +140,21 @@ function M.download_POST(request, response)
 end
 
 -- if successful, this call won't return since the device will flash its memory and reboot
+-- accepts: version (string, will try to use most recent if not specified)
+-- accepts: no_retain (bool, device will be completely cleaned if true (aka '-n' flag to sysupgrade))
 function M.install_POST(request, response)
 	local argVersion = request:get("version")
+	local argNoRetain = request:get("no_retain")
 	log:info("API:update/install")
 
 	if not operationsAccessOrFail(request, response) then return end
 
 	updater.setLogger(log)
 	updater.setState(updater.STATE.INSTALLING,"")
-	
+
 	local ssid = wifi.getSubstitutedSsid(settings.get('network.ap.ssid'))
 	local rv,msg = netconf.enableAccessPoint(ssid)
-	
+
 	if not argVersion then
 		local success,status,msg = updater.getStatus()
 		if not success then
@@ -174,7 +177,7 @@ function M.install_POST(request, response)
 		return
 	end
 
-	local rv,msg = updater.flashImageVersion(vEnt)
+	local rv,msg = updater.flashImageVersion(vEnt, argNoRetain)
 
 	if not rv then
 		updater.setState(updater.STATE.INSTALL_FAILED, "installation failed (" .. msg .. ")")

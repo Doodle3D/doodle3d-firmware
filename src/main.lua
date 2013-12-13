@@ -1,4 +1,4 @@
----
+----
 -- Entry code of the REST API and secondary functionality.
 -- Primarily, this sets up the environment, processes a REST request and responds appropiately.
 -- Secondary functions are to auto-switch between access point and client (@{setupAutoWifiMode})
@@ -14,6 +14,12 @@ local netconf = require('network.netconfig')
 local RequestClass = require('rest.request')
 local ResponseClass = require('rest.response')
 local Signin = require('network.signin')
+
+-- NOTE: the updater module 'detects' command-line invocation by existence of 'arg', so we have to make sure it is not defined.
+argStash = arg
+arg = nil
+local updater = require('script.d3d-updater')
+arg = argStash
 
 local postData = nil
 
@@ -185,6 +191,10 @@ local function main(environment)
 	local rq = RequestClass.new(environment, postData, confDefaults.DEBUG_API)
 
 	if rq:getRequestMethod() == 'CMDLINE' and rq:get('autowifi') ~= nil then
+	
+		local version = updater.formatVersion(updater.getCurrentVersion());
+		log:info("Doodle3D version: "..util.dump(version))
+	
 		log:info("running in autowifi mode")
 		local rv,msg = setupAutoWifiMode()
 

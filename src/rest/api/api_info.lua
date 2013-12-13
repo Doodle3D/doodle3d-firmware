@@ -6,6 +6,7 @@ local printDriver = require('print3d')
 local printerUtils = require('util.printer')
 local printerAPI = require('rest.api.api_printer')
 local wifi = require('network.wlanconfig')
+local printerUtils = require('util.printer')
 
 local TMP_DIR = '/tmp'
 local LOG_COLLECT_DIRNAME = 'wifibox-logs'
@@ -178,7 +179,41 @@ function M.status(request, response)
 		rv = M.access(request, response)
 		if(rv == false) then return end
 	end
-	response:addData('v', 10)
+end
+
+--- Read the tail of a log file
+-- @string	file	File to read from the /tmp/ folder
+-- @number	length	Max number of lines from the end of the file
+-- @number	offset	Offset in lines from the end. 
+function M.logtail(request, response)
+	
+	local argFile = request:get("file")
+	local argLength = request:get("length")
+	local argOffset = request:get("offset")
+	
+	if argFile == nil or argFile == '' then
+		response:setError("missing file argument")
+		return
+	end
+	if argLength == nil or argLength == '' then
+		argLength = 10
+	end
+	if argOffset == nil or argOffset == '' then
+		argOffset = 0
+	end
+	
+	response:setSuccess()
+	
+	local cmd
+	if argOffset == 0 then 
+		cmd = "tail -n "..argLength.." /tmp/"..argFile
+	else
+		cmd = "tail -n "..argOffset.." /tmp/"..argFile.." | head -n "..argLength
+	end
+	
+	local output= utils.captureCommandOutput(cmd)
+	output = output:gsub('\n', '\\n')
+	response:addData('tail', output)
 end
 
 return M

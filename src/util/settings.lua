@@ -216,7 +216,7 @@ end
 -- @treturn bool|nil True if everything went well, nil in case of error.
 -- @treturn ?string Error message in case first return value is nil (invalid key).
 function M.set(key, value)
-	--log:info("settings:set: "..utils.dump(key))
+	log:info("settings:set: "..utils.dump(key).." to: "..utils.dump(value))
 	key = replaceDots(key)
 
 	local r = utils.create(UCI_CONFIG_FILE)
@@ -224,9 +224,6 @@ function M.set(key, value)
 
 	local base = getBaseKeyTable(key)
 	if not base then return nil,ERR_NO_SUCH_KEY end
-
-	if M.isDefault(key) and value == nil then return true end -- key is default already
-	--log:info("  not default")
 	
 	--log:info("  base.type: "..utils.dump(base.type))
 	if base.type == 'bool' then
@@ -248,11 +245,6 @@ function M.set(key, value)
 		return nil,m
 	end
 
-	--local current = uci:get(UCI_CONFIG_NAME, UCI_CONFIG_SECTION, key)
-	local current = M.get(key)
-	--if fromUciValue(current, base.type) == value then return true end
-	if current == value then return true end
-	
 	local section = UCI_CONFIG_SECTION;
 	if base.subSection ~= nil then 
 		section = M.get(base.subSection)
@@ -275,13 +267,22 @@ end
 function M.resetAll()
 	log:info("settings:resetAll")
 
+	-- delete all uci sections but system
 	local allSections = uci:get_all(UCI_CONFIG_NAME)
-	
 	for key,value in pairs(allSections) do 
 		if key ~= "system" and not key:match('^[A-Z_]*$') then --TEMP: skip 'constants', which should be moved anyway
+			
 			uci:delete(UCI_CONFIG_NAME,key)
 		end 
 	end
+	
+	-- reset all to defaults
+	for k,_ in pairs(baseconfig) do
+		if not k:match('^[A-Z_]*$') then --TEMP: skip 'constants', which should be moved anyway
+			M.reset(k)
+		end
+	end
+	
 	uci:commit(UCI_CONFIG_NAME)
 	
 	return true
@@ -291,21 +292,20 @@ end
 -- @string key The key to reset.
 -- @treturn bool|nil True if everything went well, nil in case of error.
 function M.reset(key)
-	--log:info("settings:reset: "..utils.dump(key))
+	log:info("settings:reset: "..utils.dump(key))
 	
-	--uci:foreach(UCI_CONFIG_NAME,UCI_CONFIG_TYPE)
-	--uci:delete(UCI_CONFIG_NAME, UCI_CONFIG_SECTION, key)
-	
+	-- delete
 	key = replaceDots(key)
 	local base = getBaseKeyTable(key)
 	if not base then return nil,ERR_NO_SUCH_KEY end
-	
 	local section = UCI_CONFIG_SECTION;
 	if base.subSection ~= nil then 
 		section = M.get(base.subSection)
 	end
-	
 	uci:delete(UCI_CONFIG_NAME, section, key)
+	
+	-- reuse get logic to retrieve default and set it.
+	M.set(key,M.get(key))
 	
 	uci:commit(UCI_CONFIG_NAME)
 	return true

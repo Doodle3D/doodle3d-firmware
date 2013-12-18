@@ -1,3 +1,6 @@
+# 0.9.12 (18th dec 2013):
+- Refill wifibox uci settings after reset, preventing printer driver crash (#138)
+
 # 0.9.11 (11th dec 2013):
 - keyboard shortcuts have been added
 - sketches can now be downloaded both as SVG and as GCODE files

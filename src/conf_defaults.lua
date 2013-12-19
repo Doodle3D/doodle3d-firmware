@@ -305,4 +305,10 @@ M.doodle3d_simplify_minDistance = {
 	min = 0
 }
 
+M.doodle3d_tour_enabled = {
+	default = true,
+	type = 'bool',
+	description = 'Show tour to new users'
+}
+
 return M

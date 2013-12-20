@@ -29,10 +29,8 @@ local function operationsAccessOrFail(request, response)
 	end
 
 	local rv, printerState = printerAPI.state(request, response, true)
-	if(rv == false) then
-		response:setError("Could not get printer state")
-		return false
-	end
+	-- NOTE: rv being false means a printer device exists but no server is running for it, so it cannot be 'busy'
+	if rv == false then return true end
 
 	if printerState == 'buffering' or printerState == 'printing' or printerState == 'stopping' then
 		response:setFail("Printer is busy, please wait")
@@ -97,16 +95,16 @@ function M.all_GET(request, response)
 end
 
 --- Reset specific setting to default value
--- When an setting has a subSection only the setting in it's current subSection is reset. 
--- For example you want to reset setting _printer.startcode_ 
--- and it has it's _subSection_ set to 'printer_type' 
--- and printer.type is set to 'ultimaker' then 
+-- When an setting has a subSection only the setting in it's current subSection is reset.
+-- For example you want to reset setting _printer.startcode_
+-- and it has it's _subSection_ set to 'printer_type'
+-- and printer.type is set to 'ultimaker' then
 -- only the printer.startcode under the ultimaker subsection is removed.
 function M.reset_POST(request, response)
 	--log:info("API:reset");
 	if not operationsAccessOrFail(request, response) then return end
 	response:setSuccess()
-	
+
 	for k,v in pairs(request:getAll()) do
 		--log:info("  "..k..": "..v);
 		local r,m = settings.reset(k);
@@ -115,12 +113,12 @@ function M.reset_POST(request, response)
 	end
 end
 
---- Reset all settings to default value 
+--- Reset all settings to default value
 function M.resetall_POST(request, response)
 	if not operationsAccessOrFail(request, response) then return end
 	response:setSuccess()
 	settings.resetAll()
-	
+
 	for k,v in pairs(settings.getAll()) do
 		response:addData(k,v)
 	end

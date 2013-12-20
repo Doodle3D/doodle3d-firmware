@@ -29,10 +29,8 @@ local function operationsAccessOrFail(request, response)
 	end
 
 	local rv, printerState = printerAPI.state(request, response, true)
-	if(rv == false) then
-		response:setError("Could not get printer state")
-		return false
-	end
+	-- NOTE: rv being false means a printer device exists but no server is running for it, so it cannot be 'busy'
+	if rv == false then return true end
 
 	if printerState == 'buffering' or printerState == 'printing' or printerState == 'stopping' then
 		response:setFail("Printer is busy, please wait")

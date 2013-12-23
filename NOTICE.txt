@@ -1,0 +1,6 @@
+Doodle3D uses the following external projects:
+
+Lua - Copyright (c) 1994–2013 Lua.org, PUC-Rio. - MIT license
+Luafilesystem - Copyright (c) 2003 Kepler Project - MIT license
+JSON.lua (http://regex.info/blog/lua/json) - Copyright (c) 2010-2013 Jeffrey Friedl - Creative Commons CC BY 3 license
+urlcode.lua, part of CGILua - Copyright (c) 2003 Kepler Project - MIT license

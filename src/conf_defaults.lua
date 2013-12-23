@@ -1,3 +1,11 @@
+--
+-- This file is part of the Doodle3D project (http://doodle3d.com).
+--
+-- @copyright 2013, Doodle3D
+-- @license This software is licensed under the terms of the GNU GPL v2 or later.
+-- See file LICENSE.txt or visit http://www.gnu.org/licenses/gpl.html for full license details.
+
+
 ---
 -- This file contains all valid configuration keys, their default values and optional constraints.
 -- The table names are used as configuration key names, where underscores ('`_`') may be used to denote semi-categories.

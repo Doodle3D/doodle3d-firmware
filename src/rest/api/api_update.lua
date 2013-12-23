@@ -152,7 +152,8 @@ function M.install_POST(request, response)
 	local argVersion = request:get("version")
 	local argNoRetain = request:get("no_retain")
 	log:info("API:update/install (noRetain: "..utils.dump(argNoRetain)..")")
-
+	local noRetain = argNoRetain == 'true'
+	
 	if not operationsAccessOrFail(request, response) then return end
 	
 	updater.setLogger(log)
@@ -183,7 +184,7 @@ function M.install_POST(request, response)
 		return
 	end
 
-	local rv,msg = updater.flashImageVersion(vEnt, argNoRetain)
+	local rv,msg = updater.flashImageVersion(vEnt, noRetain)
 
 	if not rv then
 		updater.setState(updater.STATE.INSTALL_FAILED, "installation failed (" .. msg .. ")")

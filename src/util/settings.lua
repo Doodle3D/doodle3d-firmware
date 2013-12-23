@@ -266,8 +266,7 @@ function M.set(key, value, noCommit)
 			return false,"Value isn't a valid int or float"
 		end
 	end
-
-
+	
 	local valid,m = isValid(value, base)
 	if not valid then
 		return false,m
@@ -278,7 +277,7 @@ function M.set(key, value, noCommit)
 		section = M.get(base.subSection)
 		local rv, msg = uci:set(UCI_CONFIG_NAME, section, UCI_CONFIG_TYPE)
 		if not rv and msg ~= nil then
-			local errorMSG = "Issue creating subsection '"..utils.dump(section).."': "..utils.dump(msg);
+			local errorMSG = "Issue getting subsection '"..utils.dump(base.subSection).."': "..utils.dump(msg);
 			log:info(errorMSG)
 			return nil, errorMSG;
 		end

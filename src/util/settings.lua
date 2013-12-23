@@ -361,11 +361,14 @@ function M.reset(key)
 		section = M.get(base.subSection)
 	end
 	local rv, msg = uci:delete(UCI_CONFIG_NAME, section, key)
-	if not rv and msg ~= nil then
-		local errorMSG = "Issue deleting setting '"..utils.dump(key).."' in section '"..section.."': "..utils.dump(msg);
 		log:info(errorMSG)
-		return nil, errorMSG;
-	end
+	-- we can't respond to errors in general here because when a key isn't found 
+	--   (which always happens when reset is used in resetall) it will also generate a error
+	--if not rv and msg ~= nil then
+	--	local errorMSG = "Issue deleting setting '"..utils.dump(key).."' in section '"..section.."': "..utils.dump(msg);
+	--	log:info(errorMSG)
+	--	return nil, errorMSG;
+	--end
 
 	-- reuse get logic to retrieve default and set it.
 	M.set(key,M.get(key))

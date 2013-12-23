@@ -315,14 +315,15 @@ end
 function M.resetAll()
 	log:info("settings:resetAll")
 
-	-- delete all uci sections but system
+	-- find all sections
 	local allSections, msg = uci:get_all(UCI_CONFIG_NAME)
 	if not allSections and msg ~= nil then
 		local errorMSG = "Issue reading all settings: "..utils.dump(msg);
 		log:info(errorMSG)
 		return nil, errorMSG;
 	end
-
+	
+	-- delete all uci sections but system
 	for key,value in pairs(allSections) do
 		if key ~= "system" and not key:match('^[A-Z_]*$') then --TEMP: skip 'constants', which should be moved anyway
 			local rv, msg = uci:delete(UCI_CONFIG_NAME,key)
@@ -333,23 +334,23 @@ function M.resetAll()
 			end
 		end
 	end
-
+	
 	-- reset all to defaults
 	for k,_ in pairs(baseconfig) do
 		if not k:match('^[A-Z_]*$') then --TEMP: skip 'constants', which should be moved anyway
-			M.reset(k)
+			M.reset(k,true)
 		end
 	end
-
-	uci:commit(UCI_CONFIG_NAME)
-
+	
+	M.commit()
 	return true
 end
 
 --- Reset setting to default value
 -- @string key The key to reset.
+-- @p[opt=nil] noCommit If true, do not commit the uci configuration; this is more efficient when resetting multiple values
 -- @treturn bool|nil True if everything went well, nil in case of error.
-function M.reset(key)
+function M.reset(key, noCommit)
 	log:info("settings:reset: "..utils.dump(key))
 
 	-- delete
@@ -359,9 +360,8 @@ function M.reset(key)
 	local section = UCI_CONFIG_SECTION;
 	if base.subSection ~= nil then
 		section = M.get(base.subSection)
-	end
+	end 
 	local rv, msg = uci:delete(UCI_CONFIG_NAME, section, key)
-		log:info(errorMSG)
 	-- we can't respond to errors in general here because when a key isn't found 
 	--   (which always happens when reset is used in resetall) it will also generate a error
 	--if not rv and msg ~= nil then
@@ -371,9 +371,9 @@ function M.reset(key)
 	--end
 
 	-- reuse get logic to retrieve default and set it.
-	M.set(key,M.get(key))
+	M.set(key,M.get(key),true)
 
-	uci:commit(UCI_CONFIG_NAME)
+	if noCommit ~= true then uci:commit(UCI_CONFIG_NAME) end
 	return true
 end
 

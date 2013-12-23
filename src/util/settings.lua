@@ -156,31 +156,32 @@ end]]--
 
 --- Returns the value of the requested key if it exists.
 -- @p key The key to return the associated value for.
--- @return The associated value, beware (!) that this may be boolean false for keys of 'bool' type.
+-- @return The associated value, beware (!) that this may be boolean false for keys of 'bool' type, or nil if the key could not be read because of a UCI error.
+-- @treturn string Message in case of error.
 function M.get(key)
 	--log:info("settings:get: "..utils.dump(key))
 	key = replaceDots(key)
 	local base = getBaseKeyTable(key)
 
 	if not base then return nil,ERR_NO_SUCH_KEY end
-	
+
 	local section = UCI_CONFIG_SECTION;
-	if base.subSection ~= nil then 
+	if base.subSection ~= nil then
 		section = M.get(base.subSection)
 	end
-	
+
 	local uciV,msg = uci:get(UCI_CONFIG_NAME, section, key)
 	if not uciV and msg ~= nil then
 		local errorMSG = "Issue reading setting '"..utils.dump(key).."': "..utils.dump(msg);
 		log:info(errorMSG)
 		return nil, errorMSG;
 	end
-	
+
 	local uciV = fromUciValue(uciV, base.type)
 	if uciV ~= nil then
-		-- returning value from uci 
+		-- returning value from uci
 		return uciV
-	elseif base.subSection ~= nil then 
+	elseif base.subSection ~= nil then
 		local subDefault = base["default_"..section]
 		if subDefault ~= nil then
 			-- returning subsection default value
@@ -192,14 +193,15 @@ function M.get(key)
 end
 
 --- Returns all configuration keys with their current values.
--- @treturn table A table containing a key/value pair for each configuration key.
+-- @return A table containing a key/value pair for each configuration key, or nil if a UCI error occured.
+-- @return string Message in case of error.
 function M.getAll()
 	local result = {}
 	for k,_ in pairs(baseconfig) do
 		if not k:match('^[A-Z_]*$') then --TEMP: skip 'constants', which should be moved anyway
 			local key = replaceUnderscores(k)
 			local v, msg = M.get(key)
-			if not uciV and msg ~= nil then
+			if not v and msg ~= nil then
 				return nil, msg
 			else
 				result[key] = v
@@ -249,7 +251,7 @@ function M.set(key, value)
 
 	local base = getBaseKeyTable(key)
 	if not base then return false,ERR_NO_SUCH_KEY end
-	
+
 	--log:info("  base.type: "..utils.dump(base.type))
 	if base.type == 'bool' then
 		if value ~= "" then
@@ -271,7 +273,7 @@ function M.set(key, value)
 	end
 
 	local section = UCI_CONFIG_SECTION;
-	if base.subSection ~= nil then 
+	if base.subSection ~= nil then
 		section = M.get(base.subSection)
 		local rv, msg = uci:set(UCI_CONFIG_NAME, section, UCI_CONFIG_TYPE)
 		if not rv and msg ~= nil then
@@ -296,12 +298,12 @@ function M.set(key, value)
 			return nil, errorMSG;
 		end
 	end
-	
+
 	uci:commit(UCI_CONFIG_NAME)
 	return true
 end
 
---- Reset all settings to their default values 
+--- Reset all settings to their default values
 -- @string key The key to set.
 -- @treturn bool|nil True if everything went well, nil in case of error.
 function M.resetAll()
@@ -314,8 +316,8 @@ function M.resetAll()
 		log:info(errorMSG)
 		return nil, errorMSG;
 	end
-	
-	for key,value in pairs(allSections) do 
+
+	for key,value in pairs(allSections) do
 		if key ~= "system" and not key:match('^[A-Z_]*$') then --TEMP: skip 'constants', which should be moved anyway
 			local rv, msg = uci:delete(UCI_CONFIG_NAME,key)
 			if not rv and msg ~= nil then
@@ -323,33 +325,33 @@ function M.resetAll()
 				log:info(errorMSG)
 				return nil, errorMSG;
 			end
-		end 
+		end
 	end
-	
+
 	-- reset all to defaults
 	for k,_ in pairs(baseconfig) do
 		if not k:match('^[A-Z_]*$') then --TEMP: skip 'constants', which should be moved anyway
 			M.reset(k)
 		end
 	end
-	
+
 	uci:commit(UCI_CONFIG_NAME)
-	
+
 	return true
 end
 
---- Reset setting to default value 
+--- Reset setting to default value
 -- @string key The key to reset.
 -- @treturn bool|nil True if everything went well, nil in case of error.
 function M.reset(key)
 	log:info("settings:reset: "..utils.dump(key))
-	
+
 	-- delete
 	key = replaceDots(key)
 	local base = getBaseKeyTable(key)
 	if not base then return nil,ERR_NO_SUCH_KEY end
 	local section = UCI_CONFIG_SECTION;
-	if base.subSection ~= nil then 
+	if base.subSection ~= nil then
 		section = M.get(base.subSection)
 	end
 	local rv, msg = uci:delete(UCI_CONFIG_NAME, section, key)
@@ -358,10 +360,10 @@ function M.reset(key)
 		log:info(errorMSG)
 		return nil, errorMSG;
 	end
-	
+
 	-- reuse get logic to retrieve default and set it.
 	M.set(key,M.get(key))
-	
+
 	uci:commit(UCI_CONFIG_NAME)
 	return true
 end
@@ -369,7 +371,7 @@ end
 
 --- Returns a UCI configuration key from the system section.
 -- @string key The key for which to return the value, must be non-empty.
--- @return Requested value or false if it does not exist or nil on invalid key.
+-- @return Requested value or false if it does not exist or nil on UCI error.
 function M.getSystemKey(key)
 	if type(key) ~= 'string' or key:len() == 0 then return nil end
 	local v,msg = uci:get(UCI_CONFIG_NAME, UCI_CONFIG_SYSTEM_SECTION, key)
@@ -377,7 +379,7 @@ function M.getSystemKey(key)
 		local errorMSG = "Issue getting system setting '"..utils.dump(key).."' in section '"..UCI_CONFIG_SYSTEM_SECTION.."': "..utils.dump(msg);
 		return nil, errorMSG;
 	end
-	
+
 	return v or false
 end
 

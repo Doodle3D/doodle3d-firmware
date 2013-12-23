@@ -46,12 +46,12 @@ function M._global_GET(request, response)
 	for k,v in pairs(request:getAll()) do
 		local r,m = settings.get(k)
 
-		if r ~= nil then 
+		if r ~= nil then
 			response:addData(k, r)
-		else 
+		else
 			response:addData(k, "could not read key ('" .. m .. "')")
 			response:setError(m)
-			return false;
+			return
 		end
 	end
 end
@@ -75,7 +75,7 @@ function M._global_POST(request, response)
 			log:info("  m: "..utils.dump(m))
 		elseif r == nil then
 			response:setError(m)
-			return false;
+			return
 		end
 	end
 	response:addData("validation",validation)
@@ -83,7 +83,7 @@ function M._global_POST(request, response)
 	local substitutedSsid = wifi.getSubstitutedSsid(settings.get('network.ap.ssid'))
 	response:addData("substituted_ssid",substitutedSsid)
 
-	-- we now call signin seperatly trough cgi-bin
+	-- we now call signin seperately trough cgi-bin
 	--[[log:info("API:Network:try signing in")
   	if signin.signin() then
   		log:info("API:Network:signin successfull")
@@ -101,7 +101,7 @@ function M.all_GET(request, response)
 		end
 	else
 		response:setError(msg)
-		return false;
+		return
 	end
 end
 
@@ -121,10 +121,10 @@ function M.reset_POST(request, response)
 		local r,m = settings.reset(k);
 		if r ~= nil then
 			response:addData(k, "ok")
-		else 
+		else
 			response:addData(k, "could not reset key ('" .. m .. "')")
 			response:setError(m)
-			return false;
+			return
 		end
 	end
 end
@@ -133,14 +133,14 @@ end
 function M.resetall_POST(request, response)
 	if not operationsAccessOrFail(request, response) then return end
 	response:setSuccess()
-	
+
 	local rv, msg = settings.resetAll()
-	
+
 	if(rv == nil) then
 		response:setError(msg)
-		return false
+		return
 	end
-	
+
 	for k,v in pairs(settings.getAll()) do
 		response:addData(k,v)
 	end

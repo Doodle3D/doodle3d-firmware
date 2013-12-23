@@ -151,10 +151,10 @@ end
 function M.install_POST(request, response)
 	local argVersion = request:get("version")
 	local argNoRetain = request:get("no_retain")
-	log:info("API:update/install")
+	log:info("API:update/install (noRetain: "..utils.dump(argNoRetain)..")")
 
 	if not operationsAccessOrFail(request, response) then return end
-
+	
 	updater.setLogger(log)
 	updater.setState(updater.STATE.INSTALLING,"")
 

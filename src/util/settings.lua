@@ -161,7 +161,14 @@ function M.get(key)
 		section = M.get(base.subSection)
 	end
 	
-	local uciV = fromUciValue(uci:get(UCI_CONFIG_NAME, section, key), base.type)
+	local uciV,msg = uci:get(UCI_CONFIG_NAME, section, key)
+	if not uciV and msg ~= nil then
+		local errorMSG = "Issue reading setting '"..utils.dump(key).."': "..utils.dump(msg);
+		log:info(errorMSG)
+		return nil, errorMSG;
+	end
+	
+	local uciV = fromUciValue(uciV, base.type)
 	if uciV ~= nil then
 		-- returning value from uci 
 		return uciV
@@ -183,7 +190,12 @@ function M.getAll()
 	for k,_ in pairs(baseconfig) do
 		if not k:match('^[A-Z_]*$') then --TEMP: skip 'constants', which should be moved anyway
 			local key = replaceUnderscores(k)
-			result[key] = M.get(key)
+			local v, msg = M.get(key)
+			if not uciV and msg ~= nil then
+				return nil, msg
+			else
+				result[key] = v
+			end
 		end
 	end
 	return result
@@ -213,17 +225,22 @@ end
 --- Sets a key to a new value or reverts it to the default value.
 -- @string key The key to set.
 -- @p[opt=nil] value The value or set, or nil to revert key to its default value.
--- @treturn bool|nil True if everything went well, nil in case of error.
+-- @treturn bool|nil True if everything went well, false if validation error, nil in case of error.
 -- @treturn ?string Error message in case first return value is nil (invalid key).
 function M.set(key, value)
 	log:info("settings:set: "..utils.dump(key).." to: "..utils.dump(value))
 	key = replaceDots(key)
 
 	local r = utils.create(UCI_CONFIG_FILE)
-	uci:set(UCI_CONFIG_NAME, UCI_CONFIG_SECTION, UCI_CONFIG_TYPE)
+	local rv, msg = uci:set(UCI_CONFIG_NAME, UCI_CONFIG_SECTION, UCI_CONFIG_TYPE)
+	if not rv and msg ~= nil then
+		local errorMSG = "Issue creating section '"..utils.dump(UCI_CONFIG_SECTION).."': "..utils.dump(msg);
+		log:info(errorMSG)
+		return nil, errorMSG;
+	end
 
 	local base = getBaseKeyTable(key)
-	if not base then return nil,ERR_NO_SUCH_KEY end
+	if not base then return false,ERR_NO_SUCH_KEY end
 	
 	--log:info("  base.type: "..utils.dump(base.type))
 	if base.type == 'bool' then
@@ -235,28 +252,43 @@ function M.set(key, value)
 	elseif base.type == 'int' or base.type == 'float' then
 		value = tonumber(value)
 		if(value == nil) then
-			return nil,"Value isn't a valid int or float"
+			return false,"Value isn't a valid int or float"
 		end
 	end
 
 
 	local valid,m = isValid(value, base)
 	if not valid then
-		return nil,m
+		return false,m
 	end
 
 	local section = UCI_CONFIG_SECTION;
 	if base.subSection ~= nil then 
 		section = M.get(base.subSection)
-		uci:set(UCI_CONFIG_NAME, section, UCI_CONFIG_TYPE)
+		local rv, msg = uci:set(UCI_CONFIG_NAME, section, UCI_CONFIG_TYPE)
+		if not rv and msg ~= nil then
+			local errorMSG = "Issue creating subsection '"..utils.dump(section).."': "..utils.dump(msg);
+			log:info(errorMSG)
+			return nil, errorMSG;
+		end
 	end
 
 	if value ~= nil then
-		uci:set(UCI_CONFIG_NAME, section, key, toUciValue(value, base.type))
+		local rv, msg = uci:set(UCI_CONFIG_NAME, section, key, toUciValue(value, base.type))
+		if not rv and msg ~= nil then
+			local errorMSG = "Issue setting setting '"..utils.dump(key).."' in section '"..utils.dump(section).."': "..utils.dump(msg);
+			log:info(errorMSG)
+			return nil, errorMSG;
+		end
 	else
-		uci:delete(UCI_CONFIG_NAME, section, key)
+		local rv, msg = uci:delete(UCI_CONFIG_NAME, section, key)
+		if not rv and msg ~= nil then
+			local errorMSG = "Issue deleting setting '"..utils.dump(key).."' in section '"..utils.dump(section).."': "..utils.dump(msg);
+			log:info(errorMSG)
+			return nil, errorMSG;
+		end
 	end
-
+	
 	uci:commit(UCI_CONFIG_NAME)
 	return true
 end
@@ -268,11 +300,21 @@ function M.resetAll()
 	log:info("settings:resetAll")
 
 	-- delete all uci sections but system
-	local allSections = uci:get_all(UCI_CONFIG_NAME)
+	local allSections, msg = uci:get_all(UCI_CONFIG_NAME)
+	if not allSections and msg ~= nil then
+		local errorMSG = "Issue reading all settings: "..utils.dump(msg);
+		log:info(errorMSG)
+		return nil, errorMSG;
+	end
+	
 	for key,value in pairs(allSections) do 
 		if key ~= "system" and not key:match('^[A-Z_]*$') then --TEMP: skip 'constants', which should be moved anyway
-			
-			uci:delete(UCI_CONFIG_NAME,key)
+			local rv, msg = uci:delete(UCI_CONFIG_NAME,key)
+			if not rv and msg ~= nil then
+				local errorMSG = "Issue deleting setting '"..utils.dump(key).."': "..utils.dump(msg);
+				log:info(errorMSG)
+				return nil, errorMSG;
+			end
 		end 
 	end
 	
@@ -302,7 +344,12 @@ function M.reset(key)
 	if base.subSection ~= nil then 
 		section = M.get(base.subSection)
 	end
-	uci:delete(UCI_CONFIG_NAME, section, key)
+	local rv, msg = uci:delete(UCI_CONFIG_NAME, section, key)
+	if not rv and msg ~= nil then
+		local errorMSG = "Issue deleting setting '"..utils.dump(key).."' in section '"..section.."': "..utils.dump(msg);
+		log:info(errorMSG)
+		return nil, errorMSG;
+	end
 	
 	-- reuse get logic to retrieve default and set it.
 	M.set(key,M.get(key))
@@ -317,7 +364,12 @@ end
 -- @return Requested value or false if it does not exist or nil on invalid key.
 function M.getSystemKey(key)
 	if type(key) ~= 'string' or key:len() == 0 then return nil end
-	local v = uci:get(UCI_CONFIG_NAME, UCI_CONFIG_SYSTEM_SECTION, key)
+	local v,msg = uci:get(UCI_CONFIG_NAME, UCI_CONFIG_SYSTEM_SECTION, key)
+	if not v and msg ~= nil then
+		local errorMSG = "Issue getting system setting '"..utils.dump(key).."' in section '"..UCI_CONFIG_SYSTEM_SECTION.."': "..utils.dump(msg);
+		return nil, errorMSG;
+	end
+	
 	return v or false
 end
 

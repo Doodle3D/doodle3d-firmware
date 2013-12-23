@@ -124,6 +124,12 @@ local function setupLogger()
 			else logTargetError = msg
 			end
 		end
+	else
+		-- if uci config not available, fallback to /tmp/wifibox.log
+		local f,msg = io.open('/tmp/wifibox.log', 'a+')
+		if f then logStream = f
+		else logTargetError = msg
+		end
 	end
 
 	if type(logLevelSetting) == 'string' and logLevelSetting:len() > 0 then

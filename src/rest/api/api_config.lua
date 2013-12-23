@@ -40,8 +40,12 @@ function M._global_GET(request, response)
 	for k,v in pairs(request:getAll()) do
 		local r,m = settings.get(k)
 
-		if r ~= nil then response:addData(k, r)
-		else response:addData(k, "could not read key ('" .. m .. "')")
+		if r ~= nil then 
+			response:addData(k, r)
+		else 
+			response:addData(k, "could not read key ('" .. m .. "')")
+			response:setError(m)
+			return false;
 		end
 	end
 end
@@ -59,12 +63,13 @@ function M._global_POST(request, response)
 		local r,m = settings.set(k, v)
 
 		if r then
-			--response:addData(k, "ok")
 			validation[k] = "ok"
-		else
-			--response:addData(k, "could not save setting ('" .. m .. "')")
+		elseif r == false then
 			validation[k] = "could not save setting ('" .. m .. "')"
 			log:info("  m: "..utils.dump(m))
+		elseif r == nil then
+			response:setError(m)
+			return false;
 		end
 	end
 	response:addData("validation",validation)
@@ -82,9 +87,15 @@ function M._global_POST(request, response)
 end
 
 function M.all_GET(request, response)
-	response:setSuccess()
-	for k,v in pairs(settings.getAll()) do
-		response:addData(k,v)
+	local allSettings, msg = settings.getAll();
+	if allSettings then
+		response:setSuccess()
+		for k,v in pairs(settings.getAll()) do
+			response:addData(k,v)
+		end
+	else
+		response:setError(msg)
+		return false;
 	end
 end
 
@@ -102,8 +113,13 @@ function M.reset_POST(request, response)
 	for k,v in pairs(request:getAll()) do
 		--log:info("  "..k..": "..v);
 		local r,m = settings.reset(k);
-		if r ~= nil then response:addData(k, "ok")
-		else response:addData(k, "could not reset key ('" .. m .. "')") end
+		if r ~= nil then
+			response:addData(k, "ok")
+		else 
+			response:addData(k, "could not reset key ('" .. m .. "')")
+			response:setError(m)
+			return false;
+		end
 	end
 end
 
@@ -111,7 +127,13 @@ end
 function M.resetall_POST(request, response)
 	if not operationsAccessOrFail(request, response) then return end
 	response:setSuccess()
-	settings.resetAll()
+	
+	local rv, msg = settings.resetAll()
+	
+	if(rv == nil) then
+		response:setError(msg)
+		return false
+	end
 	
 	for k,v in pairs(settings.getAll()) do
 		response:addData(k,v)

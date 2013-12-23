@@ -235,9 +235,10 @@ end
 --- Sets a key to a new value or reverts it to the default value.
 -- @string key The key to set.
 -- @p[opt=nil] value The value or set, or nil to revert key to its default value.
+-- @p[opt=nil] noCommit If true, do not commit the uci configuration; this is more efficient when setting multiple values
 -- @treturn bool|nil True if everything went well, false if validation error, nil in case of error.
 -- @treturn ?string Error message in case first return value is nil (invalid key).
-function M.set(key, value)
+function M.set(key, value, noCommit)
 	log:info("settings:set: "..utils.dump(key).." to: "..utils.dump(value))
 	key = replaceDots(key)
 
@@ -299,8 +300,14 @@ function M.set(key, value)
 		end
 	end
 
-	uci:commit(UCI_CONFIG_NAME)
+	if noCommit ~= true then uci:commit(UCI_CONFIG_NAME) end
 	return true
+end
+
+--- Commit the UCI configuration, this can be used after making multiple changes
+-- which have not been committed yet.
+function M.commit()
+	uci:commit(UCI_CONFIG_NAME)
 end
 
 --- Reset all settings to their default values

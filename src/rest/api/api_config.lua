@@ -66,7 +66,7 @@ function M._global_POST(request, response)
 	local validation = {}
 	for k,v in pairs(request:getAll()) do
 		--log:info("  "..k..": "..v);
-		local r,m = settings.set(k, v)
+		local r,m = settings.set(k, v, true)
 
 		if r then
 			validation[k] = "ok"
@@ -74,10 +74,12 @@ function M._global_POST(request, response)
 			validation[k] = "could not save setting ('" .. m .. "')"
 			log:info("  m: "..utils.dump(m))
 		elseif r == nil then
+			settings.commit()
 			response:setError(m)
 			return
 		end
 	end
+	settings.commit()
 	response:addData("validation",validation)
 
 	local substitutedSsid = wifi.getSubstitutedSsid(settings.get('network.ap.ssid'))

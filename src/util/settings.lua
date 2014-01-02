@@ -1,3 +1,11 @@
+--
+-- This file is part of the Doodle3D project (http://doodle3d.com).
+--
+-- @copyright 2013, Doodle3D
+-- @license This software is licensed under the terms of the GNU GPL v2 or later.
+-- See file LICENSE.txt or visit http://www.gnu.org/licenses/gpl.html for full license details.
+
+
 ---
 -- The settings interface reads and writes configuration keys using [UCI](http://wiki.openwrt.org/doc/uci).
 -- All keys have pre-defined defaults in @{conf_defaults} which will be used
@@ -148,24 +156,32 @@ end]]--
 
 --- Returns the value of the requested key if it exists.
 -- @p key The key to return the associated value for.
--- @return The associated value, beware (!) that this may be boolean false for keys of 'bool' type.
+-- @return The associated value, beware (!) that this may be boolean false for keys of 'bool' type, or nil if the key could not be read because of a UCI error.
+-- @treturn string Message in case of error.
 function M.get(key)
 	--log:info("settings:get: "..utils.dump(key))
 	key = replaceDots(key)
 	local base = getBaseKeyTable(key)
 
 	if not base then return nil,ERR_NO_SUCH_KEY end
-	
+
 	local section = UCI_CONFIG_SECTION;
-	if base.subSection ~= nil then 
+	if base.subSection ~= nil then
 		section = M.get(base.subSection)
 	end
-	
-	local uciV = fromUciValue(uci:get(UCI_CONFIG_NAME, section, key), base.type)
+
+	local uciV,msg = uci:get(UCI_CONFIG_NAME, section, key)
+	if not uciV and msg ~= nil then
+		local errorMSG = "Issue reading setting '"..utils.dump(key).."': "..utils.dump(msg);
+		log:info(errorMSG)
+		return nil, errorMSG;
+	end
+
+	local uciV = fromUciValue(uciV, base.type)
 	if uciV ~= nil then
-		-- returning value from uci 
+		-- returning value from uci
 		return uciV
-	elseif base.subSection ~= nil then 
+	elseif base.subSection ~= nil then
 		local subDefault = base["default_"..section]
 		if subDefault ~= nil then
 			-- returning subsection default value
@@ -177,13 +193,19 @@ function M.get(key)
 end
 
 --- Returns all configuration keys with their current values.
--- @treturn table A table containing a key/value pair for each configuration key.
+-- @return A table containing a key/value pair for each configuration key, or nil if a UCI error occured.
+-- @return string Message in case of error.
 function M.getAll()
 	local result = {}
 	for k,_ in pairs(baseconfig) do
 		if not k:match('^[A-Z_]*$') then --TEMP: skip 'constants', which should be moved anyway
 			local key = replaceUnderscores(k)
-			result[key] = M.get(key)
+			local v, msg = M.get(key)
+			if not v and msg ~= nil then
+				return nil, msg
+			else
+				result[key] = v
+			end
 		end
 	end
 	return result
@@ -213,18 +235,33 @@ end
 --- Sets a key to a new value or reverts it to the default value.
 -- @string key The key to set.
 -- @p[opt=nil] value The value or set, or nil to revert key to its default value.
--- @treturn bool|nil True if everything went well, nil in case of error.
+-- @p[opt=nil] noCommit If true, do not commit the uci configuration; this is more efficient when setting multiple values
+-- @treturn bool|nil True if everything went well, false if validation error, nil in case of error.
 -- @treturn ?string Error message in case first return value is nil (invalid key).
+<<<<<<< HEAD
 function M.set(key, value)
+=======
+function M.set(key, value, noCommit)
+>>>>>>> develop
 	log:info("settings:set: "..utils.dump(key).." to: "..utils.dump(value))
 	key = replaceDots(key)
 
 	local r = utils.create(UCI_CONFIG_FILE)
-	uci:set(UCI_CONFIG_NAME, UCI_CONFIG_SECTION, UCI_CONFIG_TYPE)
+	local rv, msg = uci:set(UCI_CONFIG_NAME, UCI_CONFIG_SECTION, UCI_CONFIG_TYPE)
+	if not rv and msg ~= nil then
+		local errorMSG = "Issue creating section '"..utils.dump(UCI_CONFIG_SECTION).."': "..utils.dump(msg);
+		log:info(errorMSG)
+		return nil, errorMSG;
+	end
 
 	local base = getBaseKeyTable(key)
+<<<<<<< HEAD
 	if not base then return nil,ERR_NO_SUCH_KEY end
 	
+=======
+	if not base then return false,ERR_NO_SUCH_KEY end
+
+>>>>>>> develop
 	--log:info("  base.type: "..utils.dump(base.type))
 	if base.type == 'bool' then
 		if value ~= "" then
@@ -235,38 +272,59 @@ function M.set(key, value)
 	elseif base.type == 'int' or base.type == 'float' then
 		value = tonumber(value)
 		if(value == nil) then
-			return nil,"Value isn't a valid int or float"
+			return false,"Value isn't a valid int or float"
 		end
 	end
-
-
+	
 	local valid,m = isValid(value, base)
 	if not valid then
-		return nil,m
+		return false,m
 	end
 
 	local section = UCI_CONFIG_SECTION;
-	if base.subSection ~= nil then 
+	if base.subSection ~= nil then
 		section = M.get(base.subSection)
-		uci:set(UCI_CONFIG_NAME, section, UCI_CONFIG_TYPE)
+		local rv, msg = uci:set(UCI_CONFIG_NAME, section, UCI_CONFIG_TYPE)
+		if not rv and msg ~= nil then
+			local errorMSG = "Issue getting subsection '"..utils.dump(base.subSection).."': "..utils.dump(msg);
+			log:info(errorMSG)
+			return nil, errorMSG;
+		end
 	end
 
 	if value ~= nil then
-		uci:set(UCI_CONFIG_NAME, section, key, toUciValue(value, base.type))
+		local rv, msg = uci:set(UCI_CONFIG_NAME, section, key, toUciValue(value, base.type))
+		if not rv and msg ~= nil then
+			local errorMSG = "Issue setting setting '"..utils.dump(key).."' in section '"..utils.dump(section).."': "..utils.dump(msg);
+			log:info(errorMSG)
+			return nil, errorMSG;
+		end
 	else
-		uci:delete(UCI_CONFIG_NAME, section, key)
+		local rv, msg = uci:delete(UCI_CONFIG_NAME, section, key)
+		if not rv and msg ~= nil then
+			local errorMSG = "Issue deleting setting '"..utils.dump(key).."' in section '"..utils.dump(section).."': "..utils.dump(msg);
+			log:info(errorMSG)
+			return nil, errorMSG;
+		end
 	end
 
-	uci:commit(UCI_CONFIG_NAME)
+	if noCommit ~= true then uci:commit(UCI_CONFIG_NAME) end
 	return true
 end
 
---- Reset all settings to their default values 
+--- Commit the UCI configuration, this can be used after making multiple changes
+-- which have not been committed yet.
+function M.commit()
+	uci:commit(UCI_CONFIG_NAME)
+end
+
+--- Reset all settings to their default values
 -- @string key The key to set.
 -- @treturn bool|nil True if everything went well, nil in case of error.
 function M.resetAll()
 	log:info("settings:resetAll")
 
+<<<<<<< HEAD
 	-- delete all uci sections but system
 	local allSections = uci:get_all(UCI_CONFIG_NAME)
 	for key,value in pairs(allSections) do 
@@ -284,23 +342,60 @@ function M.resetAll()
 	end
 	
 	uci:commit(UCI_CONFIG_NAME)
+=======
+	-- find all sections
+	local allSections, msg = uci:get_all(UCI_CONFIG_NAME)
+	if not allSections and msg ~= nil then
+		local errorMSG = "Issue reading all settings: "..utils.dump(msg);
+		log:info(errorMSG)
+		return nil, errorMSG;
+	end
 	
+	-- delete all uci sections but system
+	for key,value in pairs(allSections) do
+		if key ~= "system" and not key:match('^[A-Z_]*$') then --TEMP: skip 'constants', which should be moved anyway
+			local rv, msg = uci:delete(UCI_CONFIG_NAME,key)
+			if not rv and msg ~= nil then
+				local errorMSG = "Issue deleting setting '"..utils.dump(key).."': "..utils.dump(msg);
+				log:info(errorMSG)
+				return nil, errorMSG;
+			end
+		end
+	end
+	
+	-- reset all to defaults
+	for k,_ in pairs(baseconfig) do
+		if not k:match('^[A-Z_]*$') then --TEMP: skip 'constants', which should be moved anyway
+			M.reset(k,true)
+		end
+	end
+>>>>>>> develop
+	
+	M.commit()
 	return true
 end
 
---- Reset setting to default value 
+--- Reset setting to default value
 -- @string key The key to reset.
+-- @p[opt=nil] noCommit If true, do not commit the uci configuration; this is more efficient when resetting multiple values
 -- @treturn bool|nil True if everything went well, nil in case of error.
+<<<<<<< HEAD
 function M.reset(key)
 	log:info("settings:reset: "..utils.dump(key))
 	
+=======
+function M.reset(key, noCommit)
+	log:info("settings:reset: "..utils.dump(key))
+
+>>>>>>> develop
 	-- delete
 	key = replaceDots(key)
 	local base = getBaseKeyTable(key)
 	if not base then return nil,ERR_NO_SUCH_KEY end
 	local section = UCI_CONFIG_SECTION;
-	if base.subSection ~= nil then 
+	if base.subSection ~= nil then
 		section = M.get(base.subSection)
+<<<<<<< HEAD
 	end
 	uci:delete(UCI_CONFIG_NAME, section, key)
 	
@@ -308,16 +403,37 @@ function M.reset(key)
 	M.set(key,M.get(key))
 	
 	uci:commit(UCI_CONFIG_NAME)
+=======
+	end 
+	local rv, msg = uci:delete(UCI_CONFIG_NAME, section, key)
+	-- we can't respond to errors in general here because when a key isn't found 
+	--   (which always happens when reset is used in resetall) it will also generate a error
+	--if not rv and msg ~= nil then
+	--	local errorMSG = "Issue deleting setting '"..utils.dump(key).."' in section '"..section.."': "..utils.dump(msg);
+	--	log:info(errorMSG)
+	--	return nil, errorMSG;
+	--end
+
+	-- reuse get logic to retrieve default and set it.
+	M.set(key,M.get(key),true)
+
+	if noCommit ~= true then uci:commit(UCI_CONFIG_NAME) end
+>>>>>>> develop
 	return true
 end
 
 
 --- Returns a UCI configuration key from the system section.
 -- @string key The key for which to return the value, must be non-empty.
--- @return Requested value or false if it does not exist or nil on invalid key.
+-- @return Requested value or false if it does not exist or nil on UCI error.
 function M.getSystemKey(key)
 	if type(key) ~= 'string' or key:len() == 0 then return nil end
-	local v = uci:get(UCI_CONFIG_NAME, UCI_CONFIG_SYSTEM_SECTION, key)
+	local v,msg = uci:get(UCI_CONFIG_NAME, UCI_CONFIG_SYSTEM_SECTION, key)
+	if not v and msg ~= nil then
+		local errorMSG = "Issue getting system setting '"..utils.dump(key).."' in section '"..UCI_CONFIG_SYSTEM_SECTION.."': "..utils.dump(msg);
+		return nil, errorMSG;
+	end
+
 	return v or false
 end
 

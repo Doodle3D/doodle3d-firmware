@@ -41,7 +41,8 @@ if [ $RETURN_VALUE -ne 0 ]; then
 fi
 
 if [ $UPLOAD_FILES -eq 1 ]; then
-	UPLOAD_PATH=$BASE_URL:public_html/updates
+	#UPLOAD_PATH=$BASE_URL:public_html/updates
+	UPLOAD_PATH=$BASE_URL:doodle3d.com/DEFAULT/updates
 
 	cat <<-'EOM' > $DEST_DIR/$UPDATES_DIR/.htaccess
 	Options +Indexes

@@ -1,3 +1,11 @@
+--
+-- This file is part of the Doodle3D project (http://doodle3d.com).
+--
+-- @copyright 2013, Doodle3D
+-- @license This software is licensed under the terms of the GNU GPL v2 or later.
+-- See file LICENSE.txt or visit http://www.gnu.org/licenses/gpl.html for full license details.
+
+
 local wifi = require('network.wlanconfig')
 local netconf = require('network.netconfig')
 local settings = require('util.settings')
@@ -26,10 +34,8 @@ local function operationsAccessOrFail(request, response)
 	end
 
 	local rv, printerState = printerAPI.state(request, response, true)
-	if(rv == false) then
-		response:setError("Could not get printer state")
-		return false
-	end
+	-- NOTE: rv being false means a printer device exists but no server is running for it, so it cannot be 'busy'
+	if rv == false then return true end
 
 	if printerState == 'buffering' or printerState == 'printing' or printerState == 'stopping' then
 		response:setFail("Printer is busy, please wait")
@@ -145,10 +151,11 @@ end
 function M.install_POST(request, response)
 	local argVersion = request:get("version")
 	local argNoRetain = request:get("no_retain")
-	log:info("API:update/install")
-
+	log:info("API:update/install (noRetain: "..utils.dump(argNoRetain)..")")
+	local noRetain = argNoRetain == 'true'
+	
 	if not operationsAccessOrFail(request, response) then return end
-
+	
 	updater.setLogger(log)
 	updater.setState(updater.STATE.INSTALLING,"")
 
@@ -177,7 +184,7 @@ function M.install_POST(request, response)
 		return
 	end
 
-	local rv,msg = updater.flashImageVersion(vEnt, argNoRetain)
+	local rv,msg = updater.flashImageVersion(vEnt, noRetain)
 
 	if not rv then
 		updater.setState(updater.STATE.INSTALL_FAILED, "installation failed (" .. msg .. ")")

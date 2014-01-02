@@ -1,3 +1,11 @@
+--
+-- This file is part of the Doodle3D project (http://doodle3d.com).
+--
+-- @copyright 2013, Doodle3D
+-- @license This software is licensed under the terms of the GNU GPL v2 or later.
+-- See file LICENSE.txt or visit http://www.gnu.org/licenses/gpl.html for full license details.
+
+
 ---
 -- The REST response object handles all operations necessary to generate a HTTP response.
 -- It knows about the request, ensures the correct HTTP headers are present and
@@ -5,7 +13,9 @@
 local JSON = require('util/JSON')
 local settings = require('util.settings')
 local defaults = require('conf_defaults')
-
+local utils = require('util.utils')
+local log = require('util.logger')
+  
 local M = {}
 M.__index = M
 
@@ -121,8 +131,6 @@ end
 
 --- Call all function on the post-response queue, see @{M:addPostResponseFunction} for details and a side-note.
 function M:executePostResponseQueue()
-  --local utils = require('util.utils')
-  --local log = require('util.logger')
   --log:info("Response:executePostResponseQueue: " .. utils.dump(self.postResponseQueue))
 
   for i,fn in ipairs(self.postResponseQueue) do fn() end
@@ -159,6 +167,10 @@ function M:send()
 		io.write("\r\n")
 		io.write(self.binaryData)
 	end
+	
+	if self.body.status ~= "success" then 
+		log:debug("Response:"..utils.dump(self.body.status).." ("..utils.dump(self.body.msg)..")")
+	end 
 end
 
 --- Sets the response object to return binary data instead of JSON as its body.

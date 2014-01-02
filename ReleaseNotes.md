@@ -1,3 +1,20 @@
+<<<<<<< HEAD
+=======
+# 0.9.13 (23th dec 2013)
+- Links to release notes in settings update panel, both for current version and for updateable version.
+- On finishing the tour the status message, thermometer and progress indicators are only hidden when appropriate
+- Heated bed printer setting
+- Gcode {if heatedBed} variable
+- Enable / disable tour setting
+- Displaying send percentage in status message
+- Deltabot (Delta RostockMax, Deltamaker, Kossel) specific start- and endgcode
+- Deltabot now have 0 x and y dimentions to center the print
+- No more usb hub needed (OpenWRT full speed usb stability patch)
+- You can now update without preserving your personal data (sketches / settings)
+- Settings can be saved even if there are printer driver issues
+- Save and restore settings issues fixed
+
+>>>>>>> develop
 # 0.9.12 (18th dec 2013):
 - Refill wifibox uci settings after reset, preventing printer driver crash (#138)
 

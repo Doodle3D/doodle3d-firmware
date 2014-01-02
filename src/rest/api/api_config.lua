@@ -84,14 +84,6 @@ function M._global_POST(request, response)
 
 	local substitutedSsid = wifi.getSubstitutedSsid(settings.get('network.ap.ssid'))
 	response:addData("substituted_ssid",substitutedSsid)
-
-	-- we now call signin seperately trough cgi-bin
-	--[[log:info("API:Network:try signing in")
-  	if signin.signin() then
-  		log:info("API:Network:signin successfull")
-  	else
-  		log:info("API:Network:signin failed")
-  	end]]--
 end
 
 function M.all_GET(request, response)

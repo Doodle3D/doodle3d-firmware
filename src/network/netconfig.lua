@@ -369,6 +369,13 @@ function M.associateSsid(ssid, passphrase, recreate)
 		return nil,msg
 	end
 	
+	log:info("  waiting for network configuration to finish")
+	local waitTime = 1
+	local endTime = os.time() + waitTime
+	while os.time() <= endTime do
+		-- waiting...
+	end
+	
 	M.setStatus(M.CONNECTED,"Connected");
 	
 	-- signin to connect.doodle3d.com

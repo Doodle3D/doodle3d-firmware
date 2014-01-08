@@ -86,7 +86,7 @@ local function setupAutoWifiMode()
 	end
 
 	if connectWith then
-		local rv,msg = netconf.associateSsid(connectWith)
+		local rv,msg = netconf.associateSsid(connectWith,nil,nil,true)
 		if rv then
 			return true, "autowifi: associated -- client mode with ssid '" .. connectWith .. "'"
 		else

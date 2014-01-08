@@ -53,10 +53,11 @@ function M.init(wifiInstance, reloadSilent)
 end
 
 --- Switch configuration between AP and station modes
--- @param components	a table with components as keys with operations as values (add or remove)
+-- @param table	components	a table with components as keys with operations as values (add or remove)
+-- @param boolean	boot	If true, the components have to start instead of reloaded (only needed on boot)
 -- Valid components (each with add and rm operation) are: apnet, staticaddr, dhcppool, wwwredir, dnsredir, wwwcaptive, natreflect.
 -- and additionally: wifiiface/add, network/reload
-function M.switchConfiguration(components)
+function M.switchConfiguration(components,boot)
 	local dirtyList = {} -- laundry list, add config/script name as key with value c (commit), r (reload) or b (both)
 
 	for k,v in pairs(components) do
@@ -74,7 +75,7 @@ function M.switchConfiguration(components)
 		if v == 'c' or v == 'b' then M.commitComponent(k) end
 	end
 	for k,v in pairs(dirtyList) do
-		if v == 'r' or v == 'b' then M.reloadComponent(k, silent) end
+		if v == 'r' or v == 'b' then M.reloadComponent(k, silent, boot) end
 	end
 end
 
@@ -83,15 +84,18 @@ function M.commitComponent(c)
 	uci:commit(c)
 end
 
-function M.reloadComponent(c, silent)
+function M.reloadComponent(c, silent, boot)
 	log:info("reloading component '" .. c .. "'") 
-	local cmd = '/etc/init.d/' .. c .. ' reload'
+	local command = 'reload'
+	-- if booting, the services have to be started before they can be reloaded
+	if boot then command = 'start' end 
+	local cmd = '/etc/init.d/' .. c .. ' '..command
 	if silent ~= nil and silent then 
 		cmd = cmd .. ' &> /dev/null'
 		os.execute(cmd)
 	else
 		rv = utils.captureCommandOutput(cmd)
-		log:info("  result reloading component '" .. c .. "': "..utils.dump(rv))
+		log:info("  result reloading component '" .. c .. "' (cmd: '"..cmd.."'): \n"..utils.dump(rv))
 	end
 end
 
@@ -327,10 +331,11 @@ end
 -- @tparam string ssid The SSID to associate with.
 -- @tparam string passphrase The passphrase (if any) to use, may be left out if a UCI configuration exists.
 -- @tparam boolean recreate If true, a new UCI configuration based on scan data will always be created, otherwise an attempt will be made to use an existing configuration.
+-- @tparam boolean boot If true, the components have to start instead of reloaded (only needed on boot)
 -- @return True on success or nil+msg on error.
-function M.associateSsid(ssid, passphrase, recreate)
+function M.associateSsid(ssid, passphrase, recreate, boot)
 	log:info("netconfig:associateSsid: "..(ssid or "<nil>")..", "..(recreate or "<nil>"))
-	
+	if boot then log:info("  boot mode") end 
 	M.setStatus(M.CONNECTING,"Connecting...");
 	
 	-- see if previously configured network for given ssid exists
@@ -359,7 +364,8 @@ function M.associateSsid(ssid, passphrase, recreate)
 	wifi.activateConfig(ssid)
 	--M.switchConfiguration{ wifiiface="add", apnet="rm", staticaddr="rm", dhcppool="rm", wwwredir="rm", dnsredir="rm", wwwcaptive="rm", wireless="reload" }
 	--M.switchConfiguration{ wifiiface="add", apnet="rm", staticaddr="rm", dhcppool="rm", wwwredir="rm", dnsredir="rm", wireless="reload" }
-  	M.switchConfiguration{ wifiiface="add", staticaddr="rm", dhcppool="rm", wwwredir="rm", dnsredir="rm", wireless="reload" }
+  	--M.switchConfiguration{ wifiiface="add", staticaddr="rm", dhcppool="rm", wwwredir="rm", dnsredir="rm", wireless="reload" }
+  	M.switchConfiguration({ wifiiface="add", staticaddr="rm", dhcppool="rm", wwwredir="rm", dnsredir="rm" },boot)
 
 	-- check if we are actually associated
   	local status = wifi.getDeviceState()

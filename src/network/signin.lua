@@ -42,24 +42,57 @@ function M.signin()
 	M.setStatus(SIGNING_IN_STATUS,"signing in")
 
 	local baseurl = "http://connect.doodle3d.com/api/signin.php"
-
-	local localip = wifi.getLocalIP();
-	if localip == nil then
-		log:error("signin failed no local ip found")
-		M.setStatus(IDLE_STATUS,"idle")
-		return false
+	
+	local attemptInterval = 1
+	local maxAttempts = 20
+	local attempt = 0
+	
+	local nextAttemptTime = os.time()
+	
+	local localip = ""
+	local signinResponse = ""
+	while true do
+		if os.time() > nextAttemptTime then
+			log:debug("signin attempt "..utils.dump(attempt).."/"..utils.dump(maxAttempts))
+			local signedin = false
+			local localip = wifi.getLocalIP();
+			log:debug("  localip: "..utils.dump(localip))
+			if localip ~= nil then
+				
+				local wifiboxid = wifi.getSubstitutedSsid(settings.get('network.cl.wifiboxid'))
+				wifiboxid = urlcode.escape(wifiboxid)
+			
+				local cmd = "wget -q -T 2 -t 1 -O - "..baseurl.."?wifiboxid="..wifiboxid.."\\&localip="..localip;
+				signinResponse = utils.captureCommandOutput(cmd);
+				log:debug("  signin response: \n"..utils.dump(signinResponse))
+				local success = signinResponse:match('"status":"success"')
+				log:debug("  success: "..utils.dump(success))
+				if success ~= nil then
+					signedin = true
+				else
+					log:warn("signin failed request failed (response: "..utils.dump(signinResponse)..")")
+				end
+			else 
+				log:warn("signin failed no local ip found (attempt: "..utils.dump(attempt).."/"..utils.dump(maxAttempts)..")")
+			end
+			
+			if signedin then
+				break
+			else
+				attempt = attempt+1
+				if attempt >= maxAttempts then
+					-- still no localIP; fail
+					M.setStatus(IDLE_STATUS,"idle")
+					return false
+				else
+					nextAttemptTime = os.time() + attemptInterval
+				end
+			end
+		end
 	end
-
-	local wifiboxid = wifi.getSubstitutedSsid(settings.get('network.cl.wifiboxid'))
-	wifiboxid = urlcode.escape(wifiboxid)
-
-	local cmd = "wget -q -T 2 -t 1 -O - "..baseurl.."?wifiboxid="..wifiboxid.."\\&localip="..localip;
-	local output = utils.captureCommandOutput(cmd);
-	log:info("signin: "..output)
-
+	
 	M.setStatus(IDLE_STATUS,"idle")
-
-	return string.len(output) > 0, output
+	return string.len(signinResponse) > 0, signinResponse
 end
 
 function M.getStatus()

@@ -95,7 +95,7 @@ function M.reloadComponent(c, silent, boot)
 		os.execute(cmd)
 	else
 		rv = utils.captureCommandOutput(cmd)
-		log:info("  result reloading component '" .. c .. "' (cmd: '"..cmd.."'): \n"..utils.dump(rv))
+		log:debug("  result reloading component '" .. c .. "' (cmd: '"..cmd.."'): \n"..utils.dump(rv))
 	end
 end
 
@@ -373,13 +373,6 @@ function M.associateSsid(ssid, passphrase, recreate, boot)
 		local msg = "Could not associate with network (incorrect password?)"
 		M.setStatus(M.CONNECTING_FAILED,msg);
 		return nil,msg
-	end
-	
-	log:info("  waiting for network configuration to finish")
-	local waitTime = 1
-	local endTime = os.time() + waitTime
-	while os.time() <= endTime do
-		-- waiting...
 	end
 	
 	M.setStatus(M.CONNECTED,"Connected");

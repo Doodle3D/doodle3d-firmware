@@ -124,6 +124,7 @@ end
 --returns the wireless local ip address
 function M.getLocalIP()
 	local ifconfig, rv = utils.captureCommandOutput("ifconfig wlan0");
+	--log:debug("  ifconfig: \n"..utils.dump(ifconfig));
 	local localip = ifconfig:match('inet addr:([%d\.]+)')
 	return localip;
 end

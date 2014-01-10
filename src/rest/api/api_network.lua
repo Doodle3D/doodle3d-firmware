@@ -147,7 +147,7 @@ function M.associate_POST(request, response)
 
 	response:setSuccess("wlan is trying to associate")
 
-	local rv,msg = netconf.associateSsid(argSsid, argPhrase, argRecreate)
+	local rv,msg = netconf.associateSsid(argSsid, argPhrase, argRecreate,false)
 	if rv then
 		log:info("associated to wifi: "..utils.dump(argSsid))
 	else

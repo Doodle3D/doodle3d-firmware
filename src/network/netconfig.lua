@@ -275,16 +275,19 @@ end
 -- Note: this function might belong in the wlanconfig module but that would introduce
 -- a circular dependency, easiest solution is to place the function here.
 -- @tparam string ssid The SSID to use for the access point.
+-- @tparam boolean boot If true, the components have to start instead of reloaded (only needed on boot)
 -- @return True on success or nil+msg on error.
-function M.setupAccessPoint(ssid)
-	
+function M.setupAccessPoint(ssid,boot)
 	M.setStatus(M.CREATING,"Creating access point '"..ssid.."'...");
+	boot = boot or false
+	if boot then log:info("  boot mode") end
 	
-	M.switchConfiguration{apnet="add_noreload"}
+	-- add access point configuration 
+	M.switchConfiguration({apnet="add_noreload"},boot)
 	wifi.activateConfig(ssid)
 	-- NOTE: dnsmasq must be reloaded after network or it will be unable to serve IP addresses
-	M.switchConfiguration{ wifiiface="add", network="reload", staticaddr="add", dhcppool="add_noreload", wwwredir="add", dnsredir="add" }
-	M.switchConfiguration{dhcp="reload"}
+	M.switchConfiguration({ wifiiface="add", network="reload", staticaddr="add", dhcppool="add_noreload", wwwredir="add", dnsredir="add" },boot)
+	M.switchConfiguration({dhcp="reload"},boot)
 	
 	M.setStatus(M.CREATED,"Access point created");
 	

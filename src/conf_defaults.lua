@@ -242,6 +242,18 @@ M.printer_firstLayerSlow = {
 	description = 'Print the first layer slowly to get a more stable start'
 }
 
+M.printer_bottomLayerSpeed = {
+  default = 35,
+  type = 'int',
+  description = 'If first layers are to be printed slowly, use this speed'
+}
+
+M.printer_bottomFlowRate = {
+  default = 2,
+  type = 'float',
+  description = 'Multiplication factor for filament flow rate in first few layers'
+}
+
 M.printer_heatup_enabled = {
 	default = true,
 	type = 'bool',

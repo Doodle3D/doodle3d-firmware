@@ -76,9 +76,10 @@ local function setupAutoWifiMode()
 	end
 
 	-- try to find a known network which is also visible (ordered by known network definitions)
+	-- when it finds a access point configuration first, it will use that
 	local connectWith = nil
 	for _,kn in ipairs(knownSsids) do
-    if kn.mode == 'ap' and kn.ssid == apSsid then break end
+    	if kn.mode == 'ap' and kn.ssid == apSsid then break end
 		if findSsidInList(scanList, kn.ssid) then
 			connectWith = kn.ssid
 			break
@@ -93,7 +94,6 @@ local function setupAutoWifiMode()
 			return nil, "autowifi: could not associate with ssid '" .. connectWith .. "' (" .. msg .. ")"
 		end
 	elseif netMode ~= 'ap' or netName ~= apSsid then
-		log:info("falling back to access point mode")
 		local rv,msg = netconf.setupAccessPoint(apSsid)
 		if rv then
 			return true, "autowifi: configured as access point with ssid '" .. apSsid .. "'"

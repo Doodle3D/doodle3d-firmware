@@ -56,7 +56,7 @@ function M.signin()
 			log:debug("signin attempt "..utils.dump(attempt).."/"..utils.dump(maxAttempts))
 			local signedin = false
 			local localip = wifi.getLocalIP();
-			log:debug("  localip: "..utils.dump(localip))
+			--log:debug("  localip: "..utils.dump(localip))
 			if localip ~= nil then
 				
 				local wifiboxid = wifi.getSubstitutedSsid(settings.get('network.cl.wifiboxid'))

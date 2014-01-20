@@ -280,6 +280,7 @@ end
 function M.setupAccessPoint(ssid,boot)
 	M.setStatus(M.CREATING,"Creating access point '"..ssid.."'...");
 	boot = boot or false
+	--boot = false
 	if boot then log:info("  boot mode") end
 	
 	-- add access point configuration 

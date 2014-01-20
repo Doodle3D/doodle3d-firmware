@@ -1,3 +1,19 @@
+# 0.10.0 (20th jan 2014)
+- WordArt
+- Adding basic shapes
+- 2D edit functionality: move, scale, rotate
+- Vertical shape buttons in foldable menu (creating more vertical space to draw)
+- Fixed issues connecting to networks
+- Doesn't switch to access point after firmware update anymore
+- Speed and flow rate settings for bottom layers
+- Improved Makerbot gcode for better adhesion
+- Traveling disabled in bottom layers (providing sort of a poor man's raft)
+- Feedback on 'restore settings to default'-button
+- Reimplemented layout, lots of improvements
+- Re-enabled regular browser keyboard shortcuts
+- Faster click responses on iOS 
+- magnifying glass on iOS is now prevented from showing up
+
 # 0.9.13 (23th dec 2013)
 - Links to release notes in settings update panel, both for current version and for updateable version.
 - On finishing the tour the status message, thermometer and progress indicators are only hidden when appropriate

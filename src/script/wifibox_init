@@ -15,9 +15,10 @@ boot() {
 
 	$LOGGER "Invoking Doodle3D WiFi box network auto-initialization..."
 	/usr/share/lua/wifibox/script/d3dapi autowifi
-
-	$LOGGER "Start signing in..."
-	/usr/share/lua/wifibox/script/signin.sh > /dev/null 2> /dev/null &
+	
+  $LOGGER "Start signing in..."
+  /usr/share/lua/wifibox/script/signin.sh > /dev/null 2> /dev/null &
+	
 }
 
 start() {

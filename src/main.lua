@@ -59,7 +59,7 @@ local function setupAutoWifiMode()
 		return nil, "autowifi: could not scan wifi networks (" .. msg .. ")"
 	end
 
-	log:info("current wifi name/mode: " .. (netName or "<nil>") .. "/" .. netMode .. ", ssid of self: " .. apSsid)
+	log:info("current wifi name: " .. (netName or "<nil>") .. ", mode: " .. netMode .. ", ssid of self: " .. apSsid)
 	local visNet, knownNet = {}, {}
 	for _,sn in ipairs(scanList) do
 		table.insert(visNet, sn.ssid)
@@ -76,9 +76,10 @@ local function setupAutoWifiMode()
 	end
 
 	-- try to find a known network which is also visible (ordered by known network definitions)
+	-- when it finds a access point configuration first, it will use that
 	local connectWith = nil
 	for _,kn in ipairs(knownSsids) do
-    if kn.mode == 'ap' and kn.ssid == apSsid then break end
+    	if kn.mode == 'ap' and kn.ssid == apSsid then break end
 		if findSsidInList(scanList, kn.ssid) then
 			connectWith = kn.ssid
 			break
@@ -86,14 +87,14 @@ local function setupAutoWifiMode()
 	end
 
 	if connectWith then
-		local rv,msg = netconf.associateSsid(connectWith)
+		local rv,msg = netconf.associateSsid(connectWith,nil,nil,true)
 		if rv then
 			return true, "autowifi: associated -- client mode with ssid '" .. connectWith .. "'"
 		else
 			return nil, "autowifi: could not associate with ssid '" .. connectWith .. "' (" .. msg .. ")"
 		end
 	elseif netMode ~= 'ap' or netName ~= apSsid then
-		local rv,msg = netconf.setupAccessPoint(apSsid)
+		local rv,msg = netconf.setupAccessPoint(apSsid,true)
 		if rv then
 			return true, "autowifi: configured as access point with ssid '" .. apSsid .. "'"
 		else

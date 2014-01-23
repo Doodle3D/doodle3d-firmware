@@ -159,8 +159,8 @@ function M.install_POST(request, response)
 	updater.setLogger(log)
 	updater.setState(updater.STATE.INSTALLING,"")
 
-	local ssid = wifi.getSubstitutedSsid(settings.get('network.ap.ssid'))
-	local rv,msg = netconf.enableAccessPoint(ssid)
+	--local ssid = wifi.getSubstitutedSsid(settings.get('network.ap.ssid'))
+	--local rv,msg = netconf.enableAccessPoint(ssid)
 
 	if not argVersion then
 		local success,status,msg = updater.getStatus()

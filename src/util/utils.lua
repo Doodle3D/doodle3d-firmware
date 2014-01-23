@@ -145,7 +145,7 @@ end
 -- @treturn string Output of the command that was run.
 -- @todo: this function has been duplicated from rest/api/api_system.lua
 function M.captureCommandOutput(cmd)
-	local f = assert(io.popen(cmd, 'r'))
+	local f = assert(io.popen(cmd..' 2>&1', 'r'))
 	local output = assert(f:read('*all'))
 	f:close()
 	return output

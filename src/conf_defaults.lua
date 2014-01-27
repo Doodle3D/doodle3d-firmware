@@ -294,7 +294,7 @@ M.printer_retraction_minDistance = {
 
 M.printer_retraction_amount = {
 	default = 3,
-	type = 'int',
+	type = 'float',
 	description = '',
 	min = 0
 }

@@ -78,7 +78,9 @@ $IPKG_INSTROOT/etc/init.d/dhcpcheck enable
 
 if [ -z "$IPKG_INSTROOT" ]; then
 	echo "Enabling wifi device..."
-	uci set wireless.@wifi-device[0].disabled=0; uci commit wireless; wifi
+	uci set wireless.@wifi-device[0].disabled=0
+	uci set wireless.radio0.country='NL'
+	uci commit wireless; wifi
 
 	addFirewallNet
 
@@ -97,6 +99,7 @@ else
 	uci set uhttpd.main.lua_prefix='/d3dapi'
 
 	uci set wireless.@wifi-device[0].disabled=0
+	uci set wireless.radio0.country='NL'
 	# TODO: add firewall net
 	uci set network.wlan=interface
 EOM

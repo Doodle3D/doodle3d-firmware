@@ -46,7 +46,7 @@ function M.new(requestObject)
 	local self = setmetatable({}, M)
 	self.body = { status = nil, data = {} }
 	self:setHttpStatus(200, 'OK')
-	self:setContentType('text/plain;charset=UTF-8')
+	self:setContentType('application/json;charset=UTF-8')
 	--self:setContentType('application/json;charset=UTF-8')
 
 	-- A queue for functions to be executed when the response has been given.

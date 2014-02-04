@@ -1,20 +1,22 @@
 #!/usr/bin/env lua
+--#!/usr/bin/env lua -l strict
 
 local function ERR(msg) print(msg) end
 
-local ok, lfs = pcall(require, 'lfs')
+local ok, pl = pcall(require, 'pl.import_into')
 if not ok then
-	ERR('This script requires lfs, the Lua filesystem library')
+	ERR('This script requires the Penlight library')
 	os.exit(1)
 end
+pl = pl()
+
+local lfs = require('lfs') -- assume this exists since it's required by penlight as well
 
 local D3D_REPO_FIRMWARE_NAME = 'doodle3d-firmware'
 local D3D_REPO_CLIENT_NAME = 'doodle3d-client'
 local D3D_REPO_PRINT3D_NAME = 'print3d'
 
 local paths = {}
-
-local M = {}
 
 
 local function detectOpenWrtRoot()
@@ -90,7 +92,7 @@ local function main()
 	if d3dFeed then
 		print("found " .. d3dFeed)
 	else
-		if msg then print("not found: " .. msg) else print("not found") end
+		if msg then print("not found: " .. msg) else print("not found.") end
 		os.exit(1)
 	end
 
@@ -98,18 +100,33 @@ local function main()
 	paths.client = d3dFeed .. '/' .. D3D_REPO_CLIENT_NAME
 	paths.print3d = d3dFeed .. '/' .. D3D_REPO_PRINT3D_NAME
 
-	-- if empty, try to set something sensible
+	-- if empty, try to choose something sensible
 	if not paths.cache or paths.cache == '' then
-		paths.cache = '/tmp/d3d-release-dir'
+		paths.cache = '/tmp/d3d-release-dir/2ndpath'
+	end
+	io.stdout:write("Attempting to use " .. paths.cache .. " as cache dir... ")
+	local rv,msg = pl.dir.makepath(paths.cache)
+	if not rv then
+		print("could not create path (" .. msg .. ").")
+		os.exit(1)
 	end
 
-	-- check if paths.cache is writable
+	local lock,msg = lfs.lock_dir(paths.cache)
+	if not lock then
+		print("could not obtain directory lock (" .. msg .. ").")
+		os.exit(1)
+	else
+		print("OK.")
+	end
 
-	os.exit(1)
+
+	-- ... --
+	--fetch index files and if requested also images and packages
+
+
+	lock:free()
+	os.exit(0)
 end
 
 
---- Only execute the main function if an arg table is present, this enables usage both as module and as standalone script.
-if arg ~= nil then main() end
-
-return M
+main()

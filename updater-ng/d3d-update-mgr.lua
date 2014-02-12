@@ -45,13 +45,16 @@ M.STATE_NAMES = {
 }
 
 --- The base URL to use for finding update files.
--- This URL will usually contain both an OpenWRT feed directory and an `images`-directory.
--- This script uses only the latter, and expects to find the file @{IMAGE_INDEX_FILE} there.
+-- This URL will usually contain both an OpenWRT feed directory and an `images` directory.
+-- This script uses only the latter, and expects to find the files @{IMAGE_STABLE_INDEX_FILE} and @{IMAGE_BETA_INDEX_FILE} there.
 M.DEFAULT_BASE_URL = 'http://doodle3d.com/updates'
 --M.DEFAULT_BASE_URL = 'http://localhost/~USERNAME/wifibox/updates'
 
---- The index file containing metadata on update images.
-M.IMAGE_INDEX_FILE = 'wifibox-image.index'
+--- The index file containing metadata on stable update images.
+M.IMAGE_STABLE_INDEX_FILE = 'wifibox-image.index'
+
+--- The index file containing metadata on beta update images.
+M.IMAGE_BETA_INDEX_FILE = 'wifibox-image.beta.index'
 
 --- Path to the updater cache.
 M.CACHE_PATH = '/tmp/d3d-updater'
@@ -387,43 +390,77 @@ end
 
 --- Turns a plain-text version as returned by @{formatVersion} into a table.
 -- @tparam string|table versionText The version string to parse, if it is already a table, it is returned as-is.
--- @treturn table A parse version.
+-- @treturn table A parsed version or nil on incorrect argument.
 function M.parseVersion(versionText)
+	if not versionText then return nil end
 	if type(versionText) == 'table' then return versionText end
 	if not versionText or versionText:len() == 0 then return nil end
 
-	local major,minor,patch = versionText:match("^%s*(%d+)%.(%d+)%.(%d+)%s*$")
-	if not major or not minor or not patch then return nil end
+	local major,minor,patch,suffix = versionText:match("^%s*(%d+)%.(%d+)%.(%d+)(-?%w*)%s*$")
+	if not major or not minor or not patch then return nil end -- suffix not required
 
-	return { ['major'] = major, ['minor'] = minor, ['patch'] = patch }
+	if type(suffix) == 'string' and suffix:len() > 0 then
+		if suffix:sub(1, 1) ~= '-' then return nil end
+		suffix = suffix:sub(2)
+	else
+		suffix = nil
+	end
+
+	return { ['major'] = major, ['minor'] = minor, ['patch'] = patch, ['suffix'] = suffix }
 end
 
 --- Formats a version as returned by @{parseVersion}.
 -- @tparam table|string version The version to format, if it is already a string, that will be returned unmodified.
--- @treturn string A formatted version.
+-- @treturn string A formatted version or nil on incorrect argument.
 function M.formatVersion(version)
+	if not version then return nil end
 	if type(version) == 'string' then return version end
-	return version.major .. "." .. version.minor .. "." .. version.patch
+
+	local ver = version.major .. "." .. version.minor .. "." .. version.patch
+	if version.suffix then ver = ver .. '-' .. version.suffix end
+
+	return ver
 end
 
---- Compares two versions.
+--- Compares two versions. Note that the second return value must be used for equality testing.
+-- If given, the timestamps have higher priority than the versions. Suffixes are ignored.
 -- @tparam table versionA A version as returned by @{parseVersion}.
 -- @tparam table versionB A version as returned by @{parseVersion}.
--- @treturn number -1 if versionA is smaller than versionB, 0 if versions are equal or 1 if versionA is larger than versionB.
-function M.compareVersions(versionA, versionB)
+-- @param timestampA[opt] A timestamp as returned by @{parseDate}.
+-- @param timestampB[opt] A timestamp as returned by @{parseDate}.
+-- @treturn number -1 if versionA/timestampA is smaller/older than versionB/timestampB, 0 if versions are equal (or undecided) or 1 if A is larger/newer than B.
+-- @treturn bool True if versions are really equal (first return value can be 0 if everything but the suffix is equal)
+function M.compareVersions(versionA, versionB, timestampA, timestampB)
 	if type(versionA) ~= 'table' or type(versionB) ~= 'table' then return nil end
-	local diff = versionA.major - versionB.major
-	if diff == 0 then diff = versionA.minor - versionB.minor end
-	if diff == 0 then diff = versionA.patch - versionB.patch end
-	return diff > 0 and 1 or (diff < 0 and -1 or 0)
+
+	local diff = 0
+	if timestampA and timestampB then diff = timestampA - timestampB end
+	if diff == 0 then
+		diff = versionA.major - versionB.major
+		if diff == 0 then diff = versionA.minor - versionB.minor end
+		if diff == 0 then diff = versionA.patch - versionB.patch end
+	end
+
+	local result = diff > 0 and 1 or (diff < 0 and -1 or 0)
+	local reallyEqual = (diff == 0) and (versionA.suffix == versionB.suffix)
+
+	return result, (reallyEqual and true or false)
+end
+
+--- Checks if versions are exactly equal.
+-- It returns the second return value of @{compareVersions} and accepts the same arguments.
+-- @treturn bool True if versions are equal, false otherwise.
+function M.versionsEqual(versionA, versionB, timestampA, timestampB)
+	return select(2, M.compareVersions(versionA, versionB, timestampA, timestampB))
 end
 
 --- Returns information on a version if it can be found in a collection of versions as returned by @{getAvailableVersions}.
 -- @tparam table version The version to look for.
 -- @tparam table[opt] verTable A table containing a collection of versions, if not passed in, it will be obtained using @{getAvailableVersions}.
+-- @param timestamp[opt] Specific timestamp to look for.
 -- @treturn table|nil Version information table found in the collection, or nil on error or if not found.
 -- @treturn string Descriptive message in case of error or if the version could not be found.
-function M.findVersion(version, verTable)
+function M.findVersion(version, verTable, timestamp)
 	local msg = nil
 	version = M.parseVersion(version)
 	if not verTable then verTable,msg = M.getAvailableVersions() end
@@ -431,9 +468,26 @@ function M.findVersion(version, verTable)
 	if not verTable then return nil,msg end
 
 	for _,ent in pairs(verTable) do
-		if M.compareVersions(ent.version, version) == 0 then return ent end
+		if M.versionsEqual(ent.version, version, ent.timestamp, timestamp) == 0 then return ent end
 	end
 	return nil,"no such version"
+end
+
+--- Turns a date of the format 'yyyymmdd' into a timestamp as returned by os.time.
+-- @tparam string dateText The date to parse.
+-- @return A timestamp or nil if the argument does not have correct format.
+function M.parseDate(dateText)
+	if type(dateText) ~= 'string' or dateText:len() ~= 8 or dateText:find('[^%d]') ~= nil then return nil end
+
+	return os.time({ year = dateText:sub(1, 4), month = dateText:sub(5, 6), day = dateText:sub(7,8) })
+end
+
+--- Formats a timestamp as returned by os.time to a date of the form 'yyyymmdd'.
+-- @param timestamp The timestamp to format.
+-- @return A formatted date or nil if the argument is nil.
+function M.formatDate(timestamp)
+	if not timestamp then return nil end
+	return os.date('%Y%m%d', timestamp)
 end
 
 --- Creates an image file name based on given properties.

@@ -1,3 +1,11 @@
+# 0.10.1 (12th feb 2014)
+- miniFactory support
+- Fixed most Makerbot display issues 
+- Allowing wifi channels 12 and 13
+- Allow floats for retraction amount setting
+- Also preheating reconnected printer
+- Fixed network interface issues
+- added easter-eggs
 
 # 0.10.0 (20th jan 2014)
 - WordArt

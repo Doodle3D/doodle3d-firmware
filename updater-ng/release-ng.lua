@@ -12,6 +12,12 @@ pl = pl()
 
 local lfs = require('lfs') -- assume this exists since it's required by penlight as well
 
+local argStash = arg
+arg = nil
+local upmgr = require('d3d-update-mgr') -- arg must be nil for the update manager to load as module
+arg = argStash
+
+
 local D3D_REPO_FIRMWARE_NAME = 'doodle3d-firmware'
 local D3D_REPO_CLIENT_NAME = 'doodle3d-client'
 local D3D_REPO_PRINT3D_NAME = 'print3d'
@@ -121,6 +127,9 @@ local function main()
 
 
 	-- ... --
+	upmgr.setUseCache(false)
+	upmgr.setVerbosity(1)
+	upmgr.setCachePath(paths.cache)
 	--fetch index files and if requested also images and packages
 
 

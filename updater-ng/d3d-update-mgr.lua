@@ -10,12 +10,12 @@
 --- This script provides an interface to upgrade or downgrade the Doodle3D wifibox.
 -- It can both be used as a standalone command-line tool and as a Lua library.
 
--- TODO/NOTES:
+-- TODO/NOTES: (from old script)
 -- add to status: validImage: none|<version> (can use checkValidImage for this)
 -- any more TODO's across this file?
 -- max 1 image tegelijk (moet api doen), en rekening houden met printbuffer (printen blokkeren?)
 
--- MAYBE/LATER:
+-- MAYBE/LATER: (from old script)
 -- add API calls to retrieve a list of all versions with their info (i.e., the result of getAvailableVersions)
 -- wget: add provision (in verbose mode?) to use '-v' instead of '-q' and disable output redirection
 -- document index file format (Version first, then in any order: Files: sysup; factory, FileSize: sysup; factory, MD5: sysup; factory, ChangelogStart:, ..., ChangelogEnd:)
@@ -57,17 +57,18 @@ M.IMAGE_STABLE_INDEX_FILE = 'wifibox-image.index'
 M.IMAGE_BETA_INDEX_FILE = 'wifibox-image.beta.index'
 
 --- Path to the updater cache.
-M.CACHE_PATH = '/tmp/d3d-updater'
+M.DEFAULT_CACHE_PATH = '/tmp/d3d-updater'
 
---- Name of the file to store current state in, this file resides in @{CACHE_PATH}.
+--- Name of the file to store current state in, this file resides in @{cachePath}.
 M.STATE_FILE = 'update-state'
 
 M.WGET_OPTIONS = "-q -t 1 -T 30"
 --M.WGET_OPTIONS = "-v -t 1 -T 30"
 
-local verbosity = 0 -- set by parseCommandlineArguments()
+local verbosity = 0 -- set by parseCommandlineArguments() or @{setVerbosity}
 local log = nil -- wifibox API can use M.setLogger to enable this module to use its logger
-local useCache = true -- default, can be overwritten using M.setUseCache()
+local useCache = true -- default, can be overwritten using @{setUseCache}
+local cachePath = M.DEFAULT_CACHE_PATH -- default, can be change using @{setCachePath}
 local baseUrl = M.DEFAULT_BASE_URL -- default, can be overwritten by M.setBaseUrl()
 
 
@@ -104,7 +105,24 @@ local function E(msg)
 	end
 end
 
---- Splits the return status from `os.execute`, which consists of two bytes.
+compatlua51 = _VERSION == 'Lua 5.1'
+
+--- execute a shell command. Taken from penlight library.
+-- This is a compatibility function that returns the same for Lua 5.1 and Lua 5.2
+-- @param cmd a shell command
+-- @return true if successful
+-- @return actual return code
+function compatexecute (cmd)
+	local res1,res2,res3 = os.execute(cmd)
+	if compatlua51 then
+		local cmd,sys = splitExitStatus(res1)
+		return (res1 == 0) and true or nil, sys
+	else
+		return res1, res3
+	end
+end
+
+--- Splits the return status from `os.execute` (only Lua <= 5.1), which consists of two bytes.
 --
 -- `os.execute` internally calls [system](http://linux.die.net/man/3/system),
 -- which usually returns the command exit status as high byte (see [WEXITSTATUS](http://linux.die.net/man/2/wait)).
@@ -123,11 +141,12 @@ end
 -- @number exitStatus An exit status from wget.
 -- @treturn string|number Either the status followed by a description, or a message indicating the call was interrupted, or just the status if it was not recognized.
 local function wgetStatusToString(exitStatus)
-	local wgetStatus,systemStatus = splitExitStatus(exitStatus)
+--	local wgetStatus,systemStatus = splitExitStatus(exitStatus)
+	local wgetStatus = exitStatus
 
-	if systemStatus ~= 0 then
-		return "interrupted:" .. systemStatus
-	end
+--	if systemStatus ~= 0 then
+--		return "interrupted: " .. systemStatus
+--	end
 
 	-- adapted from man(1) wget on OSX
 	local statusTexts = {
@@ -152,8 +171,9 @@ end
 -- @return bool|nil True, or nil on error.
 -- @return ?string A message in case of error.
 local function createCacheDirectory()
-	if os.execute('mkdir -p ' .. M.CACHE_PATH) ~= 0 then
-		return nil,"Error: could not create cache directory '" .. M.CACHE_PATH .. "'"
+	local _,rv = compatexecute('mkdir -p ' .. cachePath)
+	if rv ~= 0 then
+		return nil,"Error: could not create cache directory '" .. cachePath .. "'"
 	end
 	return true
 end
@@ -162,7 +182,7 @@ end
 -- @treturn STATE The current state code (@{STATE}.NONE if no state has been set).
 -- @treturn string The current state message (empty string if no state has been set).
 local function getState()
-	local file,msg = io.open(M.CACHE_PATH .. '/' .. M.STATE_FILE, 'r')
+	local file,msg = io.open(cachePath .. '/' .. M.STATE_FILE, 'r')
 	if not file then return M.STATE.NONE,"" end
 
 	local state = file:read('*a')
@@ -182,7 +202,7 @@ end
 
 --- Read the contents of a file.
 --
--- TODO: this file has been copied from @{util.utils}.lua and should be merged again.
+-- TODO: this file has been copied from @{util.utils}.lua and should be merged back.
 -- @string filePath The file to read.
 -- @bool trimResult Whether or not to trim the read data.
 -- @treturn bool|nil True, or nil on error.
@@ -204,7 +224,7 @@ end
 
 --- Reports whether or not a file exists.
 --
--- TODO: this file has been copied from @{util.utils}.lua and should be merged again.
+-- TODO: this file has been copied from @{util.utils}.lua and should be merged back.
 -- @string file The file to report about.
 -- @treturn bool True if the file exists, false otherwise.
 local function exists(file)
@@ -219,7 +239,7 @@ end
 
 --- Reports the size of a file or file handle.
 --
--- TODO: this file has been copied from @{util.utils}.lua and should be merged again.
+-- TODO: this file has been copied from @{util.utils}.lua and should be merged back.
 -- @param file A file path or open file handle.
 -- @treturn number Size of the file.
 local function fileSize(file)
@@ -245,7 +265,8 @@ end
 -- @treturn number Exit status of of command or -1 if dryRun is true.
 local function runCommand(command, dryRun)
 	D("about to run: '" .. command .. "'")
-	return (not dryRun) and os.execute(command) or -1
+	if dryRun then return -1 end
+	return compatexecute(command)
 end
 
 --- Removes a file.
@@ -331,6 +352,14 @@ end
 -- MODULE FUNCTIONS --
 ----------------------
 
+--- Set verbosity (log level) that determines which messages do get logged and which do not.
+-- @tparam number level The level to set, between -1 and 1.
+function M.setVerbosity(level)
+	if level and level >= -1 and level <= 1 then
+		verbosity = level
+	end
+end
+
 --- Enables use of the given @{util.logger} object, otherwise `stdout`/`stderr` will be used.
 -- @tparam util.logger logger The logger to log future messages to.
 function M.setLogger(logger)
@@ -349,6 +378,12 @@ end
 -- @string url The new base URL to use.
 function M.setBaseUrl(url)
 	baseUrl = url
+end
+
+--- Sets the filesystem path to use as cache for downloaded index and image files.
+-- @string path The path to use, use nil to restore default @{DEFAULT_CACHE_PATH}.
+function M.setCachePath(path)
+	cachePath = path or M.DEFAULT_CACHE_PATH
 end
 
 --- Returns a table with information about current update status of the wifibox.
@@ -380,7 +415,7 @@ function M.getStatus()
 	result.newestVersion = newest and newest.version or unknownVersion
 
 	if result.stateCode == M.STATE.DOWNLOADING then
-		result.progress = fileSize(M.CACHE_PATH .. '/' .. newest.sysupgradeFilename)
+		result.progress = fileSize(cachePath .. '/' .. newest.sysupgradeFilename)
 		if not result.progress then result.progress = 0 end -- in case the file does not exist yet (which yields nil)
 		result.imageSize = newest.sysupgradeFileSize
 	end
@@ -503,7 +538,7 @@ function M.constructImageFilename(version, devType, isFactory)
 	return 'doodle3d-wifibox-' .. M.formatVersion(v) .. '-' .. dt .. '-' .. sf .. '.bin'
 end
 
---- Checks whether a valid image file is present in @{CACHE_PATH} for the given image properties.
+--- Checks whether a valid image file is present in @{cachePath} for the given image properties.
 -- The versionEntry table will be augmented with an `isValid` key.
 --
 -- NOTE: currently, this function only checks the image exists and has the correct size.
@@ -515,8 +550,8 @@ end
 -- @treturn bool True if a valid image is present, false otherwise.
 function M.checkValidImage(versionEntry, devType, isFactory)
 	local filename = M.constructImageFilename(versionEntry.version, devType, isFactory)
-	--return versionEntry.md5 == md5sum(M.CACHE_PATH .. '/' .. filename)
-	local size = fileSize(M.CACHE_PATH .. '/' .. filename)
+	--return versionEntry.md5 == md5sum(cachePath .. '/' .. filename)
+	local size = fileSize(cachePath .. '/' .. filename)
 	versionEntry.isValid = versionEntry.sysupgradeFileSize == size
 	return versionEntry.isValid
 end
@@ -536,18 +571,14 @@ function M.getCurrentVersion()
 end
 
 --- Returns an indexed and sorted table containing version information tables.
--- The information is obtained from the either cached or downloaded image index (@{IMAGE_INDEX_FILE}).
--- @treturn table A table with a collection of version information tables.
-function M.getAvailableVersions()
+-- The information is obtained from the either cached or downloaded image index file.
+local function fetchIndexTable(indexFile, cachePath)
 	if not baseUrl then baseUrl = M.DEFAULT_BASE_URL end
-	local indexFilename = M.CACHE_PATH .. '/' .. M.IMAGE_INDEX_FILE
-
-	local ccRv,ccMsg = createCacheDirectory()
-	if not ccRv then return nil,ccMsg end
+	local indexFilename = cachePath .. '/' .. indexFile
 
 	if not useCache or not exists(indexFilename) then
-		local rv = downloadFile(baseUrl .. '/images/' .. M.IMAGE_INDEX_FILE, M.CACHE_PATH, M.IMAGE_INDEX_FILE)
-		if rv ~= 0 then return nil,"could not download image index file (" .. wgetStatusToString(rv) .. ")" end
+		local rv1,rv2 = downloadFile(baseUrl .. '/images/' .. indexFile, cachePath, indexFile)
+		if not rv1 then return nil,"could not download image index file (" .. wgetStatusToString(rv2) .. ")" end
 	end
 
 	local status,idxLines = pcall(io.lines, indexFilename)
@@ -631,7 +662,7 @@ function M.downloadImageFile(versionEntry, devType, isFactory)
 	local rv = 0
 	if doDownload then
 		M.setState(M.STATE.DOWNLOADING, "Downloading image (" .. filename .. ")")
-		rv = downloadFile(baseUrl .. '/images/' .. filename, M.CACHE_PATH, filename)
+		rv = downloadFile(baseUrl .. '/images/' .. filename, cachePath, filename)
 	end
 
 	if rv == 0 then
@@ -639,14 +670,14 @@ function M.downloadImageFile(versionEntry, devType, isFactory)
 			M.setState(M.STATE.IMAGE_READY, "Image downloaded, ready to install (image name: " .. filename .. ")")
 			return true
 		else
-			removeFile(M.CACHE_PATH .. '/' .. filename)
+			removeFile(cachePath .. '/' .. filename)
 			local ws = "Image download failed (invalid image)"
 			M.setState(M.STATE.DOWNLOAD_FAILED, ws)
 			return nil,ws
 		end
 	else
 		local ws = wgetStatusToString(rv)
-		removeFile(M.CACHE_PATH .. '/' .. filename)
+		removeFile(cachePath .. '/' .. filename)
 		M.setState(M.STATE.DOWNLOAD_FAILED, "Image download failed (wget error: " .. ws .. ")")
 		return nil,ws
 	end
@@ -665,7 +696,7 @@ function M.flashImageVersion(versionEntry, noRetain, devType, isFactory)
 	log:info("flashImageVersion")
 	local imgName = M.constructImageFilename(versionEntry.version, devType, isFactory)
 	local cmd = noRetain and 'sysupgrade -n ' or 'sysupgrade '
-	cmd = cmd .. M.CACHE_PATH .. '/' .. imgName
+	cmd = cmd .. cachePath .. '/' .. imgName
 
 	local ccRv,ccMsg = createCacheDirectory()
 	if not ccRv then return nil,ccMsg end
@@ -688,22 +719,22 @@ function M.flashImageVersion(versionEntry, noRetain, devType, isFactory)
 	return (rv == 0) and true or nil,rv
 end
 
---- Clears '*.bin' in the @{CACHE_PATH} directory.
+--- Clears '*.bin' in the @{cachePath} directory.
 -- @treturn bool|nil True on success, or nil on error.
 -- @treturn ?string Descriptive message on error.
 function M.clear()
 	local ccRv,ccMsg = createCacheDirectory()
 	if not ccRv then return nil,ccMsg end
 
-	D("Removing " .. M.CACHE_PATH .. "/doodle3d-wifibox-*.bin")
+	D("Removing " .. cachePath .. "/doodle3d-wifibox-*.bin")
 	M.setState(M.STATE.NONE, "")
-	local rv = os.execute('rm -f ' .. M.CACHE_PATH .. '/doodle3d-wifibox-*.bin')
+	local rv = compatexecute('rm -f ' .. cachePath .. '/doodle3d-wifibox-*.bin')
 	return (rv == 0) and true or nil,"could not remove image files"
 end
 
 --- Set updater state.
 --
--- NOTE: make sure the cache directory  @{CACHE_PATH} exists before calling this function or it will fail.
+-- NOTE: make sure the cache directory  @{cachePath} exists before calling this function or it will fail.
 --
 -- NOTE: this function _can_ fail but this is not expected to happen so the return value is mostly ignored for now.
 --
@@ -713,7 +744,7 @@ end
 function M.setState(code, msg)
 	local s = code .. '|' .. msg
 	D("set update state: " .. M.STATE_NAMES[code] .. " ('" .. s .. "')")
-	local file,msg = io.open(M.CACHE_PATH .. '/' .. M.STATE_FILE, 'w')
+	local file,msg = io.open(cachePath .. '/' .. M.STATE_FILE, 'w')
 
 	if not file then
 		E("error: could not open state file for writing (" .. msg .. ")")

@@ -6,13 +6,11 @@ local function ERR(msg) print(msg) end
 local ok, pl = pcall(require, 'pl.import_into')
 if not ok then
 	ERR('This script requires the Penlight library')
-	os.exit(1)
+	os.exit(2)
 end
 pl = pl()
 
 local lfs = require('lfs') -- assume this exists since it's required by penlight as well
-
-local serpent = require('util.serpent')
 
 local argStash = arg
 arg = nil
@@ -20,15 +18,36 @@ local upmgr = require('d3d-update-mgr') -- arg must be nil for the update manage
 arg = argStash
 
 
+
+-----------------------------
+-- CONSTANTS AND VARIABLES --
+-----------------------------
+
 local D3D_REPO_FIRMWARE_NAME = 'doodle3d-firmware'
 local D3D_REPO_CLIENT_NAME = 'doodle3d-client'
 local D3D_REPO_PRINT3D_NAME = 'print3d'
 local IMAGE_BASENAME = 'doodle3d-wifibox'
 
 local deviceType = 'tl-mr3020' -- or 'tl-wr703'
+local lock = nil
 local paths = {}
 
 
+
+-----------------------
+-- UTILITY FUNCTIONS --
+-----------------------
+
+local function quit(ev)
+	if lock then lock:free() end
+	os.exit(ev or 0)
+end
+
+local function md5sum(file)
+	local rv,_,sum = pl.utils.executeex('md5 -q "' .. file .. '"')
+
+	return rv and sum:sub(1, -2) or nil
+end
 
 local function detectOpenWrtRoot()
 	local f = io.open('Makefile', 'r')
@@ -84,13 +103,8 @@ local function constructImageName(version, devType, sysupOrFactory)
 	return IMAGE_BASENAME .. '-' .. upmgr.formatVersion(version) .. '-' .. devType .. '-' .. sysupOrFactory .. '.bin'
 end
 
-local function md5sum(file)
-	local rv,_,sum = pl.utils.executeex('md5 -q "' .. file .. '"')
 
-	return rv and sum:sub(1, -2) or nil
-end
-
-local function collectVersionInfo()
+local function collectLocalInfo()
 	local info = {}
 
 	-- temporary fields required for copying image files
@@ -118,13 +132,13 @@ local function collectVersionInfo()
 end
 
 
-local function main()
-	print("Doodle3D release script")
---	local opts = parseOptions(arg)
---
---	if opts['wrt-root'] then changedir(opts['wrt-root']) end
---	if opts['cache-dir'] then paths.cache = opts['cache-dir'] end
 
+--------------------
+-- MAIN FUNCTIONS --
+--------------------
+
+local function prepare()
+	local msg = nil
 
 	io.stdout:write("Checking if working directory is the OpenWrt root... ")
 	local isOpenWrtRoot = detectOpenWrtRoot()
@@ -133,7 +147,7 @@ local function main()
 		print("found (" .. paths.wrt .. ")")
 	else
 		print("unrecognized directory, try changing directories or using -wrt-root")
-		os.exit(1)
+		return nil
 	end
 
 	io.stdout:write("Looking for Doodle3D feed path... ")
@@ -142,7 +156,7 @@ local function main()
 		print("found " .. d3dFeed)
 	else
 		if msg then print("not found: " .. msg) else print("not found.") end
-		os.exit(1)
+		return nil
 	end
 
 	paths.firmware = d3dFeed .. '/' .. D3D_REPO_FIRMWARE_NAME
@@ -157,41 +171,86 @@ local function main()
 	local rv,msg = pl.dir.makepath(paths.cache)
 	if not rv then
 		print("could not create path (" .. msg .. ").")
-		os.exit(1)
+		return nil
 	end
 
-	local lock,msg = lfs.lock_dir(paths.cache)
+	lock,msg = lfs.lock_dir(paths.cache)
 	if not lock then
 		print("could not obtain directory lock (" .. msg .. ").")
-		os.exit(1)
+		return nil
 	else
 		print("ok")
 	end
 
+	return true
+end
 
-	local newVersion = collectVersionInfo()
-	print(serpent.block(newVersion))
+local function fetchVersionInfo()
+	local msg,stables,betas = nil,nil,nil
 
+	stables,msg = upmgr.getAvailableVersions('stables')
+	if not stables then return nil,msg end
 
+	betas,msg = upmgr.getAvailableVersions('betas')
+	if not betas then return nil,msg end
+
+	return stables, betas
+end
+
+local function generateIndex(newVersion, versionTable, isStable)
+	return 0
+end
+
+local function copyImages(newVersion)
+	return 0
+end
+
+local function main()
+	print("Doodle3D release script")
+--	local opts = parseOptions(arg)
+--
+--	if opts['wrt-root'] then changedir(opts['wrt-root']) end
+--	if opts['cache-dir'] then paths.cache = opts['cache-dir'] end
+
+	if not prepare() then quit(1) end
+
+	-- initialize update manager script
 	upmgr.setUseCache(false)
 	upmgr.setVerbosity(1)
 	upmgr.setCachePath(paths.cache)
 
-	local stables,msg1 = upmgr.getAvailableVersions('stables')
-	local betas,msg2 = upmgr.getAvailableVersions('betas')
+	local newVersion = collectLocalInfo()
 
-	if stables then
---		print("stables: " .. serpent.block(stables))
-	else
-		print("error getting stables (" .. msg1 .. ")")
+	local stables,betas = fetchVersionInfo()
+	if not stables then
+		print("Error: could not get version information (" .. betas .. ")")
+		quit(1)
 	end
 
---	print("===========================");
-	if betas then
---		print("betas: " .. serpent.block(betas))
-	else
-		print("error getting betas (" .. msg2 .. ")")
+	local isStable = (newVersion.version.suffix == nil)
+	print("Rolling release for firmware version " .. upmgr.formatVersion(newVersion.version) .. " (type: " .. (isStable and "stable" or "beta") .. ").")
+
+	if upmgr.findVersion(newVersion.version, stables) or upmgr.findVersion(newVersion.version, betas) then
+		print("Error: firmware version " .. upmgr.formatVersion(newVersion.version) .. " already exists")
+		quit(3)
 	end
+
+	if not generateIndex(newVersion, isStable and stables or betas, isStable) then
+		print("Error: could not generate index")
+		quit(4)
+	end
+
+	if not copyImages(newVersion) then
+		print("Error: could not copy images")
+		quit(4)
+	end
+
+
+	print(pl.pretty.dump(newVersion))
+	print("stables: " .. pl.pretty.dump(stables))
+	print("===========================");
+	print("betas: " .. pl.pretty.dump(betas))
+
 
 	--if requested, fetch images and packages (i.e., mirror whole directory)
 
@@ -200,8 +259,7 @@ local function main()
 	--check whether newVersion is not conflicting with or older than anything in corresponding table
 	--add newVersion to correct table and generate updated index file
 
-	lock:free()
-	os.exit(0)
+	quit()
 end
 
 

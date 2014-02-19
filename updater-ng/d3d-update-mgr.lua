@@ -504,7 +504,7 @@ function M.findVersion(version, verTable, timestamp)
 	if not verTable then return nil,msg end
 
 	for _,ent in pairs(verTable) do
-		if M.versionsEqual(ent.version, version, ent.timestamp, timestamp) == 0 then return ent end
+		if M.versionsEqual(ent.version, version, ent.timestamp, timestamp) == true then return ent end
 	end
 	return nil,"no such version"
 end

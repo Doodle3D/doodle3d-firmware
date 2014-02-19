@@ -12,6 +12,8 @@ pl = pl()
 
 local lfs = require('lfs') -- assume this exists since it's required by penlight as well
 
+local serpent = require('util.serpent')
+
 local argStash = arg
 arg = nil
 local upmgr = require('d3d-update-mgr') -- arg must be nil for the update manager to load as module
@@ -21,8 +23,11 @@ arg = argStash
 local D3D_REPO_FIRMWARE_NAME = 'doodle3d-firmware'
 local D3D_REPO_CLIENT_NAME = 'doodle3d-client'
 local D3D_REPO_PRINT3D_NAME = 'print3d'
+local IMAGE_BASENAME = 'doodle3d-wifibox'
 
+local deviceType = 'tl-mr3020' -- or 'tl-wr703'
 local paths = {}
+
 
 
 local function detectOpenWrtRoot()
@@ -75,6 +80,43 @@ end
 --end
 
 
+local function constructImageName(version, devType, sysupOrFactory)
+	return IMAGE_BASENAME .. '-' .. upmgr.formatVersion(version) .. '-' .. devType .. '-' .. sysupOrFactory .. '.bin'
+end
+
+local function md5sum(file)
+	local rv,_,sum = pl.utils.executeex('md5 -q "' .. file .. '"')
+
+	return rv and sum:sub(1, -2) or nil
+end
+
+local function collectVersionInfo()
+	local info = {}
+
+	-- temporary fields required for copying image files
+	info.sysupImgPath = paths.wrt .. '/bin/ar71xx/openwrt-ar71xx-generic-' .. deviceType .. '-v1-squashfs-sysupgrade.bin'
+	info.factImgPath = paths.wrt .. '/bin/ar71xx/openwrt-ar71xx-generic-' .. deviceType .. '-v1-squashfs-factory.bin'
+
+	info.version = upmgr.parseVersion(pl.file.read(paths.firmware .. '/src/FIRMWARE-VERSION'))
+	if not info.version then return nil,"could not determine current firmware version" end
+
+	info.factoryFileSize = pl.path.getsize(info.factImgPath)
+	if not info.factoryFileSize then return nil,"could not determine size for factory image" end
+
+	info.sysupgradeFileSize = pl.path.getsize(info.sysupImgPath)
+	if not info.sysupgradeFileSize then return nil,"could not determine size for sysupgrade image" end
+
+	info.factoryMD5 = md5sum(info.factImgPath)
+	info.sysupgradeMD5 = md5sum(info.sysupImgPath)
+	if not info.factoryMD5 or not info.sysupgradeMD5 then return nil,"could not determine MD5 sum for image(s)" end
+
+	info.factoryFilename = constructImageName(info.version, deviceType, 'factory')
+	info.sysupgradeFilename = constructImageName(info.version, deviceType, 'sysupgrade')
+	info.timestamp = os.time()
+
+	return info
+end
+
 
 local function main()
 	print("Doodle3D release script")
@@ -87,7 +129,8 @@ local function main()
 	io.stdout:write("Checking if working directory is the OpenWrt root... ")
 	local isOpenWrtRoot = detectOpenWrtRoot()
 	if isOpenWrtRoot then
-		print("ok")
+		paths.wrt = pl.path.currentdir()
+		print("found (" .. paths.wrt .. ")")
 	else
 		print("unrecognized directory, try changing directories or using -wrt-root")
 		os.exit(1)
@@ -122,16 +165,40 @@ local function main()
 		print("could not obtain directory lock (" .. msg .. ").")
 		os.exit(1)
 	else
-		print("OK.")
+		print("ok")
 	end
 
 
-	-- ... --
+	local newVersion = collectVersionInfo()
+	print(serpent.block(newVersion))
+
+
 	upmgr.setUseCache(false)
 	upmgr.setVerbosity(1)
 	upmgr.setCachePath(paths.cache)
-	--fetch index files and if requested also images and packages
 
+	local stables,msg1 = upmgr.getAvailableVersions('stables')
+	local betas,msg2 = upmgr.getAvailableVersions('betas')
+
+	if stables then
+--		print("stables: " .. serpent.block(stables))
+	else
+		print("error getting stables (" .. msg1 .. ")")
+	end
+
+--	print("===========================");
+	if betas then
+--		print("betas: " .. serpent.block(betas))
+	else
+		print("error getting betas (" .. msg2 .. ")")
+	end
+
+	--if requested, fetch images and packages (i.e., mirror whole directory)
+
+	--run sanity checks
+
+	--check whether newVersion is not conflicting with or older than anything in corresponding table
+	--add newVersion to correct table and generate updated index file
 
 	lock:free()
 	os.exit(0)

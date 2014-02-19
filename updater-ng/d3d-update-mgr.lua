@@ -264,7 +264,7 @@ end
 -- @bool dryRun Only log a message if true, otherwise run the command and log a message.
 -- @treturn number Exit status of of command or -1 if dryRun is true.
 local function runCommand(command, dryRun)
-	D("about to run: '" .. command .. "'")
+	--D("about to run: '" .. command .. "'")
 	if dryRun then return -1 end
 	return compatexecute(command)
 end
@@ -284,6 +284,7 @@ end
 local function downloadFile(url, saveDir, filename)
 	if not saveDir or saveDir:len() == 0 then return nil, "saveDir must be non-empty" end
 	local outArg = (filename:len() > 0) and (' -O' .. filename) or ''
+	D("Downloading file '" .. url .. "'")
 	if filename:len() > 0 then
 		return runCommand('wget ' .. M.WGET_OPTIONS .. ' -O ' .. saveDir .. '/' .. filename .. ' ' .. url .. ' 2> /dev/null')
 	else
@@ -590,7 +591,7 @@ local function fetchIndexTable(indexFile, cachePath)
 	for line in idxLines do
 		local k,v = line:match('^(.-):(.*)$')
 		k,v = trim(k), trim(v)
-		if not log then D("#" .. lineno .. ": considering '" .. line .. "' (" .. (k or '<nil>') .. " / " .. (v or '<nil>') .. ")") end
+		--if not log then D("#" .. lineno .. ": considering '" .. line .. "' (" .. (k or '<nil>') .. " / " .. (v or '<nil>') .. ")") end
 		if not changelogMode and (not k or not v) then return nil,"incorrectly formatted line in index file (line " .. lineno .. ")" end
 
 		if k == 'ChangelogEnd' then
@@ -622,6 +623,13 @@ local function fetchIndexTable(indexFile, cachePath)
 				sSum,fSum = trim(sSum), trim(fSum)
 				if sSum then entry.sysupgradeMD5 = sSum end
 				if fSum then entry.factoryMD5 = fSum end
+			elseif k == 'ReleaseDate' then
+				local ts = M.parseDate(v)
+				if not ts then
+					P(0, "ignoring incorrectly formatted ReleaseDate field (line " .. lineno .. ")")
+				else
+					entry.timestamp = ts
+				end
 			else
 				P(-1, "ignoring unrecognized field in index file '" .. k .. "' (line " .. lineno .. ")")
 			end
@@ -636,6 +644,31 @@ local function fetchIndexTable(indexFile, cachePath)
 	end)
 
 	return result
+end
+
+--- Returns an indexed and sorted table containing version information tables.
+-- The information is obtained from the either cached or downloaded image index (@{IMAGE_STABLE_INDEX_FILE}).
+-- @tparam which[opt] Which type of versions to fetch, either 'stables' (default), 'betas' or both.
+-- @treturn table A table with a collection of version information tables.
+function M.getAvailableVersions(which)
+	local ccRv,ccMsg = createCacheDirectory()
+	if not ccRv then return nil,ccMsg end
+
+	local verTable, msg = {}, nil
+
+	if which == 'stables' or which == 'both' then
+		verTable,msg = fetchIndexTable(M.IMAGE_STABLE_INDEX_FILE, cachePath)
+		if not verTable then return nil,msg end
+	end
+
+	if which == 'betas' or which == 'both' then
+		local betas,msg = fetchIndexTable(M.IMAGE_BETA_INDEX_FILE, cachePath)
+		if not betas then return nil,msg end
+
+		for k,v in pairs(betas) do verTable[k] = v end
+	end
+
+	return verTable
 end
 
 --- Attempts to download an image file with the requested properties.

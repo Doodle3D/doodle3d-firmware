@@ -26,7 +26,7 @@ arg = argStash
 -----------------------------
 
 local SERVER_HOST = 'localhost'
-local SERVER_PATH = '~wouter/public_html/wifibox/updates'
+local SERVER_PATH = '~USERDIR/public_html/wifibox/updates'
 --local SERVER_HOST = 'doodle3d.com'
 --local SERVER_PATH = 'doodle3d.com/DEFAULT/updates'
 
@@ -57,6 +57,13 @@ local function md5sum(file)
 	local rv,_,sum = pl.utils.executeex('md5 -q "' .. file .. '"')
 
 	return rv and sum:sub(1, -2) or nil
+end
+
+local function detectRootPrivileges()
+	local rv,_,userId = pl.utils.executeex('id -u')
+	if not rv then return nil end
+
+	return tonumber(userId) == 0 and true or false
 end
 
 local function detectOpenWrtRoot()
@@ -108,11 +115,41 @@ end
 --	return processFunc(--[[ hmm ]]--)
 --end
 
+local function runAction(actMsg, errMsg, ev, func)
+	io.stdout:write(actMsg .. "...")
+	local rv,err = func()
+	if not rv then
+		print("Error: " .. errMsg .. " (" .. err .. ")")
+		quit(ev)
+	else
+		print("ok")
+	end
+
+	return true
+end
+
 
 local function constructImageName(version, devType, sysupOrFactory)
 	return IMAGE_BASENAME .. '-' .. um.formatVersion(version) .. '-' .. devType .. '-' .. sysupOrFactory .. '.bin'
 end
 
+local function imageCachePath()
+	return pl.path.join(paths.cache, 'images')
+end
+
+local function ensureFilePresent(src, tgt)
+--	print("About to copy '" .. src .. "' => '" .. tgt .. "'")
+	local srcMd5, tgtMd5 = md5sum(src), md5sum(tgt)
+
+	if not srcMd5 then return nil,"source file does not exist" end
+	if tgtMd5 and srcMd5 ~= tgtMd5 then return nil,"target file already exists but is different from source file" end
+
+	if not tgtMd5 then
+		if not pl.file.copy(src, tgt, false) then return nil,"could not copy file" end
+	end
+
+	return true
+end
 
 
 
@@ -154,6 +191,12 @@ local function prepare()
 	local rv,msg = pl.dir.makepath(paths.cache)
 	if not rv then
 		print("could not create path (" .. msg .. ").")
+		return nil
+	end
+
+	local rv,msg = pl.dir.makepath(imageCachePath())
+	if not rv then
+		print("could not create images dir (" .. msg .. ").")
 		return nil
 	end
 
@@ -214,11 +257,11 @@ local function generateIndex(newVersion, versionTable, isStable)
 		return um.compareVersions(a.version, b.version, a.timestamp, b.timestamp) < 0
 	end)
 
-	local indexPath = pl.path.join(paths.cache, indexFilename)
+	local indexPath = pl.path.join(imageCachePath(), indexFilename)
 	local rv = pl.file.copy(indexPath, pl.path.join(paths.cache, indexFilename..'.'..BACKUP_FILE_SUFFIX))
 	if not rv then return nil,"could not backup index file" end
 
-	local idxFile = io.open(pl.path.join(paths.cache, indexFilename), 'w')
+	local idxFile = io.open(pl.path.join(imageCachePath(), indexFilename), 'w')
 	if not idxFile then return nil,"could not open index file for writing" end
 
 	sortedVers:foreach(function(el)
@@ -233,29 +276,36 @@ local function generateIndex(newVersion, versionTable, isStable)
 	return 0
 end
 
-local function ensureFilePresent(src, tgt)
---	print("About to copy '" .. src .. "' => '" .. tgt .. "'")
-	local srcMd5, tgtMd5 = md5sum(src), md5sum(tgt)
+local function copyImages(newVersion)
+	local rv,msg
+	rv,msg = ensureFilePresent(newVersion.factoryImgPath, pl.path.join(imageCachePath(), newVersion.factoryFilename))
+	if not rv then return nil,msg end
 
-	if not srcMd5 then return nil,"source file does not exist" end
-	if tgtMd5 and srcMd5 ~= tgtMd5 then return nil,"target file already exists but is different from source file" end
-
-	if not tgtMd5 then
-		if not pl.file.copy(src, tgt, false) then return nil,"could not copy file" end
-	end
+	rv,msg = ensureFilePresent(newVersion.sysupgradeImgPath, pl.path.join(imageCachePath(), newVersion.sysupgradeFilename))
+	if not rv then return nil,msg end
 
 	return true
 end
 
-local function copyImages(newVersion)
-	local rv,msg
-	rv,msg = ensureFilePresent(newVersion.factoryImgPath, pl.path.join(paths.cache, newVersion.factoryFilename))
-	if not rv then return nil,msg end
+local function copyReleaseNotes()
+	local releaseNotesPath = pl.path.join(imageCachePath(), RELEASE_NOTES_FILE)
+	if pl.path.isfile(releaseNotesPath) then
+		local rv = pl.file.copy(releaseNotesPath, pl.path.join(paths.cache, RELEASE_NOTES_FILE..'.'..BACKUP_FILE_SUFFIX))
+		if not rv then return nil,"could not backup file" end
+	end
 
-	rv,msg = ensureFilePresent(newVersion.sysupgradeImgPath, pl.path.join(paths.cache, newVersion.sysupgradeFilename))
-	if not rv then return nil,msg end
+	local rv = pl.file.copy(pl.path.join(paths.firmware, RELEASE_NOTES_FILE), releaseNotesPath)
+	if not rv then return nil,"could not copy file" end
 
 	return true
+end
+
+-- TODO: the packages are not really used and the openwrt script to generate the
+-- package index requires all packages to be present so this has been skipped for now
+local function buildFeedDir()
+	local scriptPath = pl.path.join(paths.wrt, 'scripts/ipkg-make-index.sh')
+
+	return nil
 end
 
 local function uploadFiles()
@@ -269,17 +319,23 @@ end
 
 local function main()
 	print("Doodle3D release script")
+	if detectRootPrivileges() then
+		print("Error: refusing to run script as root.")
+		quit(99)
+	end
+
 --	local opts = parseOptions(arg)
 --
 --	if opts['wrt-root'] then changedir(opts['wrt-root']) end
 --	if opts['cache-dir'] then paths.cache = opts['cache-dir'] end
+-- more options: clear cache, rebuild (download all and generate index from actual files), dry-run, force
 
 	if not prepare() then quit(1) end
 
 	-- initialize update manager script
 	um.setUseCache(false)
 	um.setVerbosity(1)
-	um.setCachePath(paths.cache)
+	um.setCachePath(imageCachePath())
 
 	local newVersion,msg = collectLocalInfo()
 	if not newVersion then
@@ -301,6 +357,7 @@ local function main()
 		quit(3)
 	end
 
+
 --	pl.pretty.dump(newVersion)
 --	print("stables: "); pl.pretty.dump(stables)
 --	print("===========================");
@@ -309,47 +366,22 @@ local function main()
 	--TODO: if requested, fetch images and packages (i.e., mirror whole directory)
 	--TODO: run sanity checks
 
-	io.stdout:write("Generating new index file...")
-	if not generateIndex(newVersion, isStable and stables or betas, isStable) then
-		print("Error: could not generate index")
-		quit(4)
-	else
-		print("ok")
-	end
 
-	io.stdout:write("Copying image files...")
-	local rv,msg = copyImages(newVersion)
-	if not rv then
-		print("Error: could not copy images (" .. msg .. ")")
-		quit(4)
-	else
-		print("ok")
-	end
+	runAction("Generating new index file", "could not generate index", 4, function()
+		return generateIndex(newVersion, isStable and stables or betas, isStable)
+	end)
 
-	io.stdout:write("Copying release notes...")
-	local releaseNotesPath = pl.path.join(paths.cache, RELEASE_NOTES_FILE)
-	if pl.path.isfile(releaseNotesPath) then
-		local rv = pl.file.copy(releaseNotesPath, pl.path.join(paths.cache, RELEASE_NOTES_FILE..'.'..BACKUP_FILE_SUFFIX))
-		if not rv then
-			print("backing up failed")
-			quit(4)
-		end
-	end
+	runAction("Copying image files", "could not generate index", 4, function()
+		return copyImages(newVersion)
+	end)
 
-	local rv = pl.file.copy(pl.path.join(paths.firmware, RELEASE_NOTES_FILE), releaseNotesPath)
-	if not rv then
-		print("copy failed")
-		quit(4)
-	else
-		print("ok")
-	end
+	runAction("Copying release notes", "failed", 4, copyReleaseNotes)
 
-	print("About to sync files to server...")
-	local rv,msg = uploadFiles()
-	if not rv then
-		print("Error: could not upload files (" .. msg .. ")")
-		quit(5)
-	end
+	io.stdout:write("Building package feed directory...")
+	print("skipped - not implemented")
+--	runAction("Building package feed directory", "failed", 4, buildFeedDir)
+
+	runAction("About to sync files to server", "could not upload files", 5, uploadFiles)
 
 	print("Done.")
 	quit()

@@ -16,7 +16,7 @@ local lfs = require('lfs') -- assume this exists since it's required by penlight
 
 local argStash = arg
 arg = nil
-local upmgr = require('d3d-update-mgr') -- arg must be nil for the update manager to load as module
+local um = require('d3d-update-mgr') -- arg must be nil for the update manager to load as module
 arg = argStash
 
 
@@ -103,7 +103,7 @@ end
 
 
 local function constructImageName(version, devType, sysupOrFactory)
-	return IMAGE_BASENAME .. '-' .. upmgr.formatVersion(version) .. '-' .. devType .. '-' .. sysupOrFactory .. '.bin'
+	return IMAGE_BASENAME .. '-' .. um.formatVersion(version) .. '-' .. devType .. '-' .. sysupOrFactory .. '.bin'
 end
 
 
@@ -168,7 +168,7 @@ local function collectLocalInfo()
 	info.factoryImgPath = pl.path.join(paths.wrt, 'bin/ar71xx/openwrt-ar71xx-generic-' .. deviceType .. '-v1-squashfs-factory.bin')
 	info.sysupgradeImgPath = pl.path.join(paths.wrt, 'bin/ar71xx/openwrt-ar71xx-generic-' .. deviceType .. '-v1-squashfs-sysupgrade.bin')
 
-	info.version = upmgr.parseVersion(pl.file.read(pl.path.join(paths.firmware, 'src/FIRMWARE-VERSION')))
+	info.version = um.parseVersion(pl.file.read(pl.path.join(paths.firmware, 'src/FIRMWARE-VERSION')))
 	if not info.version then return nil,"could not determine current firmware version" end
 
 	info.factoryFileSize = pl.path.getsize(info.factoryImgPath)
@@ -191,20 +191,20 @@ end
 local function fetchVersionInfo()
 	local msg,stables,betas = nil,nil,nil
 
-	stables,msg = upmgr.getAvailableVersions('stables')
+	stables,msg = um.getAvailableVersions('stables')
 	if not stables then return nil,msg end
 
-	betas,msg = upmgr.getAvailableVersions('betas')
+	betas,msg = um.getAvailableVersions('betas')
 	if not betas then return nil,msg end
 
 	return stables, betas
 end
 
 local function generateIndex(newVersion, versionTable, isStable)
-	local indexFilename = isStable and upmgr.IMAGE_STABLE_INDEX_FILE or upmgr.IMAGE_BETA_INDEX_FILE
+	local indexFilename = isStable and um.IMAGE_STABLE_INDEX_FILE or um.IMAGE_BETA_INDEX_FILE
 	local sortedVers = pl.List(versionTable)
 	sortedVers:sort(function(a, b)
-		return upmgr.compareVersions(a.version, b.version, a.timestamp, b.timestamp) < 0
+		return um.compareVersions(a.version, b.version, a.timestamp, b.timestamp) < 0
 	end)
 
 	local indexPath = pl.path.join(paths.cache, indexFilename)
@@ -213,11 +213,11 @@ local function generateIndex(newVersion, versionTable, isStable)
 	if not idxFile then return nil,"could not open index file for writing" end
 
 	sortedVers:foreach(function(el)
-		idxFile:write("Version: " .. upmgr.formatVersion(el.version) .. "\n")
+		idxFile:write("Version: " .. um.formatVersion(el.version) .. "\n")
 		idxFile:write("Files: " .. el.sysupgradeFilename .. "; " .. el.factoryFilename .. "\n")
 		idxFile:write("FileSize: " .. el.sysupgradeFileSize .. "; " .. el.factoryFileSize .. "\n")
 		idxFile:write("MD5: " .. el.sysupgradeMD5 .. "; " .. el.factoryMD5 .. "\n")
-		idxFile:write("ReleaseDate: " .. upmgr.formatDate(el.timestamp) .. "\n")
+		idxFile:write("ReleaseDate: " .. um.formatDate(el.timestamp) .. "\n")
 	end)
 
 	idxFile:close()
@@ -259,9 +259,9 @@ local function main()
 	if not prepare() then quit(1) end
 
 	-- initialize update manager script
-	upmgr.setUseCache(false)
-	upmgr.setVerbosity(1)
-	upmgr.setCachePath(paths.cache)
+	um.setUseCache(false)
+	um.setVerbosity(1)
+	um.setCachePath(paths.cache)
 
 	local newVersion,msg = collectLocalInfo()
 	if not newVersion then
@@ -276,10 +276,10 @@ local function main()
 	end
 
 	local isStable = (newVersion.version.suffix == nil)
-	print("Rolling release for firmware version " .. upmgr.formatVersion(newVersion.version) .. " (type: " .. (isStable and "stable" or "beta") .. ").")
+	print("Rolling release for firmware version " .. um.formatVersion(newVersion.version) .. " (type: " .. (isStable and "stable" or "beta") .. ").")
 
-	if upmgr.findVersion(newVersion.version, stables) or upmgr.findVersion(newVersion.version, betas) then
-		print("Error: firmware version " .. upmgr.formatVersion(newVersion.version) .. " already exists")
+	if um.findVersion(newVersion.version, stables) or um.findVersion(newVersion.version, betas) then
+		print("Error: firmware version " .. um.formatVersion(newVersion.version) .. " already exists")
 		quit(3)
 	end
 

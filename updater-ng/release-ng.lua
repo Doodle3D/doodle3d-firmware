@@ -25,11 +25,18 @@ arg = argStash
 -- CONSTANTS AND VARIABLES --
 -----------------------------
 
+local SERVER_HOST = 'localhost'
+local SERVER_PATH = '~wouter/public_html/wifibox/updates'
+--local SERVER_HOST = 'doodle3d.com'
+--local SERVER_PATH = 'doodle3d.com/DEFAULT/updates'
+
 local D3D_REPO_FIRMWARE_NAME = 'doodle3d-firmware'
 local D3D_REPO_CLIENT_NAME = 'doodle3d-client'
 local D3D_REPO_PRINT3D_NAME = 'print3d'
 local IMAGE_BASENAME = 'doodle3d-wifibox'
-local INDEX_BACKUP_SUFFIX = 'bkp'
+local BACKUP_FILE_SUFFIX = 'bkp'
+local RELEASE_NOTES_FILE = "ReleaseNotes.md"
+local RSYNC_TIMEOUT = 2
 
 local deviceType = 'tl-mr3020' -- or 'tl-wr703'
 local lock = nil
@@ -208,7 +215,9 @@ local function generateIndex(newVersion, versionTable, isStable)
 	end)
 
 	local indexPath = pl.path.join(paths.cache, indexFilename)
-	pl.file.copy(indexPath, pl.path.join(paths.cache, indexFilename..'.'..INDEX_BACKUP_SUFFIX))
+	local rv = pl.file.copy(indexPath, pl.path.join(paths.cache, indexFilename..'.'..BACKUP_FILE_SUFFIX))
+	if not rv then return nil,"could not backup index file" end
+
 	local idxFile = io.open(pl.path.join(paths.cache, indexFilename), 'w')
 	if not idxFile then return nil,"could not open index file for writing" end
 
@@ -249,6 +258,15 @@ local function copyImages(newVersion)
 	return true
 end
 
+local function uploadFiles()
+	local serverUrl = SERVER_HOST..':'..SERVER_PATH
+	-- rsync options are: recursive, preserve perms, symlinks and timestamps, be verbose and use compression
+	local cmd = "rsync -rpltvz -e ssh --progress --timeout=" .. RSYNC_TIMEOUT .. " --exclude '*.bkp' --exclude 'lockfile.lfs' " .. paths.cache .. "/* " .. serverUrl
+	print("Running command: '" .. cmd .. "'")
+	local rv,ev = um.compatexecute(cmd)
+	return rv and true or nil,("rsync failed, exit status: " .. ev)
+end
+
 local function main()
 	print("Doodle3D release script")
 --	local opts = parseOptions(arg)
@@ -283,6 +301,14 @@ local function main()
 		quit(3)
 	end
 
+--	pl.pretty.dump(newVersion)
+--	print("stables: "); pl.pretty.dump(stables)
+--	print("===========================");
+--	print("betas: "); pl.pretty.dump(betas)
+
+	--TODO: if requested, fetch images and packages (i.e., mirror whole directory)
+	--TODO: run sanity checks
+
 	io.stdout:write("Generating new index file...")
 	if not generateIndex(newVersion, isStable and stables or betas, isStable) then
 		print("Error: could not generate index")
@@ -300,20 +326,32 @@ local function main()
 		print("ok")
 	end
 
+	io.stdout:write("Copying release notes...")
+	local releaseNotesPath = pl.path.join(paths.cache, RELEASE_NOTES_FILE)
+	if pl.path.isfile(releaseNotesPath) then
+		local rv = pl.file.copy(releaseNotesPath, pl.path.join(paths.cache, RELEASE_NOTES_FILE..'.'..BACKUP_FILE_SUFFIX))
+		if not rv then
+			print("backing up failed")
+			quit(4)
+		end
+	end
 
---	pl.pretty.dump(newVersion)
---	print("stables: "); pl.pretty.dump(stables)
---	print("===========================");
---	print("betas: "); pl.pretty.dump(betas)
+	local rv = pl.file.copy(pl.path.join(paths.firmware, RELEASE_NOTES_FILE), releaseNotesPath)
+	if not rv then
+		print("copy failed")
+		quit(4)
+	else
+		print("ok")
+	end
 
+	print("About to sync files to server...")
+	local rv,msg = uploadFiles()
+	if not rv then
+		print("Error: could not upload files (" .. msg .. ")")
+		quit(5)
+	end
 
-	--if requested, fetch images and packages (i.e., mirror whole directory)
-
-	--run sanity checks
-
-	--check whether newVersion is not conflicting with or older than anything in corresponding table
-	--add newVersion to correct table and generate updated index file
-
+	print("Done.")
 	quit()
 end
 

@@ -105,23 +105,6 @@ local function E(msg)
 	end
 end
 
-compatlua51 = _VERSION == 'Lua 5.1'
-
---- execute a shell command. Taken from penlight library.
--- This is a compatibility function that returns the same for Lua 5.1 and Lua 5.2
--- @param cmd a shell command
--- @return true if successful
--- @return actual return code
-function compatexecute (cmd)
-	local res1,res2,res3 = os.execute(cmd)
-	if compatlua51 then
-		local cmd,sys = splitExitStatus(res1)
-		return (res1 == 0) and true or nil, sys
-	else
-		return res1, res3
-	end
-end
-
 --- Splits the return status from `os.execute` (only Lua <= 5.1), which consists of two bytes.
 --
 -- `os.execute` internally calls [system](http://linux.die.net/man/3/system),
@@ -171,7 +154,7 @@ end
 -- @return bool|nil True, or nil on error.
 -- @return ?string A message in case of error.
 local function createCacheDirectory()
-	local _,rv = compatexecute('mkdir -p ' .. cachePath)
+	local _,rv = M.compatexecute('mkdir -p ' .. cachePath)
 	if rv ~= 0 then
 		return nil,"Error: could not create cache directory '" .. cachePath .. "'"
 	end
@@ -266,7 +249,7 @@ end
 local function runCommand(command, dryRun)
 	--D("about to run: '" .. command .. "'")
 	if dryRun then return -1 end
-	return compatexecute(command)
+	return M.compatexecute(command)
 end
 
 --- Removes a file.
@@ -352,6 +335,23 @@ end
 ----------------------
 -- MODULE FUNCTIONS --
 ----------------------
+
+local compatlua51 = _VERSION == 'Lua 5.1'
+
+--- execute a shell command. Taken from penlight library.
+-- This is a compatibility function that returns the same for Lua 5.1 and Lua 5.2
+-- @param cmd a shell command
+-- @return true if successful
+-- @return actual return code
+function M.compatexecute (cmd)
+	local res1,res2,res3 = os.execute(cmd)
+	if compatlua51 then
+		local cmd, sys = splitExitStatus(res1)
+		return (res1 == 0) and true or nil, sys
+	else
+		return res1, res3
+	end
+end
 
 --- Set verbosity (log level) that determines which messages do get logged and which do not.
 -- @tparam number level The level to set, between -1 and 1.
@@ -761,7 +761,7 @@ function M.clear()
 
 	D("Removing " .. cachePath .. "/doodle3d-wifibox-*.bin")
 	M.setState(M.STATE.NONE, "")
-	local rv = compatexecute('rm -f ' .. cachePath .. '/doodle3d-wifibox-*.bin')
+	local rv = M.compatexecute('rm -f ' .. cachePath .. '/doodle3d-wifibox-*.bin')
 	return (rv == 0) and true or nil,"could not remove image files"
 end
 

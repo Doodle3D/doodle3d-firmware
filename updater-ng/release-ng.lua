@@ -11,14 +11,9 @@ if not ok then
 	os.exit(2)
 end
 pl = pl()
+local um --- update manager module, will be loaded later through @{loadUpdateManager}
 
 local lfs = require('lfs') -- assume this exists since it's required by penlight as well
-
-local argStash = arg
-arg = nil
-local um = require('d3d-update-mgr') -- arg must be nil for the update manager to load as module
-arg = argStash
-
 
 
 -----------------------------
@@ -48,6 +43,14 @@ local paths = {}
 -- UTILITY FUNCTIONS --
 -----------------------
 
+local function loadUpdateManager()
+	package.path = package.path .. ';' .. pl.path.join(paths.firmware, 'updater-ng') .. '/?.lua'
+	local argStash = arg
+	arg = nil
+	um = require('d3d-update-mgr') -- arg must be nil for the update manager to load as module
+	arg = argStash
+end
+
 local function quit(ev)
 	if lock then lock:free() end
 	os.exit(ev or 0)
@@ -57,6 +60,17 @@ local function md5sum(file)
 	local rv,_,sum = pl.utils.executeex('md5 -q "' .. file .. '"')
 
 	return rv and sum:sub(1, -2) or nil
+end
+
+local function getYesNo(question)
+	local answer
+	repeat
+		io.write(question)
+		io.flush()
+		answer = io.stdin:read('*line'):lower()
+	until answer == 'yes' or answer == 'no' or answer == 'n'
+
+	return (answer == 'yes') and true or false
 end
 
 local function detectRootPrivileges()
@@ -116,7 +130,7 @@ end
 --end
 
 local function runAction(actMsg, errMsg, ev, func)
-	io.stdout:write(actMsg .. "...")
+	io.stdout:write("* " .. actMsg .. "...")
 	local rv,err = func()
 	if not rv then
 		print("Error: " .. errMsg .. " (" .. err .. ")")
@@ -160,7 +174,7 @@ end
 local function prepare()
 	local msg = nil
 
-	io.stdout:write("Checking if working directory is the OpenWrt root... ")
+	io.stdout:write("* Checking if working directory is the OpenWrt root... ")
 	local isOpenWrtRoot = detectOpenWrtRoot()
 	if isOpenWrtRoot then
 		paths.wrt = pl.path.currentdir()
@@ -170,7 +184,7 @@ local function prepare()
 		return nil
 	end
 
-	io.stdout:write("Looking for Doodle3D feed path... ")
+	io.stdout:write("* Looking for Doodle3D feed path... ")
 	local d3dFeed,msg = getWifiboxFeedRoot('feeds.conf')
 	if d3dFeed then
 		print("found " .. d3dFeed)
@@ -187,12 +201,14 @@ local function prepare()
 	if not paths.cache or paths.cache == '' then
 		paths.cache = '/tmp/d3d-release-dir'
 	end
-	io.stdout:write("Attempting to use " .. paths.cache .. " as cache dir... ")
+	io.stdout:write("* Attempting to use " .. paths.cache .. " as cache dir... ")
 	local rv,msg = pl.dir.makepath(paths.cache)
 	if not rv then
 		print("could not create path (" .. msg .. ").")
 		return nil
 	end
+
+	loadUpdateManager()
 
 	local rv,msg = pl.dir.makepath(imageCachePath())
 	if not rv then
@@ -318,7 +334,7 @@ local function uploadFiles()
 end
 
 local function main()
-	print("Doodle3D release script")
+	print("\nDoodle3D release script")
 	if detectRootPrivileges() then
 		print("Error: refusing to run script as root.")
 		quit(99)
@@ -343,14 +359,14 @@ local function main()
 		quit(3)
 	end
 
+	local isStable = (newVersion.version.suffix == nil)
+	print("\nRolling release for firmware version " .. um.formatVersion(newVersion.version) .. " (type: " .. (isStable and "stable" or "beta") .. ").")
+
 	local stables,betas = fetchVersionInfo()
 	if not stables then
 		print("Error: could not get version information (" .. betas .. ")")
 		quit(1)
 	end
-
-	local isStable = (newVersion.version.suffix == nil)
-	print("Rolling release for firmware version " .. um.formatVersion(newVersion.version) .. " (type: " .. (isStable and "stable" or "beta") .. ").")
 
 	if um.findVersion(newVersion.version, stables) or um.findVersion(newVersion.version, betas) then
 		print("Error: firmware version " .. um.formatVersion(newVersion.version) .. " already exists")
@@ -377,15 +393,21 @@ local function main()
 
 	runAction("Copying release notes", "failed", 4, copyReleaseNotes)
 
-	io.stdout:write("Building package feed directory...")
+	io.stdout:write("* Building package feed directory...")
 	print("skipped - not implemented")
 --	runAction("Building package feed directory", "failed", 4, buildFeedDir)
+
+
+	local answer = getYesNo("? Local updates directory will be synced to remote server, proceed? (y/n) ")
+	if answer ~= true then
+		print("Did not get green light, quitting.")
+		quit(5)
+	end
 
 	runAction("About to sync files to server", "could not upload files", 5, uploadFiles)
 
 	print("Done.")
 	quit()
 end
-
 
 main()

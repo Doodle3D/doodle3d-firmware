@@ -1,6 +1,8 @@
 #!/usr/bin/env lua
 --#!/usr/bin/env lua -l strict
 
+--TODO: replace prints with D() function from update manager and other slightly smarter mechanisms?
+
 local function ERR(msg) print(msg) end
 
 local ok, pl = pcall(require, 'pl.import_into')
@@ -27,6 +29,7 @@ local D3D_REPO_FIRMWARE_NAME = 'doodle3d-firmware'
 local D3D_REPO_CLIENT_NAME = 'doodle3d-client'
 local D3D_REPO_PRINT3D_NAME = 'print3d'
 local IMAGE_BASENAME = 'doodle3d-wifibox'
+local INDEX_BACKUP_SUFFIX = 'bkp'
 
 local deviceType = 'tl-mr3020' -- or 'tl-wr703'
 local lock = nil
@@ -104,33 +107,6 @@ local function constructImageName(version, devType, sysupOrFactory)
 end
 
 
-local function collectLocalInfo()
-	local info = {}
-
-	-- temporary fields required for copying image files
-	info.sysupImgPath = paths.wrt .. '/bin/ar71xx/openwrt-ar71xx-generic-' .. deviceType .. '-v1-squashfs-sysupgrade.bin'
-	info.factImgPath = paths.wrt .. '/bin/ar71xx/openwrt-ar71xx-generic-' .. deviceType .. '-v1-squashfs-factory.bin'
-
-	info.version = upmgr.parseVersion(pl.file.read(paths.firmware .. '/src/FIRMWARE-VERSION'))
-	if not info.version then return nil,"could not determine current firmware version" end
-
-	info.factoryFileSize = pl.path.getsize(info.factImgPath)
-	if not info.factoryFileSize then return nil,"could not determine size for factory image" end
-
-	info.sysupgradeFileSize = pl.path.getsize(info.sysupImgPath)
-	if not info.sysupgradeFileSize then return nil,"could not determine size for sysupgrade image" end
-
-	info.factoryMD5 = md5sum(info.factImgPath)
-	info.sysupgradeMD5 = md5sum(info.sysupImgPath)
-	if not info.factoryMD5 or not info.sysupgradeMD5 then return nil,"could not determine MD5 sum for image(s)" end
-
-	info.factoryFilename = constructImageName(info.version, deviceType, 'factory')
-	info.sysupgradeFilename = constructImageName(info.version, deviceType, 'sysupgrade')
-	info.timestamp = os.time()
-
-	return info
-end
-
 
 
 --------------------
@@ -159,13 +135,13 @@ local function prepare()
 		return nil
 	end
 
-	paths.firmware = d3dFeed .. '/' .. D3D_REPO_FIRMWARE_NAME
-	paths.client = d3dFeed .. '/' .. D3D_REPO_CLIENT_NAME
-	paths.print3d = d3dFeed .. '/' .. D3D_REPO_PRINT3D_NAME
+	paths.firmware = pl.path.join(d3dFeed, D3D_REPO_FIRMWARE_NAME)
+	paths.client = pl.path.join(d3dFeed, D3D_REPO_CLIENT_NAME)
+	paths.print3d = pl.path.join(d3dFeed, D3D_REPO_PRINT3D_NAME)
 
 	-- if empty, try to choose something sensible
 	if not paths.cache or paths.cache == '' then
-		paths.cache = '/tmp/d3d-release-dir/2ndpath'
+		paths.cache = '/tmp/d3d-release-dir'
 	end
 	io.stdout:write("Attempting to use " .. paths.cache .. " as cache dir... ")
 	local rv,msg = pl.dir.makepath(paths.cache)
@@ -185,6 +161,33 @@ local function prepare()
 	return true
 end
 
+local function collectLocalInfo()
+	local info = {}
+
+	-- temporary fields required for copying image files
+	info.factoryImgPath = pl.path.join(paths.wrt, 'bin/ar71xx/openwrt-ar71xx-generic-' .. deviceType .. '-v1-squashfs-factory.bin')
+	info.sysupgradeImgPath = pl.path.join(paths.wrt, 'bin/ar71xx/openwrt-ar71xx-generic-' .. deviceType .. '-v1-squashfs-sysupgrade.bin')
+
+	info.version = upmgr.parseVersion(pl.file.read(pl.path.join(paths.firmware, 'src/FIRMWARE-VERSION')))
+	if not info.version then return nil,"could not determine current firmware version" end
+
+	info.factoryFileSize = pl.path.getsize(info.factoryImgPath)
+	if not info.factoryFileSize then return nil,"could not determine size for factory image" end
+
+	info.sysupgradeFileSize = pl.path.getsize(info.sysupgradeImgPath)
+	if not info.sysupgradeFileSize then return nil,"could not determine size for sysupgrade image" end
+
+	info.factoryMD5 = md5sum(info.factoryImgPath)
+	info.sysupgradeMD5 = md5sum(info.sysupgradeImgPath)
+	if not info.factoryMD5 or not info.sysupgradeMD5 then return nil,"could not determine MD5 sum for image(s)" end
+
+	info.factoryFilename = constructImageName(info.version, deviceType, 'factory')
+	info.sysupgradeFilename = constructImageName(info.version, deviceType, 'sysupgrade')
+	info.timestamp = os.time()
+
+	return info
+end
+
 local function fetchVersionInfo()
 	local msg,stables,betas = nil,nil,nil
 
@@ -198,11 +201,52 @@ local function fetchVersionInfo()
 end
 
 local function generateIndex(newVersion, versionTable, isStable)
+	local indexFilename = isStable and upmgr.IMAGE_STABLE_INDEX_FILE or upmgr.IMAGE_BETA_INDEX_FILE
+	local sortedVers = pl.List(versionTable)
+	sortedVers:sort(function(a, b)
+		return upmgr.compareVersions(a.version, b.version, a.timestamp, b.timestamp) < 0
+	end)
+
+	local indexPath = pl.path.join(paths.cache, indexFilename)
+	pl.file.copy(indexPath, pl.path.join(paths.cache, indexFilename..'.'..INDEX_BACKUP_SUFFIX))
+	local idxFile = io.open(pl.path.join(paths.cache, indexFilename), 'w')
+	if not idxFile then return nil,"could not open index file for writing" end
+
+	sortedVers:foreach(function(el)
+		idxFile:write("Version: " .. upmgr.formatVersion(el.version) .. "\n")
+		idxFile:write("Files: " .. el.sysupgradeFilename .. "; " .. el.factoryFilename .. "\n")
+		idxFile:write("FileSize: " .. el.sysupgradeFileSize .. "; " .. el.factoryFileSize .. "\n")
+		idxFile:write("MD5: " .. el.sysupgradeMD5 .. "; " .. el.factoryMD5 .. "\n")
+		idxFile:write("ReleaseDate: " .. upmgr.formatDate(el.timestamp) .. "\n")
+	end)
+
+	idxFile:close()
 	return 0
 end
 
+local function ensureFilePresent(src, tgt)
+--	print("About to copy '" .. src .. "' => '" .. tgt .. "'")
+	local srcMd5, tgtMd5 = md5sum(src), md5sum(tgt)
+
+	if not srcMd5 then return nil,"source file does not exist" end
+	if tgtMd5 and srcMd5 ~= tgtMd5 then return nil,"target file already exists but is different from source file" end
+
+	if not tgtMd5 then
+		if not pl.file.copy(src, tgt, false) then return nil,"could not copy file" end
+	end
+
+	return true
+end
+
 local function copyImages(newVersion)
-	return 0
+	local rv,msg
+	rv,msg = ensureFilePresent(newVersion.factoryImgPath, pl.path.join(paths.cache, newVersion.factoryFilename))
+	if not rv then return nil,msg end
+
+	rv,msg = ensureFilePresent(newVersion.sysupgradeImgPath, pl.path.join(paths.cache, newVersion.sysupgradeFilename))
+	if not rv then return nil,msg end
+
+	return true
 end
 
 local function main()
@@ -219,7 +263,11 @@ local function main()
 	upmgr.setVerbosity(1)
 	upmgr.setCachePath(paths.cache)
 
-	local newVersion = collectLocalInfo()
+	local newVersion,msg = collectLocalInfo()
+	if not newVersion then
+		print("Error: could not collect local version information (" .. msg .. ")")
+		quit(3)
+	end
 
 	local stables,betas = fetchVersionInfo()
 	if not stables then
@@ -235,21 +283,28 @@ local function main()
 		quit(3)
 	end
 
+	io.stdout:write("Generating new index file...")
 	if not generateIndex(newVersion, isStable and stables or betas, isStable) then
 		print("Error: could not generate index")
 		quit(4)
+	else
+		print("ok")
 	end
 
-	if not copyImages(newVersion) then
-		print("Error: could not copy images")
+	io.stdout:write("Copying image files...")
+	local rv,msg = copyImages(newVersion)
+	if not rv then
+		print("Error: could not copy images (" .. msg .. ")")
 		quit(4)
+	else
+		print("ok")
 	end
 
 
-	print(pl.pretty.dump(newVersion))
-	print("stables: " .. pl.pretty.dump(stables))
-	print("===========================");
-	print("betas: " .. pl.pretty.dump(betas))
+--	pl.pretty.dump(newVersion)
+--	print("stables: "); pl.pretty.dump(stables)
+--	print("===========================");
+--	print("betas: "); pl.pretty.dump(betas)
 
 
 	--if requested, fetch images and packages (i.e., mirror whole directory)

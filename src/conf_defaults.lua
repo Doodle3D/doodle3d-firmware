@@ -335,4 +335,10 @@ M.doodle3d_tour_enabled = {
 	description = 'Show tour to new users'
 }
 
+M.doodle3d_betas = {
+	default = false,
+	type = 'bool',
+	description = 'Update to beta releases',
+}
+
 return M

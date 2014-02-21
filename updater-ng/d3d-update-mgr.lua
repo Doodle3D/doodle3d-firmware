@@ -396,7 +396,7 @@ end
 -- @treturn bool True if status has been determined fully, false if not.
 -- @treturn table The result table.
 -- @treturn ?string Descriptive message in case the result table is not complete.
-function M.getStatus()
+function M.getStatus(includeBetas)
 	if not baseUrl then baseUrl = M.DEFAULT_BASE_URL end
 	local unknownVersion = { major = 0, minor = 0, patch = 0 }
 	local result = {}
@@ -405,15 +405,24 @@ function M.getStatus()
 	result.stateCode, result.stateText = getState()
 	result.stateCode = tonumber(result.stateCode)
 
-	local verTable,msg = M.getAvailableVersions()
+	local verTable,msg = M.getAvailableVersions(includeBetas and 'both' or 'stables')
 	if not verTable then
-		D("could not obtain available versions (" .. msg .. ")")
+		D("error: could not obtain available versions (" .. msg .. ")")
 		-- TODO: set an error state in result to signify we probably do not have internet access?
 		return false, result, msg
 	end
 
 	local newest = verTable and verTable[#verTable]
 	result.newestVersion = newest and newest.version or unknownVersion
+	result.newestReleaseTimestamp = newest and newest.timestamp
+
+	-- look up timestamp of current version
+	local cEnt = M.findVersion(result.currentVersion, verTable)
+	if cEnt then
+		result.currentReleaseTimestamp = cEnt.timestamp
+	else
+		D("warning: could not find current wifibox version in release index, beta setting disabled after having beta installed?")
+	end
 
 	if result.stateCode == M.STATE.DOWNLOADING then
 		result.progress = fileSize(cachePath .. '/' .. newest.sysupgradeFilename)

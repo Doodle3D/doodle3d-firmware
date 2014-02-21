@@ -10,12 +10,12 @@
 --- This script provides an interface to upgrade or downgrade the Doodle3D wifibox.
 -- It can both be used as a standalone command-line tool and as a Lua library.
 
--- TODO/NOTES:
+-- TODO/NOTES: (from old script)
 -- add to status: validImage: none|<version> (can use checkValidImage for this)
 -- any more TODO's across this file?
 -- max 1 image tegelijk (moet api doen), en rekening houden met printbuffer (printen blokkeren?)
 
--- MAYBE/LATER:
+-- MAYBE/LATER: (from old script)
 -- add API calls to retrieve a list of all versions with their info (i.e., the result of getAvailableVersions)
 -- wget: add provision (in verbose mode?) to use '-v' instead of '-q' and disable output redirection
 -- document index file format (Version first, then in any order: Files: sysup; factory, FileSize: sysup; factory, MD5: sysup; factory, ChangelogStart:, ..., ChangelogEnd:)
@@ -45,26 +45,30 @@ M.STATE_NAMES = {
 }
 
 --- The base URL to use for finding update files.
--- This URL will usually contain both an OpenWRT feed directory and an `images`-directory.
--- This script uses only the latter, and expects to find the file @{IMAGE_INDEX_FILE} there.
+-- This URL will usually contain both an OpenWRT feed directory and an `images` directory.
+-- This script uses only the latter, and expects to find the files @{IMAGE_STABLE_INDEX_FILE} and @{IMAGE_BETA_INDEX_FILE} there.
 M.DEFAULT_BASE_URL = 'http://doodle3d.com/updates'
 --M.DEFAULT_BASE_URL = 'http://localhost/~USERNAME/wifibox/updates'
 
---- The index file containing metadata on update images.
-M.IMAGE_INDEX_FILE = 'wifibox-image.index'
+--- The index file containing metadata on stable update images.
+M.IMAGE_STABLE_INDEX_FILE = 'wifibox-image.index'
+
+--- The index file containing metadata on beta update images.
+M.IMAGE_BETA_INDEX_FILE = 'wifibox-image.beta.index'
 
 --- Path to the updater cache.
-M.CACHE_PATH = '/tmp/d3d-updater'
+M.DEFAULT_CACHE_PATH = '/tmp/d3d-updater'
 
---- Name of the file to store current state in, this file resides in @{CACHE_PATH}.
+--- Name of the file to store current state in, this file resides in @{cachePath}.
 M.STATE_FILE = 'update-state'
 
 M.WGET_OPTIONS = "-q -t 1 -T 30"
 --M.WGET_OPTIONS = "-v -t 1 -T 30"
 
-local verbosity = 0 -- set by parseCommandlineArguments()
+local verbosity = 0 -- set by parseCommandlineArguments() or @{setVerbosity}
 local log = nil -- wifibox API can use M.setLogger to enable this module to use its logger
-local useCache = true -- default, can be overwritten using M.setUseCache()
+local useCache = true -- default, can be overwritten using @{setUseCache}
+local cachePath = M.DEFAULT_CACHE_PATH -- default, can be change using @{setCachePath}
 local baseUrl = M.DEFAULT_BASE_URL -- default, can be overwritten by M.setBaseUrl()
 
 
@@ -101,7 +105,7 @@ local function E(msg)
 	end
 end
 
---- Splits the return status from `os.execute`, which consists of two bytes.
+--- Splits the return status from `os.execute` (only Lua <= 5.1), which consists of two bytes.
 --
 -- `os.execute` internally calls [system](http://linux.die.net/man/3/system),
 -- which usually returns the command exit status as high byte (see [WEXITSTATUS](http://linux.die.net/man/2/wait)).
@@ -120,11 +124,12 @@ end
 -- @number exitStatus An exit status from wget.
 -- @treturn string|number Either the status followed by a description, or a message indicating the call was interrupted, or just the status if it was not recognized.
 local function wgetStatusToString(exitStatus)
-	local wgetStatus,systemStatus = splitExitStatus(exitStatus)
+--	local wgetStatus,systemStatus = splitExitStatus(exitStatus)
+	local wgetStatus = exitStatus
 
-	if systemStatus ~= 0 then
-		return "interrupted:" .. systemStatus
-	end
+--	if systemStatus ~= 0 then
+--		return "interrupted: " .. systemStatus
+--	end
 
 	-- adapted from man(1) wget on OSX
 	local statusTexts = {
@@ -149,8 +154,9 @@ end
 -- @return bool|nil True, or nil on error.
 -- @return ?string A message in case of error.
 local function createCacheDirectory()
-	if os.execute('mkdir -p ' .. M.CACHE_PATH) ~= 0 then
-		return nil,"Error: could not create cache directory '" .. M.CACHE_PATH .. "'"
+	local _,rv = M.compatexecute('mkdir -p ' .. cachePath)
+	if rv ~= 0 then
+		return nil,"Error: could not create cache directory '" .. cachePath .. "'"
 	end
 	return true
 end
@@ -159,7 +165,7 @@ end
 -- @treturn STATE The current state code (@{STATE}.NONE if no state has been set).
 -- @treturn string The current state message (empty string if no state has been set).
 local function getState()
-	local file,msg = io.open(M.CACHE_PATH .. '/' .. M.STATE_FILE, 'r')
+	local file,msg = io.open(cachePath .. '/' .. M.STATE_FILE, 'r')
 	if not file then return M.STATE.NONE,"" end
 
 	local state = file:read('*a')
@@ -179,7 +185,7 @@ end
 
 --- Read the contents of a file.
 --
--- TODO: this file has been copied from @{util.utils}.lua and should be merged again.
+-- TODO: this file has been copied from @{util.utils}.lua and should be merged back.
 -- @string filePath The file to read.
 -- @bool trimResult Whether or not to trim the read data.
 -- @treturn bool|nil True, or nil on error.
@@ -201,7 +207,7 @@ end
 
 --- Reports whether or not a file exists.
 --
--- TODO: this file has been copied from @{util.utils}.lua and should be merged again.
+-- TODO: this file has been copied from @{util.utils}.lua and should be merged back.
 -- @string file The file to report about.
 -- @treturn bool True if the file exists, false otherwise.
 local function exists(file)
@@ -216,7 +222,7 @@ end
 
 --- Reports the size of a file or file handle.
 --
--- TODO: this file has been copied from @{util.utils}.lua and should be merged again.
+-- TODO: this file has been copied from @{util.utils}.lua and should be merged back.
 -- @param file A file path or open file handle.
 -- @treturn number Size of the file.
 local function fileSize(file)
@@ -241,8 +247,9 @@ end
 -- @bool dryRun Only log a message if true, otherwise run the command and log a message.
 -- @treturn number Exit status of of command or -1 if dryRun is true.
 local function runCommand(command, dryRun)
-	D("about to run: '" .. command .. "'")
-	return (not dryRun) and os.execute(command) or -1
+	--D("about to run: '" .. command .. "'")
+	if dryRun then return -1 end
+	return M.compatexecute(command)
 end
 
 --- Removes a file.
@@ -260,6 +267,7 @@ end
 local function downloadFile(url, saveDir, filename)
 	if not saveDir or saveDir:len() == 0 then return nil, "saveDir must be non-empty" end
 	local outArg = (filename:len() > 0) and (' -O' .. filename) or ''
+	D("Downloading file '" .. url .. "'")
 	if filename:len() > 0 then
 		return runCommand('wget ' .. M.WGET_OPTIONS .. ' -O ' .. saveDir .. '/' .. filename .. ' ' .. url .. ' 2> /dev/null')
 	else
@@ -328,6 +336,31 @@ end
 -- MODULE FUNCTIONS --
 ----------------------
 
+local compatlua51 = _VERSION == 'Lua 5.1'
+
+--- execute a shell command. Taken from penlight library.
+-- This is a compatibility function that returns the same for Lua 5.1 and Lua 5.2
+-- @param cmd a shell command
+-- @return true if successful
+-- @return actual return code
+function M.compatexecute (cmd)
+	local res1,res2,res3 = os.execute(cmd)
+	if compatlua51 then
+		local cmd, sys = splitExitStatus(res1)
+		return (res1 == 0) and true or nil, sys
+	else
+		return res1, res3
+	end
+end
+
+--- Set verbosity (log level) that determines which messages do get logged and which do not.
+-- @tparam number level The level to set, between -1 and 1.
+function M.setVerbosity(level)
+	if level and level >= -1 and level <= 1 then
+		verbosity = level
+	end
+end
+
 --- Enables use of the given @{util.logger} object, otherwise `stdout`/`stderr` will be used.
 -- @tparam util.logger logger The logger to log future messages to.
 function M.setLogger(logger)
@@ -348,6 +381,12 @@ function M.setBaseUrl(url)
 	baseUrl = url
 end
 
+--- Sets the filesystem path to use as cache for downloaded index and image files.
+-- @string path The path to use, use nil to restore default @{DEFAULT_CACHE_PATH}.
+function M.setCachePath(path)
+	cachePath = path or M.DEFAULT_CACHE_PATH
+end
+
 --- Returns a table with information about current update status of the wifibox.
 --
 -- The result table will contain at least the current version, current state code and text.
@@ -357,7 +396,7 @@ end
 -- @treturn bool True if status has been determined fully, false if not.
 -- @treturn table The result table.
 -- @treturn ?string Descriptive message in case the result table is not complete.
-function M.getStatus()
+function M.getStatus(includeBetas)
 	if not baseUrl then baseUrl = M.DEFAULT_BASE_URL end
 	local unknownVersion = { major = 0, minor = 0, patch = 0 }
 	local result = {}
@@ -366,18 +405,27 @@ function M.getStatus()
 	result.stateCode, result.stateText = getState()
 	result.stateCode = tonumber(result.stateCode)
 
-	local verTable,msg = M.getAvailableVersions()
+	local verTable,msg = M.getAvailableVersions(includeBetas and 'both' or 'stables')
 	if not verTable then
-		D("could not obtain available versions (" .. msg .. ")")
+		D("error: could not obtain available versions (" .. msg .. ")")
 		-- TODO: set an error state in result to signify we probably do not have internet access?
 		return false, result, msg
 	end
 
 	local newest = verTable and verTable[#verTable]
 	result.newestVersion = newest and newest.version or unknownVersion
+	result.newestReleaseTimestamp = newest and newest.timestamp
+
+	-- look up timestamp of current version
+	local cEnt = M.findVersion(result.currentVersion, verTable)
+	if cEnt then
+		result.currentReleaseTimestamp = cEnt.timestamp
+	else
+		D("warning: could not find current wifibox version in release index, beta setting disabled after having beta installed?")
+	end
 
 	if result.stateCode == M.STATE.DOWNLOADING then
-		result.progress = fileSize(M.CACHE_PATH .. '/' .. newest.sysupgradeFilename)
+		result.progress = fileSize(cachePath .. '/' .. newest.sysupgradeFilename)
 		if not result.progress then result.progress = 0 end -- in case the file does not exist yet (which yields nil)
 		result.imageSize = newest.sysupgradeFileSize
 	end
@@ -387,43 +435,77 @@ end
 
 --- Turns a plain-text version as returned by @{formatVersion} into a table.
 -- @tparam string|table versionText The version string to parse, if it is already a table, it is returned as-is.
--- @treturn table A parse version.
+-- @treturn table A parsed version or nil on incorrect argument.
 function M.parseVersion(versionText)
+	if not versionText then return nil end
 	if type(versionText) == 'table' then return versionText end
 	if not versionText or versionText:len() == 0 then return nil end
 
-	local major,minor,patch = versionText:match("^%s*(%d+)%.(%d+)%.(%d+)%s*$")
-	if not major or not minor or not patch then return nil end
+	local major,minor,patch,suffix = versionText:match("^%s*(%d+)%.(%d+)%.(%d+)(-?%w*)%s*$")
+	if not major or not minor or not patch then return nil end -- suffix not required
 
-	return { ['major'] = major, ['minor'] = minor, ['patch'] = patch }
+	if type(suffix) == 'string' and suffix:len() > 0 then
+		if suffix:sub(1, 1) ~= '-' then return nil end
+		suffix = suffix:sub(2)
+	else
+		suffix = nil
+	end
+
+	return { ['major'] = major, ['minor'] = minor, ['patch'] = patch, ['suffix'] = suffix }
 end
 
 --- Formats a version as returned by @{parseVersion}.
 -- @tparam table|string version The version to format, if it is already a string, that will be returned unmodified.
--- @treturn string A formatted version.
+-- @treturn string A formatted version or nil on incorrect argument.
 function M.formatVersion(version)
+	if not version then return nil end
 	if type(version) == 'string' then return version end
-	return version.major .. "." .. version.minor .. "." .. version.patch
+
+	local ver = version.major .. "." .. version.minor .. "." .. version.patch
+	if version.suffix then ver = ver .. '-' .. version.suffix end
+
+	return ver
 end
 
---- Compares two versions.
+--- Compares two versions. Note that the second return value must be used for equality testing.
+-- If given, the timestamps have higher priority than the versions. Suffixes are ignored.
 -- @tparam table versionA A version as returned by @{parseVersion}.
 -- @tparam table versionB A version as returned by @{parseVersion}.
--- @treturn number -1 if versionA is smaller than versionB, 0 if versions are equal or 1 if versionA is larger than versionB.
-function M.compareVersions(versionA, versionB)
+-- @param timestampA[opt] A timestamp as returned by @{parseDate}.
+-- @param timestampB[opt] A timestamp as returned by @{parseDate}.
+-- @treturn number -1 if versionA/timestampA is smaller/older than versionB/timestampB, 0 if versions are equal (or undecided) or 1 if A is larger/newer than B.
+-- @treturn bool True if versions are really equal (first return value can be 0 if everything but the suffix is equal)
+function M.compareVersions(versionA, versionB, timestampA, timestampB)
 	if type(versionA) ~= 'table' or type(versionB) ~= 'table' then return nil end
-	local diff = versionA.major - versionB.major
-	if diff == 0 then diff = versionA.minor - versionB.minor end
-	if diff == 0 then diff = versionA.patch - versionB.patch end
-	return diff > 0 and 1 or (diff < 0 and -1 or 0)
+
+	local diff = 0
+	if timestampA and timestampB then diff = timestampA - timestampB end
+	if diff == 0 then
+		diff = versionA.major - versionB.major
+		if diff == 0 then diff = versionA.minor - versionB.minor end
+		if diff == 0 then diff = versionA.patch - versionB.patch end
+	end
+
+	local result = diff > 0 and 1 or (diff < 0 and -1 or 0)
+	local reallyEqual = (diff == 0) and (versionA.suffix == versionB.suffix)
+
+	return result, (reallyEqual and true or false)
+end
+
+--- Checks if versions are exactly equal.
+-- It returns the second return value of @{compareVersions} and accepts the same arguments.
+-- @treturn bool True if versions are equal, false otherwise.
+function M.versionsEqual(versionA, versionB, timestampA, timestampB)
+	return select(2, M.compareVersions(versionA, versionB, timestampA, timestampB))
 end
 
 --- Returns information on a version if it can be found in a collection of versions as returned by @{getAvailableVersions}.
 -- @tparam table version The version to look for.
 -- @tparam table[opt] verTable A table containing a collection of versions, if not passed in, it will be obtained using @{getAvailableVersions}.
+-- @param timestamp[opt] Specific timestamp to look for.
 -- @treturn table|nil Version information table found in the collection, or nil on error or if not found.
 -- @treturn string Descriptive message in case of error or if the version could not be found.
-function M.findVersion(version, verTable)
+function M.findVersion(version, verTable, timestamp)
 	local msg = nil
 	version = M.parseVersion(version)
 	if not verTable then verTable,msg = M.getAvailableVersions() end
@@ -431,9 +513,26 @@ function M.findVersion(version, verTable)
 	if not verTable then return nil,msg end
 
 	for _,ent in pairs(verTable) do
-		if M.compareVersions(ent.version, version) == 0 then return ent end
+		if M.versionsEqual(ent.version, version, ent.timestamp, timestamp) == true then return ent end
 	end
 	return nil,"no such version"
+end
+
+--- Turns a date of the format 'yyyymmdd' into a timestamp as returned by os.time.
+-- @tparam string dateText The date to parse.
+-- @return A timestamp or nil if the argument does not have correct format.
+function M.parseDate(dateText)
+	if type(dateText) ~= 'string' or dateText:len() ~= 8 or dateText:find('[^%d]') ~= nil then return nil end
+
+	return os.time({ year = dateText:sub(1, 4), month = dateText:sub(5, 6), day = dateText:sub(7,8) })
+end
+
+--- Formats a timestamp as returned by os.time to a date of the form 'yyyymmdd'.
+-- @param timestamp The timestamp to format.
+-- @return A formatted date or nil if the argument is nil.
+function M.formatDate(timestamp)
+	if not timestamp then return nil end
+	return os.date('%Y%m%d', timestamp)
 end
 
 --- Creates an image file name based on given properties.
@@ -449,7 +548,7 @@ function M.constructImageFilename(version, devType, isFactory)
 	return 'doodle3d-wifibox-' .. M.formatVersion(v) .. '-' .. dt .. '-' .. sf .. '.bin'
 end
 
---- Checks whether a valid image file is present in @{CACHE_PATH} for the given image properties.
+--- Checks whether a valid image file is present in @{cachePath} for the given image properties.
 -- The versionEntry table will be augmented with an `isValid` key.
 --
 -- NOTE: currently, this function only checks the image exists and has the correct size.
@@ -461,8 +560,8 @@ end
 -- @treturn bool True if a valid image is present, false otherwise.
 function M.checkValidImage(versionEntry, devType, isFactory)
 	local filename = M.constructImageFilename(versionEntry.version, devType, isFactory)
-	--return versionEntry.md5 == md5sum(M.CACHE_PATH .. '/' .. filename)
-	local size = fileSize(M.CACHE_PATH .. '/' .. filename)
+	--return versionEntry.md5 == md5sum(cachePath .. '/' .. filename)
+	local size = fileSize(cachePath .. '/' .. filename)
 	versionEntry.isValid = versionEntry.sysupgradeFileSize == size
 	return versionEntry.isValid
 end
@@ -482,18 +581,14 @@ function M.getCurrentVersion()
 end
 
 --- Returns an indexed and sorted table containing version information tables.
--- The information is obtained from the either cached or downloaded image index (@{IMAGE_INDEX_FILE}).
--- @treturn table A table with a collection of version information tables.
-function M.getAvailableVersions()
+-- The information is obtained from the either cached or downloaded image index file.
+local function fetchIndexTable(indexFile, cachePath)
 	if not baseUrl then baseUrl = M.DEFAULT_BASE_URL end
-	local indexFilename = M.CACHE_PATH .. '/' .. M.IMAGE_INDEX_FILE
-
-	local ccRv,ccMsg = createCacheDirectory()
-	if not ccRv then return nil,ccMsg end
+	local indexFilename = cachePath .. '/' .. indexFile
 
 	if not useCache or not exists(indexFilename) then
-		local rv = downloadFile(baseUrl .. '/images/' .. M.IMAGE_INDEX_FILE, M.CACHE_PATH, M.IMAGE_INDEX_FILE)
-		if rv ~= 0 then return nil,"could not download image index file (" .. wgetStatusToString(rv) .. ")" end
+		local rv1,rv2 = downloadFile(baseUrl .. '/images/' .. indexFile, cachePath, indexFile)
+		if not rv1 then return nil,"could not download image index file (" .. wgetStatusToString(rv2) .. ")" end
 	end
 
 	local status,idxLines = pcall(io.lines, indexFilename)
@@ -505,7 +600,7 @@ function M.getAvailableVersions()
 	for line in idxLines do
 		local k,v = line:match('^(.-):(.*)$')
 		k,v = trim(k), trim(v)
-		if not log then D("#" .. lineno .. ": considering '" .. line .. "' (" .. (k or '<nil>') .. " / " .. (v or '<nil>') .. ")") end
+		--if not log then D("#" .. lineno .. ": considering '" .. line .. "' (" .. (k or '<nil>') .. " / " .. (v or '<nil>') .. ")") end
 		if not changelogMode and (not k or not v) then return nil,"incorrectly formatted line in index file (line " .. lineno .. ")" end
 
 		if k == 'ChangelogEnd' then
@@ -537,6 +632,13 @@ function M.getAvailableVersions()
 				sSum,fSum = trim(sSum), trim(fSum)
 				if sSum then entry.sysupgradeMD5 = sSum end
 				if fSum then entry.factoryMD5 = fSum end
+			elseif k == 'ReleaseDate' then
+				local ts = M.parseDate(v)
+				if not ts then
+					P(0, "ignoring incorrectly formatted ReleaseDate field (line " .. lineno .. ")")
+				else
+					entry.timestamp = ts
+				end
 			else
 				P(-1, "ignoring unrecognized field in index file '" .. k .. "' (line " .. lineno .. ")")
 			end
@@ -551,6 +653,31 @@ function M.getAvailableVersions()
 	end)
 
 	return result
+end
+
+--- Returns an indexed and sorted table containing version information tables.
+-- The information is obtained from the either cached or downloaded image index (@{IMAGE_STABLE_INDEX_FILE}).
+-- @tparam which[opt] Which type of versions to fetch, either 'stables' (default), 'betas' or both.
+-- @treturn table A table with a collection of version information tables.
+function M.getAvailableVersions(which)
+	local ccRv,ccMsg = createCacheDirectory()
+	if not ccRv then return nil,ccMsg end
+
+	local verTable, msg = {}, nil
+
+	if which == 'stables' or which == 'both' then
+		verTable,msg = fetchIndexTable(M.IMAGE_STABLE_INDEX_FILE, cachePath)
+		if not verTable then return nil,msg end
+	end
+
+	if which == 'betas' or which == 'both' then
+		local betas,msg = fetchIndexTable(M.IMAGE_BETA_INDEX_FILE, cachePath)
+		if not betas then return nil,msg end
+
+		for k,v in pairs(betas) do verTable[k] = v end
+	end
+
+	return verTable
 end
 
 --- Attempts to download an image file with the requested properties.
@@ -577,7 +704,7 @@ function M.downloadImageFile(versionEntry, devType, isFactory)
 	local rv = 0
 	if doDownload then
 		M.setState(M.STATE.DOWNLOADING, "Downloading image (" .. filename .. ")")
-		rv = downloadFile(baseUrl .. '/images/' .. filename, M.CACHE_PATH, filename)
+		rv = downloadFile(baseUrl .. '/images/' .. filename, cachePath, filename)
 	end
 
 	if rv == 0 then
@@ -585,14 +712,14 @@ function M.downloadImageFile(versionEntry, devType, isFactory)
 			M.setState(M.STATE.IMAGE_READY, "Image downloaded, ready to install (image name: " .. filename .. ")")
 			return true
 		else
-			removeFile(M.CACHE_PATH .. '/' .. filename)
+			removeFile(cachePath .. '/' .. filename)
 			local ws = "Image download failed (invalid image)"
 			M.setState(M.STATE.DOWNLOAD_FAILED, ws)
 			return nil,ws
 		end
 	else
 		local ws = wgetStatusToString(rv)
-		removeFile(M.CACHE_PATH .. '/' .. filename)
+		removeFile(cachePath .. '/' .. filename)
 		M.setState(M.STATE.DOWNLOAD_FAILED, "Image download failed (wget error: " .. ws .. ")")
 		return nil,ws
 	end
@@ -611,7 +738,7 @@ function M.flashImageVersion(versionEntry, noRetain, devType, isFactory)
 	log:info("flashImageVersion")
 	local imgName = M.constructImageFilename(versionEntry.version, devType, isFactory)
 	local cmd = noRetain and 'sysupgrade -n ' or 'sysupgrade '
-	cmd = cmd .. M.CACHE_PATH .. '/' .. imgName
+	cmd = cmd .. cachePath .. '/' .. imgName
 
 	local ccRv,ccMsg = createCacheDirectory()
 	if not ccRv then return nil,ccMsg end
@@ -634,22 +761,22 @@ function M.flashImageVersion(versionEntry, noRetain, devType, isFactory)
 	return (rv == 0) and true or nil,rv
 end
 
---- Clears '*.bin' in the @{CACHE_PATH} directory.
+--- Clears '*.bin' in the @{cachePath} directory.
 -- @treturn bool|nil True on success, or nil on error.
 -- @treturn ?string Descriptive message on error.
 function M.clear()
 	local ccRv,ccMsg = createCacheDirectory()
 	if not ccRv then return nil,ccMsg end
 
-	D("Removing " .. M.CACHE_PATH .. "/doodle3d-wifibox-*.bin")
+	D("Removing " .. cachePath .. "/doodle3d-wifibox-*.bin")
 	M.setState(M.STATE.NONE, "")
-	local rv = os.execute('rm -f ' .. M.CACHE_PATH .. '/doodle3d-wifibox-*.bin')
+	local rv = M.compatexecute('rm -f ' .. cachePath .. '/doodle3d-wifibox-*.bin')
 	return (rv == 0) and true or nil,"could not remove image files"
 end
 
 --- Set updater state.
 --
--- NOTE: make sure the cache directory  @{CACHE_PATH} exists before calling this function or it will fail.
+-- NOTE: make sure the cache directory  @{cachePath} exists before calling this function or it will fail.
 --
 -- NOTE: this function _can_ fail but this is not expected to happen so the return value is mostly ignored for now.
 --
@@ -659,7 +786,7 @@ end
 function M.setState(code, msg)
 	local s = code .. '|' .. msg
 	D("set update state: " .. M.STATE_NAMES[code] .. " ('" .. s .. "')")
-	local file,msg = io.open(M.CACHE_PATH .. '/' .. M.STATE_FILE, 'w')
+	local file,msg = io.open(cachePath .. '/' .. M.STATE_FILE, 'w')
 
 	if not file then
 		E("error: could not open state file for writing (" .. msg .. ")")

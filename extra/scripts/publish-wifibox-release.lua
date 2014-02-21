@@ -44,10 +44,10 @@ local paths = {}
 -----------------------
 
 local function loadUpdateManager()
-	package.path = package.path .. ';' .. pl.path.join(paths.firmware, 'updater-ng') .. '/?.lua'
+	package.path = package.path .. ';' .. pl.path.join(paths.firmware, 'src') .. '/?.lua'
 	local argStash = arg
 	arg = nil
-	um = require('d3d-update-mgr') -- arg must be nil for the update manager to load as module
+	um = require('script.d3d-updater') -- arg must be nil for the update manager to load as module
 	arg = argStash
 end
 
@@ -68,9 +68,9 @@ local function getYesNo(question)
 		io.write(question)
 		io.flush()
 		answer = io.stdin:read('*line'):lower()
-	until answer == 'yes' or answer == 'no' or answer == 'n'
+	until answer == 'yes' or answer == 'y' or answer == 'no' or answer == 'n'
 
-	return (answer == 'yes') and true or false
+	return (answer:sub(1, 1) == 'y') and true or false
 end
 
 local function detectRootPrivileges()

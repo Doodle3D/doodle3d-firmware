@@ -4,8 +4,8 @@
 # Using the -u option, it can also upload to doodle3d.com/updates (make sure ssh automatically uses the correct username, or change the rsync command below).
 # Modify WIFIBOX_BASE_DIR to point to your wifibox directory tree.
 
-WIFIBOX_BASE_DIR=~/Files/_devel/eclipse-workspace/wifibox
-DEST_DIR=~/Sites/wifibox
+WIFIBOX_BASE_DIR=~/Files/_devel/eclipse-workspace/doodle3d/doodle3d-firmware
+DEST_DIR=~/public_html/wifibox
 UPDATES_DIR=updates
 BASE_URL=doodle3d.com
 

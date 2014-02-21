@@ -368,7 +368,7 @@ local function main()
 		quit(1)
 	end
 
-	if um.findVersion(newVersion.version, stables) or um.findVersion(newVersion.version, betas) then
+	if um.findVersion(newVersion.version, nil, stables) or um.findVersion(newVersion.version, nil, betas) then
 		print("Error: firmware version " .. um.formatVersion(newVersion.version) .. " already exists")
 		quit(3)
 	end

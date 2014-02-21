@@ -280,7 +280,7 @@ end
 -- @treturn table|nil A table containing information on what to do, or nil if invalid arguments were specified.
 -- @treturn ?string Descriptive message on error.
 local function parseCommandlineArguments(arglist)
-	local result = { verbosity = 0, baseUrl = M.DEFAULT_BASE_URL, action = nil }
+	local result = { verbosity = 0, baseUrl = M.DEFAULT_BASE_URL, includeBetas = false, action = nil }
 	local nextIsVersion, nextIsUrl = false, false
 	for index,argument in ipairs(arglist) do
 		if nextIsVersion then
@@ -294,6 +294,7 @@ local function parseCommandlineArguments(arglist)
 			elseif argument == '-c' then result.useCache = true
 			elseif argument == '-C' then result.useCache = false
 			elseif argument == '-u' then nextIsUrl = true
+			elseif argument == '-b' then result.includeBetas = true
 			elseif argument == '-v' then result.action = 'showCurrentVersion'
 			elseif argument == '-s' then result.action = 'showStatus'
 			elseif argument == '-l' then result.action = 'showAvailableVersions'
@@ -319,16 +320,45 @@ local function parseCommandlineArguments(arglist)
 	return result
 end
 
+--- Determines if the system is OpenWrt or not by checking if `/etc/openwrt_release` exists.
+-- @treturn bool True if the OS is OpenWrt.
+local function isOpenWrt()
+	local flag = nil
+	return function()
+		if flag == nil then
+			local relFile = io.open('/etc/openwrt_release', 'r')
+			flag = not not relFile
+			if relFile then relFile:close() end
+			return flag
+		else
+			return flag
+		end
+	end
+end
+
 --- Returns the [MD5](http://en.wikipedia.org/wiki/MD5) hash for a given file.
 --
 -- NOTE: this function is not implemented, and a better hash function should probably be chosen anyway.
 -- @string filepath The path of which to calculate the MD5-sum.
 -- @treturn nil
 local function md5sum(filepath)
-	return nil
-	-- TODO [osx: md5 -q <file>], [linux: ?]
-end
+	local sfile
 
+	if not isOpenWrt() then
+		sfile = io.popen('md5 -q "' .. filepath .. '"')
+	else
+		sfile = io.popen('md5sum "' .. filepath .. '" 2>/dev/null', 'r')
+	end
+
+	local sum = sfile:read('*all')
+	sfile:close()
+
+	if not sum then return nil,"could not obtain MD5 sum" end
+
+	sum = sum:match('[%da-fA-F]+')
+
+	return sum
+end
 
 
 
@@ -343,11 +373,11 @@ local compatlua51 = _VERSION == 'Lua 5.1'
 -- @param cmd a shell command
 -- @return true if successful
 -- @return actual return code
-function M.compatexecute (cmd)
+function M.compatexecute(cmd)
 	local res1,res2,res3 = os.execute(cmd)
 	if compatlua51 then
 		local cmd, sys = splitExitStatus(res1)
-		return (res1 == 0) and true or nil, sys
+		return (res1 == 0) and true,cmd or nil,cmd
 	else
 		return res1, res3
 	end
@@ -393,10 +423,11 @@ end
 -- If the box has internet access, it will also include the newest version available.
 -- If an image is currently being downloaded, progress information will also be included.
 --
+-- @tparam bool[opt] withBetas Consider beta releases when looking for newest version.
 -- @treturn bool True if status has been determined fully, false if not.
 -- @treturn table The result table.
 -- @treturn ?string Descriptive message in case the result table is not complete.
-function M.getStatus(includeBetas)
+function M.getStatus(withBetas)
 	if not baseUrl then baseUrl = M.DEFAULT_BASE_URL end
 	local unknownVersion = { major = 0, minor = 0, patch = 0 }
 	local result = {}
@@ -405,7 +436,7 @@ function M.getStatus(includeBetas)
 	result.stateCode, result.stateText = getState()
 	result.stateCode = tonumber(result.stateCode)
 
-	local verTable,msg = M.getAvailableVersions(includeBetas and 'both' or 'stables')
+	local verTable,msg = M.getAvailableVersions(withBetas and 'both' or 'stables')
 	if not verTable then
 		D("error: could not obtain available versions (" .. msg .. ")")
 		-- TODO: set an error state in result to signify we probably do not have internet access?
@@ -417,7 +448,7 @@ function M.getStatus(includeBetas)
 	result.newestReleaseTimestamp = newest and newest.timestamp
 
 	-- look up timestamp of current version
-	local cEnt = M.findVersion(result.currentVersion, verTable)
+	local cEnt = M.findVersion(result.currentVersion, nil, verTable)
 	if cEnt then
 		result.currentReleaseTimestamp = cEnt.timestamp
 	else
@@ -500,15 +531,17 @@ function M.versionsEqual(versionA, versionB, timestampA, timestampB)
 end
 
 --- Returns information on a version if it can be found in a collection of versions as returned by @{getAvailableVersions}.
+-- FIXME: if no version table is passed in, it will be downloaded but betas will never be included
 -- @tparam table version The version to look for.
+-- @tparam bool[opt] withBetas If verTable is not given, download versions including beta releases
 -- @tparam table[opt] verTable A table containing a collection of versions, if not passed in, it will be obtained using @{getAvailableVersions}.
 -- @param timestamp[opt] Specific timestamp to look for.
 -- @treturn table|nil Version information table found in the collection, or nil on error or if not found.
 -- @treturn string Descriptive message in case of error or if the version could not be found.
-function M.findVersion(version, verTable, timestamp)
+function M.findVersion(version, withBetas, verTable, timestamp)
 	local msg = nil
 	version = M.parseVersion(version)
-	if not verTable then verTable,msg = M.getAvailableVersions() end
+	if not verTable then verTable,msg = M.getAvailableVersions(withBetas and 'both' or nil) end
 
 	if not verTable then return nil,msg end
 
@@ -558,12 +591,20 @@ end
 -- @string[opt] devType Image device type, see @{constructImageFilename}.
 -- @bool[opt] isFactory Image type, see @{constructImageFilename}.
 -- @treturn bool True if a valid image is present, false otherwise.
+-- @treturn string|nil Reason for being invalid if first return value is false.
 function M.checkValidImage(versionEntry, devType, isFactory)
 	local filename = M.constructImageFilename(versionEntry.version, devType, isFactory)
-	--return versionEntry.md5 == md5sum(cachePath .. '/' .. filename)
-	local size = fileSize(cachePath .. '/' .. filename)
-	versionEntry.isValid = versionEntry.sysupgradeFileSize == size
-	return versionEntry.isValid
+
+	local entSize = isFactory and versionEntry.factoryFileSize or versionEntry.sysupgradeFileSize
+	local entMd5 = isFactory and versionEntry.factoryMd5 or versionEntry.sysupgradeMD5
+
+	versionEntry.isValid = entMd5 == md5sum(cachePath .. '/' .. filename)
+	if not versionEntry.isValid then return false,"incorrect MD5 checksum" end
+
+	versionEntry.isValid = entSize == fileSize(cachePath .. '/' .. filename)
+	if not versionEntry.isValid then return false,"incorrect file size" end
+
+	return true
 end
 
 --- Returns the current wifibox version text, extracted from `/etc/wifibox-version`.
@@ -677,6 +718,11 @@ function M.getAvailableVersions(which)
 		for k,v in pairs(betas) do verTable[k] = v end
 	end
 
+	table.sort(verTable, function(a, b)
+		return M.compareVersions(a.version, b.version, a.timestamp, b.timestamp) < 0
+	end)
+
+
 	return verTable
 end
 
@@ -701,24 +747,25 @@ function M.downloadImageFile(versionEntry, devType, isFactory)
 		if versionEntry.isValid == false then doDownload = true end
 	end
 
-	local rv = 0
+	local rv1,rv2 = 0,0
 	if doDownload then
 		M.setState(M.STATE.DOWNLOADING, "Downloading image (" .. filename .. ")")
-		rv = downloadFile(baseUrl .. '/images/' .. filename, cachePath, filename)
+		rv1,rv2 = downloadFile(baseUrl .. '/images/' .. filename, cachePath, filename)
 	end
 
-	if rv == 0 then
-		if M.checkValidImage(versionEntry, devType, isFactory) then
+	if rv1 then
+		local valid,msg = M.checkValidImage(versionEntry, devType, isFactory)
+		if valid then
 			M.setState(M.STATE.IMAGE_READY, "Image downloaded, ready to install (image name: " .. filename .. ")")
 			return true
 		else
 			removeFile(cachePath .. '/' .. filename)
-			local ws = "Image download failed (invalid image)"
+			local ws = "Image download failed (invalid image: " .. msg .. ")"
 			M.setState(M.STATE.DOWNLOAD_FAILED, ws)
 			return nil,ws
 		end
 	else
-		local ws = wgetStatusToString(rv)
+		local ws = wgetStatusToString(rv2)
 		removeFile(cachePath .. '/' .. filename)
 		M.setState(M.STATE.DOWNLOAD_FAILED, "Image download failed (wget error: " .. ws .. ")")
 		return nil,ws
@@ -735,7 +782,7 @@ end
 -- @treturn bool|nil True on success (with the 'exception' as noted above) or nil on error.
 -- @treturn ?string|number (optional) Descriptive message or sysupgrade exit status on error.
 function M.flashImageVersion(versionEntry, noRetain, devType, isFactory)
-	log:info("flashImageVersion")
+	if log then log:info("flashImageVersion") end
 	local imgName = M.constructImageFilename(versionEntry.version, devType, isFactory)
 	local cmd = noRetain and 'sysupgrade -n ' or 'sysupgrade '
 	cmd = cmd .. cachePath .. '/' .. imgName
@@ -771,7 +818,7 @@ function M.clear()
 	D("Removing " .. cachePath .. "/doodle3d-wifibox-*.bin")
 	M.setState(M.STATE.NONE, "")
 	local rv = M.compatexecute('rm -f ' .. cachePath .. '/doodle3d-wifibox-*.bin')
-	return (rv == 0) and true or nil,"could not remove image files"
+	return rv and true or nil,"could not remove image files"
 end
 
 --- Set updater state.
@@ -817,7 +864,9 @@ local function main()
 	end
 
 	verbosity = argTable.verbosity
+	includeBetas = argTable.includeBetas
 	if argTable.useCache ~= nil then useCache = argTable.useCache end
+	if argTable.baseUrl ~= nil then baseUrl = argTable.baseUrl end
 
 	P(0, "Doodle3D Wifibox firmware updater")
 	local cacheCreated,msg = createCacheDirectory()
@@ -826,6 +875,8 @@ local function main()
 		os.exit(1)
 	end
 
+	P(0, (includeBetas and "Considering" or "Not considering") .. " beta releases.")
+
 	if argTable.action == 'showHelp' then
 		P(1, "\t-h\t\tShow this help message")
 		P(1, "\t-q\t\tquiet mode")
@@ -833,6 +884,7 @@ local function main()
 		P(1, "\t-c\t\tUse cache as much as possible")
 		P(1, "\t-C\t\tDo not use the cache")
 		P(1, "\t-u <base_url>\tUse specified base URL (default: " .. M.DEFAULT_BASE_URL .. ")")
+		P(1, "\t-b\t\tInclude beta releases")
 		P(1, "\t-v\t\tShow current image version")
 		P(1, "\t-s\t\tShow current update status")
 		P(1, "\t-l\t\tShow list of available image versions (and which one has been downloaded, if any)")
@@ -850,7 +902,7 @@ local function main()
 		P(1, "version: " .. M.formatVersion(v))
 
 	elseif argTable.action == 'showStatus' then
-		local status = M.getStatus()
+		local success,status,msg = M.getStatus(includeBetas)
 		P(0, "Current update status:")
 		P(1, "  currentVersion:\t" .. (M.formatVersion(status.currentVersion) or '?'))
 		P(1, "  newestVersion:\t" .. (M.formatVersion(status.newestVersion) or '?'))
@@ -867,7 +919,7 @@ local function main()
 		end
 
 	elseif argTable.action == 'showAvailableVersions' then
-		local verTable,msg = M.getAvailableVersions()
+		local verTable,msg = M.getAvailableVersions(includeBetas and 'both' or 'stables')
 		if not verTable then
 			E("error collecting version information (" .. msg .. ")")
 			os.exit(2)
@@ -877,7 +929,7 @@ local function main()
 		for _,ent in ipairs(verTable) do P(1, M.formatVersion(ent.version)) end
 
 	elseif argTable.action == 'showVersionInfo' then
-		local vEnt,msg = M.findVersion(argTable.version)
+		local vEnt,msg = M.findVersion(argTable.version, includeBetas)
 
 		if vEnt then
 			P(0, "Information on version:")
@@ -902,7 +954,7 @@ local function main()
 		end
 
 	elseif argTable.action == 'imageDownload' then
-		local vEnt,msg = M.findVersion(argTable.version)
+		local vEnt,msg = M.findVersion(argTable.version, includeBetas)
 		if vEnt == false then
 			P(1, "no such version")
 			os.exit(4)
@@ -924,7 +976,7 @@ local function main()
 
 	elseif argTable.action == 'imageInstall' then
 		local vEnt, msg = nil, nil
-		vEnt,msg = M.findVersion(argTable.version)
+		vEnt,msg = M.findVersion(argTable.version, includeBetas)
 		if vEnt == false then
 			P(1, "no such version")
 			os.exit(4)

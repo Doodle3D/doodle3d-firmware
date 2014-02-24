@@ -67,7 +67,7 @@ M.WGET_OPTIONS = "-q -t 1 -T 30"
 
 local verbosity = 0 -- set by parseCommandlineArguments() or @{setVerbosity}
 local log = nil -- wifibox API can use M.setLogger to enable this module to use its logger
-local useCache = true -- default, can be overwritten using @{setUseCache}
+local useCache = false -- default, can be overwritten using @{setUseCache}
 local cachePath = M.DEFAULT_CACHE_PATH -- default, can be change using @{setCachePath}
 local baseUrl = M.DEFAULT_BASE_URL -- default, can be overwritten by M.setBaseUrl()
 
@@ -808,7 +808,7 @@ function M.flashImageVersion(versionEntry, noRetain, devType, isFactory)
 	return (rv == 0) and true or nil,rv
 end
 
---- Clears '*.bin' in the @{cachePath} directory.
+--- Clears '*.bin' and both index files in the @{cachePath} directory.
 -- @treturn bool|nil True on success, or nil on error.
 -- @treturn ?string Descriptive message on error.
 function M.clear()
@@ -817,8 +817,16 @@ function M.clear()
 
 	D("Removing " .. cachePath .. "/doodle3d-wifibox-*.bin")
 	M.setState(M.STATE.NONE, "")
+	local success = true
 	local rv = M.compatexecute('rm -f ' .. cachePath .. '/doodle3d-wifibox-*.bin')
-	return rv and true or nil,"could not remove image files"
+	success = success and (rv == 0)
+	local rv = M.compatexecute('rm -f ' .. cachePath .. '/' .. M.IMAGE_STABLE_INDEX_FILE)
+	success = success and (rv == 0)
+	local rv = M.compatexecute('rm -f ' .. cachePath .. '/' .. M.IMAGE_BETA_INDEX_FILE)
+	success = success and (rv == 0)
+
+	--return success,"could not delete all files"
+	return true
 end
 
 --- Set updater state.
@@ -882,7 +890,7 @@ local function main()
 		P(1, "\t-q\t\tquiet mode")
 		P(1, "\t-V\t\tverbose mode")
 		P(1, "\t-c\t\tUse cache as much as possible")
-		P(1, "\t-C\t\tDo not use the cache")
+		P(1, "\t-C\t\tDo not use the cache (default)")
 		P(1, "\t-u <base_url>\tUse specified base URL (default: " .. M.DEFAULT_BASE_URL .. ")")
 		P(1, "\t-b\t\tInclude beta releases")
 		P(1, "\t-v\t\tShow current image version")

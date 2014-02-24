@@ -49,7 +49,7 @@ end
 function M.status(request, response)
 	updater.setLogger(log)
 	updater.setUseCache(false)
-	local includeBetas = settings.get('doodle3d.betas')
+	local includeBetas = settings.get('doodle3d.includeBetas')
 	local success,status,msg = updater.getStatus(includeBetas)
 
 	response:addData('current_version', updater.formatVersion(status.currentVersion))
@@ -93,9 +93,9 @@ function M.download_POST(request, response)
 	updater.setState(updater.STATE.DOWNLOADING,"")
 
 	local vEnt, rv, msg
+	local includeBetas = settings.get('doodle3d.includeBetas')
 
 	if not argVersion then
-		local includeBetas = settings.get('doodle3d.betas')
 		local success,status,msg = updater.getStatus(includeBetas)
 		if not success then
 			updater.setState(updater.STATE.DOWNLOAD_FAILED, msg)
@@ -126,7 +126,7 @@ function M.download_POST(request, response)
 		end
 	end
 
-	vEnt,msg = updater.findVersion(argVersion)
+	vEnt,msg = updater.findVersion(argVersion, includeBetas)
 	if vEnt == nil then
 		updater.setState(updater.STATE.DOWNLOAD_FAILED, "error searching version index (" .. msg .. ")")
 		response:setFail("error searching version index (" .. msg .. ")")
@@ -163,9 +163,9 @@ function M.install_POST(request, response)
 
 	--local ssid = wifi.getSubstitutedSsid(settings.get('network.ap.ssid'))
 	--local rv,msg = netconf.enableAccessPoint(ssid)
+	local includeBetas = settings.get('doodle3d.includeBetas')
 
 	if not argVersion then
-		local includeBetas = settings.get('doodle3d.betas')
 		local success,status,msg = updater.getStatus(includeBetas)
 		if not success then
 			updater.setState(updater.STATE.INSTALL_FAILED, msg)
@@ -176,7 +176,7 @@ function M.install_POST(request, response)
 		end
 	end
 
-	vEnt,msg = updater.findVersion(argVersion)
+	vEnt,msg = updater.findVersion(argVersion, includeBetas)
 	if vEnt == nil then
 		updater.setState(updater.STATE.INSTALL_FAILED, "error searching version index (" .. msg .. ")")
 		response:setFail("error searching version index (" .. msg .. ")")

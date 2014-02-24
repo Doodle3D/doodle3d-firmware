@@ -32,6 +32,7 @@ local IMAGE_BASENAME = 'doodle3d-wifibox'
 local BACKUP_FILE_SUFFIX = 'bkp'
 local RELEASE_NOTES_FILE = "ReleaseNotes.md"
 local RSYNC_TIMEOUT = 2
+local MAX_VIABLE_IMAGE_SIZE = 3500000
 
 local deviceType = 'tl-mr3020' -- or 'tl-wr703'
 local lock = nil
@@ -78,6 +79,14 @@ local function detectRootPrivileges()
 	if not rv then return nil end
 
 	return tonumber(userId) == 0 and true or false
+end
+
+local function findInFile(needle, file)
+	local f = io.open(file, 'r')
+	if not f then return nil,"could not open file" end
+
+	local t = f:read('*all')
+	return not not t:find(needle, 1, true)
 end
 
 local function detectOpenWrtRoot()
@@ -133,7 +142,9 @@ local function runAction(actMsg, errMsg, ev, func)
 	io.stdout:write("* " .. actMsg .. "...")
 	local rv,err = func()
 	if not rv then
-		print("Error: " .. errMsg .. " (" .. err .. ")")
+		if err then print("Error: " .. errMsg .. " (" .. err .. ")")
+		else print("Error: " .. errMsg)
+		end
 		quit(ev)
 	else
 		print("ok")
@@ -178,7 +189,7 @@ local function prepare()
 	local isOpenWrtRoot = detectOpenWrtRoot()
 	if isOpenWrtRoot then
 		paths.wrt = pl.path.currentdir()
-		print("found (" .. paths.wrt .. ")")
+		print("found " .. paths.wrt)
 	else
 		print("unrecognized directory, try changing directories or using -wrt-root")
 		return nil
@@ -199,6 +210,7 @@ local function prepare()
 
 	-- if empty, try to choose something sensible
 	if not paths.cache or paths.cache == '' then
+		--paths.cache = pl.app.appfile('')
 		paths.cache = '/tmp/d3d-release-dir'
 	end
 	io.stdout:write("* Attempting to use " .. paths.cache .. " as cache dir... ")
@@ -268,6 +280,7 @@ end
 
 local function generateIndex(newVersion, versionTable, isStable)
 	local indexFilename = isStable and um.IMAGE_STABLE_INDEX_FILE or um.IMAGE_BETA_INDEX_FILE
+	versionTable[#versionTable+1] = newVersion
 	local sortedVers = pl.List(versionTable)
 	sortedVers:sort(function(a, b)
 		return um.compareVersions(a.version, b.version, a.timestamp, b.timestamp) < 0
@@ -303,14 +316,20 @@ local function copyImages(newVersion)
 	return true
 end
 
-local function copyReleaseNotes()
-	local releaseNotesPath = pl.path.join(imageCachePath(), RELEASE_NOTES_FILE)
-	if pl.path.isfile(releaseNotesPath) then
-		local rv = pl.file.copy(releaseNotesPath, pl.path.join(paths.cache, RELEASE_NOTES_FILE..'.'..BACKUP_FILE_SUFFIX))
+local function copyReleaseNotes(newVersion)
+	local srcReleaseNotesPath = pl.path.join(paths.firmware, RELEASE_NOTES_FILE)
+	local tgtReleaseNotesPath = pl.path.join(imageCachePath(), RELEASE_NOTES_FILE)
+
+	if not findInFile(um.formatVersion(newVersion.version), srcReleaseNotesPath) then
+		return nil,"version not mentioned in release notes file"
+	end
+
+	if pl.path.isfile(tgtReleaseNotesPath) then
+		local rv = pl.file.copy(tgtReleaseNotesPath, tgtReleaseNotesPath..'.'..BACKUP_FILE_SUFFIX)
 		if not rv then return nil,"could not backup file" end
 	end
 
-	local rv = pl.file.copy(pl.path.join(paths.firmware, RELEASE_NOTES_FILE), releaseNotesPath)
+	local rv = pl.file.copy(srcReleaseNotesPath, tgtReleaseNotesPath)
 	if not rv then return nil,"could not copy file" end
 
 	return true
@@ -331,6 +350,26 @@ local function uploadFiles()
 	print("Running command: '" .. cmd .. "'")
 	local rv,ev = um.compatexecute(cmd)
 	return rv and true or nil,("rsync failed, exit status: " .. ev)
+end
+
+local function checkWrtConfig()
+	local goodConfigPath = pl.path.join(paths.firmware, "extra/openwrt-build/openwrt-diffconfig-extramini")
+	local wrtConfigPath = pl.path.tmpname()
+	--print("diffonfig output file: " .. wrtConfigPath)
+
+	local rv,ev = pl.utils.execute('./scripts/diffconfig.sh > "' .. wrtConfigPath .. '"')
+	if not rv then return nil,"could not run diffconfig script (exit status: " .. ev .. ")" end
+
+	local _,rv,output = pl.utils.executeex('diff "' .. wrtConfigPath .. '" "' .. goodConfigPath .. '"')
+
+	if rv == 0 then
+		return true
+	elseif rv == 1 then
+		print("configurations differ:\n-----------------------\n" .. output .. "\n-----------------------")
+		--ask for confirmation?
+	else
+		return nil,"unexpected exit status from diff (" .. rv .. ")"
+	end
 end
 
 local function main()
@@ -359,19 +398,13 @@ local function main()
 		quit(3)
 	end
 
-	local isStable = (newVersion.version.suffix == nil)
-	print("\nRolling release for firmware version " .. um.formatVersion(newVersion.version) .. " (type: " .. (isStable and "stable" or "beta") .. ").")
-
 	local stables,betas = fetchVersionInfo()
 	if not stables then
 		print("Error: could not get version information (" .. betas .. ")")
 		quit(1)
 	end
 
-	if um.findVersion(newVersion.version, nil, stables) or um.findVersion(newVersion.version, nil, betas) then
-		print("Error: firmware version " .. um.formatVersion(newVersion.version) .. " already exists")
-		quit(3)
-	end
+	--TODO: if requested, fetch images and packages (i.e., mirror whole directory)
 
 
 --	pl.pretty.dump(newVersion)
@@ -379,23 +412,41 @@ local function main()
 --	print("===========================");
 --	print("betas: "); pl.pretty.dump(betas)
 
-	--TODO: if requested, fetch images and packages (i.e., mirror whole directory)
-	--TODO: run sanity checks
 
+	print("\nRunning sanity checks")
 
-	runAction("Generating new index file", "could not generate index", 4, function()
+	runAction("Checking whether version is unique",
+			"firmware version " .. um.formatVersion(newVersion.version) .. " already exists", 3, function()
+		return not (um.findVersion(newVersion.version, nil, stables) or um.findVersion(newVersion.version, nil, betas)) and true or nil
+	end)
+
+	runAction("Checking OpenWrt config", "failed", 3, checkWrtConfig)
+
+	--TODO: check git repos (`git log -n 1 --pretty=format:%ct` gives commit date of last commit (not author date))
+
+	local isStable = (newVersion.version.suffix == nil)
+	print("\nRolling release for firmware version " .. um.formatVersion(newVersion.version) .. " (type: " .. (isStable and "stable" or "beta") .. ").")
+
+	if newVersion.sysupgradeFileSize > MAX_VIABLE_IMAGE_SIZE then
+		print("Error: sysupgrade image file is too large, it will not run well (max. size: " .. MAX_VIABLE_IMAGE_SIZE .. " bytes)")
+		quit(4)
+	end
+
+	runAction("Copying release notes", "failed", 5, function()
+		return copyReleaseNotes(newVersion)
+	end)
+
+	runAction("Generating new index file", "could not generate index", 5, function()
 		return generateIndex(newVersion, isStable and stables or betas, isStable)
 	end)
 
-	runAction("Copying image files", "could not generate index", 4, function()
+	runAction("Copying image files", "could not generate index", 5, function()
 		return copyImages(newVersion)
 	end)
 
-	runAction("Copying release notes", "failed", 4, copyReleaseNotes)
-
 	io.stdout:write("* Building package feed directory...")
 	print("skipped - not implemented")
---	runAction("Building package feed directory", "failed", 4, buildFeedDir)
+--	runAction("Building package feed directory", "failed", 5, buildFeedDir)
 
 
 	local answer = getYesNo("? Local updates directory will be synced to remote server, proceed? (y/n) ")
@@ -404,7 +455,7 @@ local function main()
 		quit(5)
 	end
 
-	runAction("About to sync files to server", "could not upload files", 5, uploadFiles)
+	runAction("About to sync files to server", "could not upload files", 6, uploadFiles)
 
 	print("Done.")
 	quit()

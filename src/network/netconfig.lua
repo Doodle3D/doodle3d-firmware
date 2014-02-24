@@ -370,16 +370,31 @@ function M.associateSsid(ssid, passphrase, recreate, boot)
 	--M.switchConfiguration{ wifiiface="add", apnet="rm", staticaddr="rm", dhcppool="rm", wwwredir="rm", dnsredir="rm", wireless="reload" }
   	--M.switchConfiguration{ wifiiface="add", staticaddr="rm", dhcppool="rm", wwwredir="rm", dnsredir="rm", wireless="reload" }
   	M.switchConfiguration({ wifiiface="add", staticaddr="rm", dhcppool="rm", wwwredir="rm", dnsredir="rm" },boot)
-
-	-- check if we are actually associated
-  	local status = wifi.getDeviceState()
-	if not status.ssid or status.ssid ~= ssid then
-		local msg = "Could not associate with network (incorrect password?)"
-		M.setStatus(M.CONNECTING_FAILED,msg);
-		return nil,msg
-	end
 	
-	M.setStatus(M.CONNECTED,"Connected");
+	-- we check if we get a ssid and ip in max 5 seconds
+	-- if not there is probably a issue 
+	local attemptInterval = 1
+	local maxAttempts = 5
+	local attempt = 0
+	local nextAttemptTime = os.time()
+	while true do
+		if os.time() > nextAttemptTime then
+			log:debug("associated check "..utils.dump(attempt).."/"..utils.dump(maxAttempts))
+			if wifi.getLocalIP() ~= nil and wifi.getDeviceState().ssid == ssid then
+				break
+			else
+				attempt = attempt+1
+				if attempt >= maxAttempts then
+					-- still no correct ssid; fail
+					local msg = "Could not associate with network (incorrect password?)"
+					M.setStatus(M.CONNECTING_FAILED,msg);
+					return false, msg
+				else
+					nextAttemptTime = os.time() + attemptInterval
+				end
+			end
+		end
+	end
 	
 	-- signin to connect.doodle3d.com
 	local success, output = signin.signin()
@@ -388,7 +403,10 @@ function M.associateSsid(ssid, passphrase, recreate, boot)
 	else 
 		log:info("Signing in failed")
 	end
-
+	
+	-- report we are connected after signin attempt
+	M.setStatus(M.CONNECTED,"Connected");
+	
 	return true
 end
 --- Disassociate wlan device as client from all SSID's.

@@ -186,7 +186,6 @@ function M.status(request, response)
 		rv = M.access(request, response)
 		if(rv == false) then return end
 	end
-	response:addData('v', 10)
 end
 
 return M

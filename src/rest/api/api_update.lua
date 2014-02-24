@@ -63,6 +63,7 @@ function M.status(request, response)
 	end
 
 	local canUpdate = updater.compareVersions(status.newestVersion, status.currentVersion, status.newestReleaseTimestamp, status.currentReleaseTimestamp) > 0
+	if (status.currentVersion.suffix ~= nil) and not includeBetas then canUpdate = true end -- always allow downgrade from beta to stable if !includeBetas
 
 	response:addData('newest_version', updater.formatVersion(status.newestVersion))
 	if status.currentReleaseTimestamp then response:addData('current_release_date', updater.formatDate(status.currentReleaseTimestamp)) end

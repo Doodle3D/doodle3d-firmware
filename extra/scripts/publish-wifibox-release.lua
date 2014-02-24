@@ -298,7 +298,7 @@ local function generateIndex(newVersion, versionTable, isStable)
 		idxFile:write("Files: " .. el.sysupgradeFilename .. "; " .. el.factoryFilename .. "\n")
 		idxFile:write("FileSize: " .. el.sysupgradeFileSize .. "; " .. el.factoryFileSize .. "\n")
 		idxFile:write("MD5: " .. el.sysupgradeMD5 .. "; " .. el.factoryMD5 .. "\n")
-		idxFile:write("ReleaseDate: " .. um.formatDate(el.timestamp) .. "\n")
+		if el.timestamp then idxFile:write("ReleaseDate: " .. um.formatDate(el.timestamp) .. "\n") end
 	end)
 
 	idxFile:close()

@@ -439,16 +439,28 @@ function M.getStatus(withBetas)
 	local verTable,msg = M.getAvailableVersions(withBetas and 'both' or 'stables')
 	if not verTable then
 		D("error: could not obtain available versions (" .. msg .. ")")
-		-- TODO: set an error state in result to signify we probably do not have internet access?
 		return false, result, msg
 	end
+
+	-- NOTE: to look up the current version we need a table containing all versions
+	local allVersionsTable,msg
+	if not withBetas then
+		allVersionsTable,msg = M.getAvailableVersions('both')
+		if not allVersionsTable then
+			D("error: could not obtain available versions including betas (" .. msg .. ")")
+			return false, result, msg
+		end
+	else
+		allVersionsTable = verTable
+	end
+
 
 	local newest = verTable and verTable[#verTable]
 	result.newestVersion = newest and newest.version or unknownVersion
 	result.newestReleaseTimestamp = newest and newest.timestamp
 
 	-- look up timestamp of current version
-	local cEnt = M.findVersion(result.currentVersion, nil, verTable)
+	local cEnt = M.findVersion(result.currentVersion, nil, allVersionsTable)
 	if cEnt then
 		result.currentReleaseTimestamp = cEnt.timestamp
 	else
@@ -531,7 +543,6 @@ function M.versionsEqual(versionA, versionB, timestampA, timestampB)
 end
 
 --- Returns information on a version if it can be found in a collection of versions as returned by @{getAvailableVersions}.
--- FIXME: if no version table is passed in, it will be downloaded but betas will never be included
 -- @tparam table version The version to look for.
 -- @tparam bool[opt] withBetas If verTable is not given, download versions including beta releases
 -- @tparam table[opt] verTable A table containing a collection of versions, if not passed in, it will be obtained using @{getAvailableVersions}.
@@ -541,7 +552,7 @@ end
 function M.findVersion(version, withBetas, verTable, timestamp)
 	local msg = nil
 	version = M.parseVersion(version)
-	if not verTable then verTable,msg = M.getAvailableVersions(withBetas and 'both' or nil) end
+	if not verTable then verTable,msg = M.getAvailableVersions(withBetas and 'both' or 'stables') end
 
 	if not verTable then return nil,msg end
 

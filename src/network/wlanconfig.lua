@@ -174,7 +174,6 @@ function M.removeConfig(ssid)
 		if s.ssid == ssid then
 			uci:delete('wireless', s['.name'])
 			rv = true
-			return false
 		end
 	end)
 	uci:commit('wireless')

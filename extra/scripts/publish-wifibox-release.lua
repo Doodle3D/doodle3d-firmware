@@ -20,10 +20,10 @@ local lfs = require('lfs') -- assume this exists since it's required by penlight
 -- CONSTANTS AND VARIABLES --
 -----------------------------
 
-local SERVER_HOST = 'localhost'
-local SERVER_PATH = '~USERDIR/public_html/wifibox/updates'
---local SERVER_HOST = 'doodle3d.com'
---local SERVER_PATH = 'doodle3d.com/DEFAULT/updates'
+--local SERVER_HOST = 'localhost'
+--local SERVER_PATH = '~USERDIR/public_html/wifibox/updates'
+local SERVER_HOST = 'doodle3d.com'
+local SERVER_PATH = 'doodle3d.com/DEFAULT/updates'
 
 local D3D_REPO_FIRMWARE_NAME = 'doodle3d-firmware'
 local D3D_REPO_CLIENT_NAME = 'doodle3d-client'
@@ -391,6 +391,7 @@ local function main()
 	um.setUseCache(false)
 	um.setVerbosity(1)
 	um.setCachePath(imageCachePath())
+	--um.setBaseUrl('http://localhost/~USERDIR/wifibox/updates')
 
 	local newVersion,msg = collectLocalInfo()
 	if not newVersion then
@@ -449,7 +450,7 @@ local function main()
 --	runAction("Building package feed directory", "failed", 5, buildFeedDir)
 
 
-	local answer = getYesNo("? Local updates directory will be synced to remote server, proceed? (y/n) ")
+	local answer = getYesNo("? Local updates cache will be synced to remote server, proceed? (y/n) ")
 	if answer ~= true then
 		print("Did not get green light, quitting.")
 		quit(5)

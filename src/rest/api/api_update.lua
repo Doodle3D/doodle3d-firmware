@@ -47,9 +47,11 @@ end
 
 
 function M.status(request, response)
+	local includeBetas = settings.get('doodle3d.update.includeBetas')
+	local baseUrl = settings.get('doodle3d.update.baseUrl')
 	updater.setLogger(log)
+	updater.setBaseUrl(baseUrl)
 	updater.setUseCache(false)
-	local includeBetas = settings.get('doodle3d.includeBetas')
 	local success,status,msg = updater.getStatus(includeBetas)
 
 	response:addData('current_version', updater.formatVersion(status.currentVersion))
@@ -89,12 +91,14 @@ function M.download_POST(request, response)
 	-- block access to prevent potential issues with printing (e.g. out of memory)
 	if not operationsAccessOrFail(request, response) then return end
 
+	local includeBetas = settings.get('doodle3d.update.includeBetas')
+	local baseUrl = settings.get('doodle3d.update.baseUrl')
 	updater.setLogger(log)
+	updater.setBaseUrl(baseUrl)
 
 	updater.setState(updater.STATE.DOWNLOADING,"")
 
 	local vEnt, rv, msg
-	local includeBetas = settings.get('doodle3d.includeBetas')
 
 	if not argVersion then
 		local success,status,msg = updater.getStatus(includeBetas)
@@ -159,12 +163,14 @@ function M.install_POST(request, response)
 
 	if not operationsAccessOrFail(request, response) then return end
 
+	local includeBetas = settings.get('doodle3d.update.includeBetas')
+	local baseUrl = settings.get('doodle3d.update.baseUrl')
+	updater.setBaseUrl(baseUrl)
 	updater.setLogger(log)
 	updater.setState(updater.STATE.INSTALLING,"")
 
 	--local ssid = wifi.getSubstitutedSsid(settings.get('network.ap.ssid'))
 	--local rv,msg = netconf.enableAccessPoint(ssid)
-	local includeBetas = settings.get('doodle3d.includeBetas')
 
 	if not argVersion then
 		local success,status,msg = updater.getStatus(includeBetas)

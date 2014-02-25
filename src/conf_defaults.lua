@@ -335,10 +335,16 @@ M.doodle3d_tour_enabled = {
 	description = 'Show tour to new users'
 }
 
-M.doodle3d_includeBetas = {
+M.doodle3d_update_includeBetas = {
 	default = false,
 	type = 'bool',
-	description = 'Update to beta releases',
+	description = 'Include beta releases when updating'
+}
+
+M.doodle3d_update_baseUrl = {
+	default = 'http://doodle3d.com/updates',
+	type = 'string',
+	description = ''
 }
 
 return M

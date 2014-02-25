@@ -44,11 +44,10 @@ M.STATE_NAMES = {
 	[M.STATE.INSTALLING] = 'installing', [M.STATE.INSTALLED] = 'installed', [M.STATE.INSTALL_FAILED] = 'install_failed'
 }
 
---- The base URL to use for finding update files.
+--- The default base URL to use for finding update files.
 -- This URL will usually contain both an OpenWRT feed directory and an `images` directory.
 -- This script uses only the latter, and expects to find the files @{IMAGE_STABLE_INDEX_FILE} and @{IMAGE_BETA_INDEX_FILE} there.
 M.DEFAULT_BASE_URL = 'http://doodle3d.com/updates'
---M.DEFAULT_BASE_URL = 'http://localhost/~USERNAME/wifibox/updates'
 
 --- The index file containing metadata on stable update images.
 M.IMAGE_STABLE_INDEX_FILE = 'wifibox-image.index'
@@ -277,39 +276,39 @@ end
 
 --- Parses command-line arguments and returns a table containing information distilled from them.
 -- @tparam table arglist A table in the same form as the [arg table](http://www.lua.org/pil/1.4.html) created by Lua.
+-- @tparam table defaults A table with defaults settings (actually the basis for the returned table)
 -- @treturn table|nil A table containing information on what to do, or nil if invalid arguments were specified.
 -- @treturn ?string Descriptive message on error.
-local function parseCommandlineArguments(arglist)
-	local result = { verbosity = 0, baseUrl = M.DEFAULT_BASE_URL, includeBetas = false, action = nil }
+local function parseCommandlineArguments(arglist, defaults)
 	local nextIsVersion, nextIsUrl = false, false
 	for index,argument in ipairs(arglist) do
 		if nextIsVersion then
-			result.version = argument; nextIsVersion = false
+			defaults.version = argument; nextIsVersion = false
 		elseif nextIsUrl then
-			result.baseUrl = argument; nextIsUrl = false
+			defaults.baseUrl = argument; nextIsUrl = false
 		else
-			if argument == '-h' then result.action = 'showHelp'
-			elseif argument == '-q' then result.verbosity = -1
-			elseif argument == '-V' then result.verbosity = 1
-			elseif argument == '-c' then result.useCache = true
-			elseif argument == '-C' then result.useCache = false
+			if argument == '-h' then defaults.action = 'showHelp'
+			elseif argument == '-q' then defaults.verbosity = -1
+			elseif argument == '-V' then defaults.verbosity = 1
+			elseif argument == '-c' then defaults.useCache = true
+			elseif argument == '-C' then defaults.useCache = false
 			elseif argument == '-u' then nextIsUrl = true
-			elseif argument == '-b' then result.includeBetas = true
-			elseif argument == '-v' then result.action = 'showCurrentVersion'
-			elseif argument == '-s' then result.action = 'showStatus'
-			elseif argument == '-l' then result.action = 'showAvailableVersions'
-			elseif argument == '-i' then result.action = 'showVersionInfo'; nextIsVersion = true
-			elseif argument == '-d' then result.action = 'imageDownload'; nextIsVersion = true
-			elseif argument == '-f' then result.action = 'imageInstall'; nextIsVersion = true
-			elseif argument == '-r' then result.action = 'clear'
+			elseif argument == '-b' then defaults.includeBetas = true
+			elseif argument == '-v' then defaults.action = 'showCurrentVersion'
+			elseif argument == '-s' then defaults.action = 'showStatus'
+			elseif argument == '-l' then defaults.action = 'showAvailableVersions'
+			elseif argument == '-i' then defaults.action = 'showVersionInfo'; nextIsVersion = true
+			elseif argument == '-d' then defaults.action = 'imageDownload'; nextIsVersion = true
+			elseif argument == '-f' then defaults.action = 'imageInstall'; nextIsVersion = true
+			elseif argument == '-r' then defaults.action = 'clear'
 			else return nil,"unrecognized argument '" .. argument .. "'"
 			end
 		end
 	end
 
-	if result.version then
-		result.version = M.parseVersion(result.version)
-		if not result.version then
+	if defaults.version then
+		defaults.version = M.parseVersion(defaults.version)
+		if not defaults.version then
 			return nil,"error parsing specified version"
 		end
 	end
@@ -317,7 +316,7 @@ local function parseCommandlineArguments(arglist)
 	if nextIsVersion then return nil, "missing required version argument" end
 	if nextIsUrl then return nil, "missing required URL argument" end
 
-	return result
+	return defaults
 end
 
 --- Determines if the system is OpenWrt or not by checking if `/etc/openwrt_release` exists.
@@ -875,7 +874,15 @@ end
 -- so this file can also be used as a library.
 -- Command-line arguments are expected to be present in the global `arg` variable.
 local function main()
-	local argTable,msg = parseCommandlineArguments(arg)
+	-- NOTE: this require must be local to functions which are only executed on the wifibox (i.e., where we have uci)
+	package.path = package.path .. ';/usr/share/lua/wifibox/?.lua'
+	local settings = require('util.settings')
+
+	local defaults = { verbosity = 0, baseUrl = M.DEFAULT_BASE_URL, includeBetas = false, action = nil }
+	local confBaseUrl = settings.get('doodle3d.update.baseUrl')
+	if confBaseUrl and confBaseUrl:len() > 0 then defaults.baseUrl = confBaseUrl end
+
+	local argTable,msg = parseCommandlineArguments(arg, defaults)
 
 	if not argTable then
 		E("error interpreting command-line arguments, try '-h' for help (".. msg ..")")
@@ -959,6 +966,7 @@ local function main()
 			P(1, "  factoryFilename:\t" .. (vEnt.factoryFilename or '-'))
 			P(1, "  factoryFileSize:\t" .. (vEnt.factoryFileSize or '-'))
 			P(1, "  factoryMD5:\t\t" .. (vEnt.factoryMD5 or '-'))
+			P(1, "  releaseDate:\t\t" .. (vEnt.timestamp and M.formatDate(vEnt.timestamp) or '-'))
 			if vEnt.changelog then
 				P(1, "\n--- Changelog ---\n" .. vEnt.changelog .. '---')
 			else

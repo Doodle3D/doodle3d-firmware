@@ -228,7 +228,7 @@ function M.createConfigFromScanInfo(info, passphrase, disabled)
 		network = M.NET,
 		device = 'radio0',
 		ssid = info.ssid,
-		bssid = info.bssid,
+		--bssid = info.bssid,
 		encryption = M.mapEncryptionType(info.encryption),
 		mode = mode,
 	}
@@ -236,8 +236,9 @@ function M.createConfigFromScanInfo(info, passphrase, disabled)
 	apconfig.disabled = disabled ~= nil and disabled and 1 or 0
 
 	uci:foreach('wireless', 'wifi-iface', function(s)
-		if s.bssid == info.bssid then
-			log:debug("removing old wireless config for net '" .. s.ssid .. "(bssid: " .. s.bssid .. ")'")
+		--if s.bssid == info.bssid then
+		if s.ssid == info.ssid then
+			log:debug("removing old wireless config for net '" .. s.ssid .. "'")
 			uci:delete('wireless', s['.name'])
 --			return false --keep looking, just in case multiple entries with this bssid exist
 		end

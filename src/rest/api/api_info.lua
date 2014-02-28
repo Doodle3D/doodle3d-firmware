@@ -14,6 +14,7 @@ local printDriver = require('print3d')
 local printerUtils = require('util.printer')
 local printerAPI = require('rest.api.api_printer')
 local wifi = require('network.wlanconfig')
+local settings = require('util.settings')
 
 local TMP_DIR = '/tmp'
 local LOG_COLLECT_DIRNAME = 'wifibox-logs'
@@ -48,6 +49,10 @@ local M = {
 
 function M._global(request, response)
 	response:setSuccess()
+	
+	local wifiboxid = wifi.getSubstitutedSsid(settings.get('network.cl.wifiboxid'))
+	response:addData('wifiboxid', wifiboxid)
+	
 end
 
 -- TODO: redirect stdout+stderr; handle errors

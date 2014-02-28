@@ -15,11 +15,9 @@ local wifi = require('network.wlanconfig')
 local accessManager = require('util.access')
 local printerAPI = require('rest.api.api_printer')
 
-
 local M = {
 	isApi = true
 }
-
 
 -- TODO: this function is also defined in 2 other places, combine them (and avoid require loops)
 local function operationsAccessOrFail(request, response)
@@ -84,6 +82,9 @@ function M._global_POST(request, response)
 
 	local substitutedSsid = wifi.getSubstitutedSsid(settings.get('network.ap.ssid'))
 	response:addData("substituted_ssid",substitutedSsid)
+	
+	local substitutedWiFiBoxID = wifi.getSubstitutedSsid(settings.get('network.cl.wifiboxid'))
+	response:addData("substituted_wifiboxid",substitutedWiFiBoxID)
 end
 
 function M.all_GET(request, response)

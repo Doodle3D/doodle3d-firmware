@@ -171,11 +171,7 @@ end
 
 function M.status(request, response)
 
-	local ds = wifi.getDeviceState()
-	log:debug("  ssid: "..utils.dump(ds.ssid))
-	
-	local rv
-	rv, state = printerAPI.state(request, response)
+	local rv, state = printerAPI.state(request, response)
 	if(rv == false) then return end
 	
 	if(state ~= "disconnected") then

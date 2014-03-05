@@ -173,12 +173,12 @@ function M.status(request, response)
 
 	local ds = wifi.getDeviceState()
 	log:debug("  ssid: "..utils.dump(ds.ssid))
-	
+
 	local rv
 	rv, state = printerAPI.state(request, response)
 	if(rv == false) then return end
-	
-	if(state ~= "disconnected") then
+
+	if state ~= "disconnected" and state ~= "connecting" then
 		rv = printerAPI.temperature(request, response)
 		if(rv == false) then return end
 		rv = printerAPI.progress(request, response)

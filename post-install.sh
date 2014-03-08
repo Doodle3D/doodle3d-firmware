@@ -77,15 +77,20 @@ $IPKG_INSTROOT/etc/init.d/wifibox start
 $IPKG_INSTROOT/etc/init.d/dhcpcheck enable
 
 if [ -z "$IPKG_INSTROOT" ]; then
-	echo "Enabling wifi device..."
+	echo "Enabling and configuring wifi device..."
 	uci set wireless.@wifi-device[0].disabled=0
 	uci set wireless.radio0.country='NL'
 	uci commit wireless; wifi
 
+	echo "Disabling default route and DNS server for lan network interface..."
+	uci set dhcp.lan.dhcp_option='3 6'
+	uci commit dhcp; /etc/init.d/dnsmasq reload
+
 	addFirewallNet
 
 	echo "Adding network interface 'wlan'..."
-	uci set network.wlan=interface; uci commit network; /etc/init.d/network reload
+	uci set network.wlan=interface
+	uci commit network; /etc/init.d/network reload
 
 else
 	# Create a script to setup the system as wifibox, it will be deleted after it has been run, except if it returns > 0
@@ -102,6 +107,8 @@ else
 	uci set wireless.radio0.country='NL'
 	# TODO: add firewall net
 	uci set network.wlan=interface
+
+	uci set dhcp.lan.dhcp_option='3 6'
 EOM
 
 	echo "WARNING: WiFiBox network configuration can only be fully prepared when installing on real device"

@@ -27,7 +27,7 @@ end
 function M.temperature(request, response)
 	local argId = request:get("id")
 	local printer,msg = printerUtils.createPrinterOrFail(argId, response)
-	if not printer then return false end
+	if not printer or not printer:hasSocket() then return false end
 
 	local temperatures,msg = printer:getTemperatures()
 
@@ -49,7 +49,7 @@ end
 function M.progress(request, response)
 	local argId = request:get("id")
 	local printer,msg = printerUtils.createPrinterOrFail(argId, response)
-	if not printer then return false end
+	if not printer or not printer:hasSocket() then return false end
 
 	-- NOTE: despite their names, `currentLine` is still the error indicator and `bufferedLines` the message in such case.
 	local currentLine,bufferedLines,totalLines = printer:getProgress()
@@ -76,6 +76,14 @@ function M.state(request, response, onlyReturnState)
 	local printer,msg = printerUtils.createPrinterOrFail(argId, response)
 	if not printer then
 		local printerState = "disconnected"
+		if not onlyReturnState then
+			response:setSuccess()
+			response:addData('state', printerState)
+		end
+		return true, printerState
+	elseif not printer:hasSocket() then
+		-- while dev is present but no server is running yet, return 'fake' connecting state
+		local printerState = "connecting"
 		if not onlyReturnState then
 			response:setSuccess()
 			response:addData('state', printerState)
@@ -115,7 +123,7 @@ function M.heatup_POST(request, response)
 
 	local argId = request:get("id")
 	local printer,msg = printerUtils.createPrinterOrFail(argId, response)
-	if not printer then return false end
+	if not printer or not printer:hasSocket() then return false end
 
 	local temperature = settings.get('printer.heatup.temperature')
 	local rv,msg = printer:heatup(temperature)
@@ -138,8 +146,8 @@ function M.stop_POST(request, response)
 	local argId = request:get("id")
 	local argGcode = request:get("gcode")
 	local printer,msg = printerUtils.createPrinterOrFail(argId, response)
-	if not printer then return end
-	
+	if not printer or not printer:hasSocket() then return false end
+
 	if(argGcode == nil) then
 		argGcode = ""
 	end
@@ -176,7 +184,7 @@ function M.print_POST(request, response)
 	local argStart = utils.toboolean(request:get("start"))
 
 	local printer,msg = printerUtils.createPrinterOrFail(argId, response)
-	if not printer then return end
+	if not printer or not printer:hasSocket() then return false end
 
 	response:addData('id', argId)
 

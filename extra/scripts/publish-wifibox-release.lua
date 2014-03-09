@@ -1,7 +1,43 @@
 #!/usr/bin/env lua
 --#!/usr/bin/env lua -l strict
 
---TODO: replace prints with D() function from update manager and other slightly smarter mechanisms?
+-- This script creates a new release by copying openwrt image files and release notes to a local
+-- directory and updating the relevant index file with a new entry. This directory is
+-- then synchronized to the release repository online.
+--
+-- USAGE:
+-- The only dependency of this script is the penlight library, which can be installed using
+-- LuaRocks (http://luarocks.org/) as follows: 'sudo luarocks install penlight'.
+-- The script must be run from within the openwrt build root. It will automatically locate
+-- the Doodle3D repo's. Index files are fetched from the online repository.
+-- For synchronizing, rsync must have passwordless SSH access to the server, for a
+-- guide, see: http://www.linuxproblem.org/art_9.html.
+-- Some basic sanity checks are built in (unique version, updated release notes, 'clean' openwrt config)
+-- but lots others are still missing (mainly: clean git repo's, freshly built images).
+-- Before anything is actually uploaded, you will be asked if that's really what you want to do.
+-- It might be wise to make a backup on the server before updating it, there's a script
+-- to do this on the server: '~/backup-updates-dir.sh'.
+--
+-- To play around with or improve on this script, use and modify the variables 'SERVER_HOST'
+-- and 'SERVER_PATH' below to point to your machine (assuming you have a webserver running there).
+-- Also uncomment and modify UPDATER_BASE_URL. You will have to init the local 'repo' with at
+-- least empty index files ('wifibox-image.index' and 'wifibox-image.beta.index'), or you
+-- could of course mirror the online repository.
+--
+-- TODO (in random order):
+-- * (feature) command-line arguments: overrides, verbosity, allow local mirroring, clear local cache dir, etc.
+-- * (feature) automatically create a backup of the online repo (there's already a script fir this, as mentioned above)
+-- * (feature) check whether git repo's are clean and on correct branch
+-- * (feature) allow local mirroring with a reverse rsync command and rebuilding the indexes
+--   - update manager 'cache' should then be enabled to prevent fetchIndexTable from downloading files
+-- * (feature) automatically (re)build openwrt to ensure it is up to date?
+-- * (feature) update package feed (requires a local mirror for the feed indexing script)
+--   - in this case sanity checks must also be run on package versions/revisions
+-- * (feature) automatically tag (and merge?) git commits?
+-- * (feature) execute as dry-run by default so changes can be reviewed?
+-- * (refactor) rename awkward vars/funcs regarding entries, versions and caches...
+-- * (refactor) replace function arguments 'includeBetas' with a set function like setUseCache to improve readability
+-- * (refactor) replace prints with D() function from update manager or other slightly smarter mechanisms?
 
 local function ERR(msg) print(msg) end
 
@@ -22,8 +58,14 @@ local lfs = require('lfs') -- assume this exists since it's required by penlight
 
 --local SERVER_HOST = 'localhost'
 --local SERVER_PATH = '~USERDIR/public_html/wifibox/updates'
+--local UPDATER_BASE_URL = 'http://localhost/~USERDIR/wifibox/updates'
 local SERVER_HOST = 'doodle3d.com'
 local SERVER_PATH = 'doodle3d.com/DEFAULT/updates'
+--- SERVER_HOST and SERVER_PATH are used by rsync to merge the local working directory
+-- back into the online repository (requires functioning public key SSH access).
+-- UPDATER_BASE_URL is used by the d3d-updater script to download the index files
+-- (over HTTP), it defaults to the doodle3d.com online repo so it should only be
+-- used for development purposes.
 
 local D3D_REPO_FIRMWARE_NAME = 'doodle3d-firmware'
 local D3D_REPO_CLIENT_NAME = 'doodle3d-client'
@@ -134,12 +176,12 @@ end
 -- TODO: pass table to functions to fill in? if they all return either true or nil+msg, that could be used for display of ok/msg
 -- returns true on success, false on error, and displays meaningful messages
 --local function runCheck(msg, processFunc)
---	io.stdout:write(msg .. "... ")
+--	io.write(msg .. "... ")
 --	return processFunc(--[[ hmm ]]--)
 --end
 
 local function runAction(actMsg, errMsg, ev, func)
-	io.stdout:write("* " .. actMsg .. "...")
+	io.write("* " .. actMsg .. "...")
 	local rv,err = func()
 	if not rv then
 		if err then print("Error: " .. errMsg .. " (" .. err .. ")")
@@ -185,7 +227,7 @@ end
 local function prepare()
 	local msg = nil
 
-	io.stdout:write("* Checking if working directory is the OpenWrt root... ")
+	io.write("* Checking if working directory is the OpenWrt root... ")
 	local isOpenWrtRoot = detectOpenWrtRoot()
 	if isOpenWrtRoot then
 		paths.wrt = pl.path.currentdir()
@@ -195,7 +237,7 @@ local function prepare()
 		return nil
 	end
 
-	io.stdout:write("* Looking for Doodle3D feed path... ")
+	io.write("* Looking for Doodle3D feed path... ")
 	local d3dFeed,msg = getWifiboxFeedRoot('feeds.conf')
 	if d3dFeed then
 		print("found " .. d3dFeed)
@@ -213,7 +255,7 @@ local function prepare()
 		--paths.cache = pl.app.appfile('')
 		paths.cache = '/tmp/d3d-release-dir'
 	end
-	io.stdout:write("* Attempting to use " .. paths.cache .. " as cache dir... ")
+	io.write("* Attempting to use " .. paths.cache .. " as cache dir... ")
 	local rv,msg = pl.dir.makepath(paths.cache)
 	if not rv then
 		print("could not create path (" .. msg .. ").")
@@ -235,6 +277,19 @@ local function prepare()
 	else
 		print("ok")
 	end
+
+		-- initialize update manager script
+	um.setUseCache(false)
+	um.setVerbosity(1)
+	um.setCachePath(imageCachePath())
+	if type(UPDATER_BASE_URL) == 'string' and UPDATER_BASE_URL:len() > 0 then
+		print("* Using updater base URL: '" .. UPDATER_BASE_URL .. "'")
+		um.setBaseUrl(UPDATER_BASE_URL)
+	else
+		print("* Using updater base URL: d3d-updater default")
+	end
+
+	print("* Using rsync server remote: '" .. SERVER_HOST .. "/" .. SERVER_PATH .. "'")
 
 	return true
 end
@@ -357,7 +412,7 @@ local function checkWrtConfig()
 	local wrtConfigPath = pl.path.tmpname()
 	--print("diffonfig output file: " .. wrtConfigPath)
 
-	local rv,ev = pl.utils.execute('./scripts/diffconfig.sh > "' .. wrtConfigPath .. '"')
+	local rv,ev = pl.utils.execute('./scripts/diffconfig.sh > "' .. wrtConfigPath .. '" 2> /dev/null')
 	if not rv then return nil,"could not run diffconfig script (exit status: " .. ev .. ")" end
 
 	local _,rv,output = pl.utils.executeex('diff "' .. wrtConfigPath .. '" "' .. goodConfigPath .. '"')
@@ -387,11 +442,6 @@ local function main()
 
 	if not prepare() then quit(1) end
 
-	-- initialize update manager script
-	um.setUseCache(false)
-	um.setVerbosity(1)
-	um.setCachePath(imageCachePath())
-	--um.setBaseUrl('http://localhost/~USERDIR/wifibox/updates')
 
 	local newVersion,msg = collectLocalInfo()
 	if not newVersion then
@@ -445,7 +495,7 @@ local function main()
 		return copyImages(newVersion)
 	end)
 
-	io.stdout:write("* Building package feed directory...")
+	io.write("* Building package feed directory...")
 	print("skipped - not implemented")
 --	runAction("Building package feed directory", "failed", 5, buildFeedDir)
 

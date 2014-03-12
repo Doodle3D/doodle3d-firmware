@@ -149,26 +149,10 @@ function M.access(request, response)
 	--log:info("  remoteAddress: |"..utils.dump(request.remoteAddress).."|");
 	--log:info("  controller: |"..utils.dump(accessManager.getController()).."|");
 
-	-- when there is a controller we check if the printer is idle,
-	-- if so, it should be done printing and we can clear the controller
-	if accessManager.getController() ~= "" then
-		local argId = request:get("id")
-		local printer,msg = printerUtils.createPrinterOrFail(argId, response)
-		local rv,msg = printer:getState()
-		if rv then
-			response:setSuccess()
-			if(state == "idle") then -- TODO: define in constants somewhere
-				accessManager.setController("") -- clear controller
-			end
-		else
-			response:setError(msg)
-			return false
-		end
-	end
-
 	local hasControl = accessManager.hasControl(request.remoteAddress)
+	-- if hasControl then log:info("  hasControl: true")
+	-- else log:info("  hasControl: false") end
 	response:setSuccess()
-
 	response:addData('has_control', hasControl)
 
 	return true

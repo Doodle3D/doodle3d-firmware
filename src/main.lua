@@ -87,14 +87,14 @@ local function setupAutoWifiMode()
 	end
 
 	if connectWith then
-		local rv,msg = netconf.associateSsid(connectWith,nil,nil,true)
+		local rv,msg = netconf.associateSsid(connectWith,nil,nil)
 		if rv then
 			return true, "autowifi: associated -- client mode with ssid '" .. connectWith .. "'"
 		else
 			return nil, "autowifi: could not associate with ssid '" .. connectWith .. "' (" .. msg .. ")"
 		end
 	elseif netMode ~= 'ap' or netName ~= apSsid then
-		local rv,msg = netconf.setupAccessPoint(apSsid,true)
+		local rv,msg = netconf.setupAccessPoint(apSsid)
 		if rv then
 			return true, "autowifi: configured as access point with ssid '" .. apSsid .. "'"
 		else

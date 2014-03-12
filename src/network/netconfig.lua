@@ -54,10 +54,9 @@ end
 
 --- Switch configuration between AP and station modes
 -- @param table	components	a table with components as keys with operations as values (add or remove)
--- @param boolean	boot	If true, the components have to start instead of reloaded (only needed on boot)
 -- Valid components (each with add and rm operation) are: apnet, staticaddr, dhcppool, wwwredir, dnsredir, wwwcaptive, natreflect.
 -- and additionally: wifiiface/add, network/reload
-function M.switchConfiguration(components,boot)
+function M.switchConfiguration(components)
 	local dirtyList = {} -- laundry list, add config/script name as key with value c (commit), r (reload) or b (both)
 
 	for k,v in pairs(components) do
@@ -75,7 +74,7 @@ function M.switchConfiguration(components,boot)
 		if v == 'c' or v == 'b' then M.commitComponent(k) end
 	end
 	for k,v in pairs(dirtyList) do
-		if v == 'r' or v == 'b' then M.reloadComponent(k, silent, boot) end
+		if v == 'r' or v == 'b' then M.reloadComponent(k, silent) end
 	end
 end
 
@@ -84,11 +83,9 @@ function M.commitComponent(c)
 	uci:commit(c)
 end
 
-function M.reloadComponent(c, silent, boot)
+function M.reloadComponent(c, silent)
 	log:info("reloading component '" .. c .. "'") 
 	local command = 'reload'
-	-- if booting, the services have to be started before they can be reloaded
-	if boot then command = 'start' end 
 	local cmd = '/etc/init.d/' .. c .. ' '..command
 	if silent ~= nil and silent then 
 		cmd = cmd .. ' &> /dev/null'
@@ -275,20 +272,16 @@ end
 -- Note: this function might belong in the wlanconfig module but that would introduce
 -- a circular dependency, easiest solution is to place the function here.
 -- @tparam string ssid The SSID to use for the access point.
--- @tparam boolean boot If true, the components have to start instead of reloaded (only needed on boot)
 -- @return True on success or nil+msg on error.
-function M.setupAccessPoint(ssid,boot)
+function M.setupAccessPoint(ssid)
 	M.setStatus(M.CREATING,"Creating access point '"..ssid.."'...");
-	boot = boot or false
-	--boot = false
-	if boot then log:info("  boot mode") end
 	
 	-- add access point configuration 
-	M.switchConfiguration({apnet="add_noreload"},boot)
+	M.switchConfiguration({apnet="add_noreload"})
 	wifi.activateConfig(ssid)
 	-- NOTE: dnsmasq must be reloaded after network or it will be unable to serve IP addresses
-	M.switchConfiguration({ wifiiface="add", network="reload", staticaddr="add", dhcppool="add_noreload", wwwredir="add", dnsredir="add" },boot)
-	M.switchConfiguration({dhcp="reload"},boot)
+	M.switchConfiguration({ wifiiface="add", network="reload", staticaddr="add", dhcppool="add_noreload", wwwredir="add", dnsredir="add" })
+	M.switchConfiguration({dhcp="reload"})
 	
 	M.setStatus(M.CREATED,"Access point created");
 	
@@ -335,11 +328,9 @@ end
 -- @tparam string ssid The SSID to associate with.
 -- @tparam string passphrase The passphrase (if any) to use, may be left out if a UCI configuration exists.
 -- @tparam boolean recreate If true, a new UCI configuration based on scan data will always be created, otherwise an attempt will be made to use an existing configuration.
--- @tparam boolean boot If true, the components have to start instead of reloaded (only needed on boot)
 -- @return True on success or nil+msg on error.
-function M.associateSsid(ssid, passphrase, recreate, boot)
+function M.associateSsid(ssid, passphrase, recreate)
 	log:info("netconfig:associateSsid: "..(ssid or "<nil>")..", "..(recreate or "<nil>"))
-	if boot then log:info("  boot mode") end 
 	M.setStatus(M.CONNECTING,"Connecting...");
 	
 	-- see if previously configured network for given ssid exists
@@ -369,7 +360,7 @@ function M.associateSsid(ssid, passphrase, recreate, boot)
 	--M.switchConfiguration{ wifiiface="add", apnet="rm", staticaddr="rm", dhcppool="rm", wwwredir="rm", dnsredir="rm", wwwcaptive="rm", wireless="reload" }
 	--M.switchConfiguration{ wifiiface="add", apnet="rm", staticaddr="rm", dhcppool="rm", wwwredir="rm", dnsredir="rm", wireless="reload" }
   	--M.switchConfiguration{ wifiiface="add", staticaddr="rm", dhcppool="rm", wwwredir="rm", dnsredir="rm", wireless="reload" }
-  	M.switchConfiguration({ wifiiface="add", staticaddr="rm", dhcppool="rm", wwwredir="rm", dnsredir="rm" },boot)
+  	M.switchConfiguration({ wifiiface="add", staticaddr="rm", dhcppool="rm", wwwredir="rm", dnsredir="rm" })
 	
 	-- we check if we get a ssid and ip in max 5 seconds
 	-- if not there is probably a issue 

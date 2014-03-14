@@ -463,7 +463,7 @@ function M.getStatus(withBetas)
 	if cEnt then
 		result.currentReleaseTimestamp = cEnt.timestamp
 	else
-		D("warning: could not find current wifibox version in release index, beta setting disabled after having beta installed?")
+		D("warning: could not find current wifibox version in release indexes")
 	end
 
 	if result.stateCode == M.STATE.DOWNLOADING then

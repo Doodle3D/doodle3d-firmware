@@ -1,3 +1,15 @@
+Changelog
+# 0.10.2 (14th mar 2014)
+- Fixed connection issues to networks with multiple routers sharing the same ssid
+- Option to update to beta releases (Beta testers are welcome)
+- Substituted wifiboxid retrievable through info api
+- Added a "connecting" printer state where it found a printer but couldn't communicate yet. (Not yet implemented for Makerbot's) 
+- When connecting takes to long, we display a warning that the user might have selected the wrong printer type (Not yet implemented for Makerbot's) 
+- API's printer/state doesn't return an error anymore when a printer is just connected
+- Allowing WiFi channels 12 & 13 
+- Fixed issue that control access wasn't properly reset after print
+- Fixed another issue where the box in access point wouldn't give ip addresses
+
 # 0.10.1 (12th feb 2014)
 - miniFactory support
 - Fixed most Makerbot display issues 

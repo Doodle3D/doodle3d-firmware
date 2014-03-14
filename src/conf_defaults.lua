@@ -19,7 +19,7 @@
 -- - _description_: A descriptive text usable by API clients
 -- - _min_, _max_, _regex_: optional constraints (min and max constrain value for numbers, or length for strings)
 -- - _isValid_: an optional function which should return true for valid values and false for invalid ones
--- - _subSection: optional: setting name of which current value is used as the uci section where this setting should be loaded from. Otherwise it's retrieved from the generic section. Setting subsection also means it will first try to get a default from subconf_defaults, if that doesn't exsist it will use the regular default  
+-- - _subSection: optional: setting name of which current value is used as the uci section where this setting should be loaded from. Otherwise it's retrieved from the generic section. Setting subsection also means it will first try to get a default from subconf_defaults, if that doesn't exsist it will use the regular default
 -- The configuration keys themselves document themselves rather well, hence they are not included in the generated documentation.
 --
 -- NOTE: the all-caps definitions should be changed into configuration keys, or moved to a better location.
@@ -106,7 +106,7 @@ M.printer_dimensions_x = {
 	default_delta_rostockmax = 0,
 	default_deltamaker = 0,
 	default_kossel = 0,
-	default_minifactory = 150, 
+	default_minifactory = 150,
 	subSection = 'printer_type',
 	type = 'int',
 	description = '',
@@ -333,6 +333,18 @@ M.doodle3d_tour_enabled = {
 	default = true,
 	type = 'bool',
 	description = 'Show tour to new users'
+}
+
+M.doodle3d_update_includeBetas = {
+	default = false,
+	type = 'bool',
+	description = 'Include beta releases when updating'
+}
+
+M.doodle3d_update_baseUrl = {
+	default = 'http://doodle3d.com/updates',
+	type = 'string',
+	description = ''
 }
 
 return M

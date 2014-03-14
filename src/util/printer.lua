@@ -78,8 +78,10 @@ function M.createPrinterOrFail(deviceId, response)
 	end
 
 	if not printer then
-		response:setError("could not open printer driver (" .. msg .. ")")
-		response:addData('id', deviceId)
+		if response ~= nil then
+			response:setError("could not open printer driver (" .. msg .. ")")
+			response:addData('id', deviceId)
+		end
 		return nil
 	end
 

@@ -6,7 +6,8 @@
 # See file LICENSE.txt or visit http://www.gnu.org/licenses/gpl.html for full license details.
 
 # start after networking
-START=22
+#START=22
+START=61
 
 LOGGER="logger -t autowifi -p 6"
 

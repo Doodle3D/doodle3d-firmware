@@ -14,6 +14,7 @@ local printDriver = require('print3d')
 local printerUtils = require('util.printer')
 local printerAPI = require('rest.api.api_printer')
 local wifi = require('network.wlanconfig')
+local settings = require('util.settings')
 
 local TMP_DIR = '/tmp'
 local LOG_COLLECT_DIRNAME = 'wifibox-logs'
@@ -48,6 +49,10 @@ local M = {
 
 function M._global(request, response)
 	response:setSuccess()
+	
+	local wifiboxid = wifi.getSubstitutedSsid(settings.get('network.cl.wifiboxid'))
+	response:addData('wifiboxid', wifiboxid)
+	
 end
 
 -- TODO: redirect stdout+stderr; handle errors
@@ -144,26 +149,10 @@ function M.access(request, response)
 	--log:info("  remoteAddress: |"..utils.dump(request.remoteAddress).."|");
 	--log:info("  controller: |"..utils.dump(accessManager.getController()).."|");
 
-	-- when there is a controller we check if the printer is idle,
-	-- if so, it should be done printing and we can clear the controller
-	if accessManager.getController() ~= "" then
-		local argId = request:get("id")
-		local printer,msg = printerUtils.createPrinterOrFail(argId, response)
-		local rv,msg = printer:getState()
-		if rv then
-			response:setSuccess()
-			if(state == "idle") then -- TODO: define in constants somewhere
-				accessManager.setController("") -- clear controller
-			end
-		else
-			response:setError(msg)
-			return false
-		end
-	end
-
 	local hasControl = accessManager.hasControl(request.remoteAddress)
+	-- if hasControl then log:info("  hasControl: true")
+	-- else log:info("  hasControl: false") end
 	response:setSuccess()
-
 	response:addData('has_control', hasControl)
 
 	return true
@@ -171,14 +160,10 @@ end
 
 function M.status(request, response)
 
-	local ds = wifi.getDeviceState()
-	log:debug("  ssid: "..utils.dump(ds.ssid))
-	
-	local rv
-	rv, state = printerAPI.state(request, response)
+	local rv, state = printerAPI.state(request, response)
 	if(rv == false) then return end
-	
-	if(state ~= "disconnected") then
+
+	if state ~= "disconnected" and state ~= "connecting" then
 		rv = printerAPI.temperature(request, response)
 		if(rv == false) then return end
 		rv = printerAPI.progress(request, response)
@@ -186,7 +171,6 @@ function M.status(request, response)
 		rv = M.access(request, response)
 		if(rv == false) then return end
 	end
-	response:addData('v', 10)
 end
 
 return M

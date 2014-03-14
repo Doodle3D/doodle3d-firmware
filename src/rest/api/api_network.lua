@@ -147,7 +147,7 @@ function M.associate_POST(request, response)
 
 	response:setSuccess("wlan is trying to associate")
 
-	local rv,msg = netconf.associateSsid(argSsid, argPhrase, argRecreate,false)
+	local rv,msg = netconf.associateSsid(argSsid, argPhrase, argRecreate)
 	if rv then
 		log:info("associated to wifi: "..utils.dump(argSsid))
 	else
@@ -215,10 +215,6 @@ end
 
 function M.alive(request, response)
 	response:setSuccess("alive")
-	
-	local ds = wifi.getDeviceState()
-	log:debug("  ssid: "..utils.dump(ds.ssid))
-	
 end
 
 return M

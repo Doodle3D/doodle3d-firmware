@@ -47,11 +47,13 @@ end
 
 
 function M.status(request, response)
+	local includeBetas = settings.get('doodle3d.update.includeBetas')
+	local baseUrl = settings.get('doodle3d.update.baseUrl')
 	updater.setLogger(log)
+	updater.setBaseUrl(baseUrl)
 	updater.setUseCache(false)
-	local success,status,msg = updater.getStatus()
+	local success,status,msg = updater.getStatus(includeBetas)
 
-	--response:addData('current_version', status.currentVersion)
 	response:addData('current_version', updater.formatVersion(status.currentVersion))
 
 	response:addData('state_code', status.stateCode)
@@ -62,10 +64,12 @@ function M.status(request, response)
 		return
 	end
 
-	local canUpdate = updater.compareVersions(status.newestVersion, status.currentVersion) > 0
+	local canUpdate = updater.compareVersions(status.newestVersion, status.currentVersion, status.newestReleaseTimestamp, status.currentReleaseTimestamp) > 0
+	if (status.currentVersion.suffix ~= nil) and not includeBetas then canUpdate = true end -- always allow downgrade from beta to stable if !includeBetas
 
-	--response:addData('newest_version', status.newestVersion)
 	response:addData('newest_version', updater.formatVersion(status.newestVersion))
+	if status.currentReleaseTimestamp then response:addData('current_release_date', updater.formatDate(status.currentReleaseTimestamp)) end
+	if status.newestReleaseTimestamp then response:addData('newest_release_date', updater.formatDate(status.newestReleaseTimestamp)) end
 	response:addData('can_update', canUpdate)
 
 	if status.progress then response:addData('progress', status.progress) end
@@ -87,14 +91,17 @@ function M.download_POST(request, response)
 	-- block access to prevent potential issues with printing (e.g. out of memory)
 	if not operationsAccessOrFail(request, response) then return end
 
+	local includeBetas = settings.get('doodle3d.update.includeBetas')
+	local baseUrl = settings.get('doodle3d.update.baseUrl')
 	updater.setLogger(log)
+	updater.setBaseUrl(baseUrl)
 
 	updater.setState(updater.STATE.DOWNLOADING,"")
 
 	local vEnt, rv, msg
 
 	if not argVersion then
-		local success,status,msg = updater.getStatus()
+		local success,status,msg = updater.getStatus(includeBetas)
 		if not success then
 			updater.setState(updater.STATE.DOWNLOAD_FAILED, msg)
 			response:setFail(msg)
@@ -124,7 +131,7 @@ function M.download_POST(request, response)
 		end
 	end
 
-	vEnt,msg = updater.findVersion(argVersion)
+	vEnt,msg = updater.findVersion(argVersion, includeBetas)
 	if vEnt == nil then
 		updater.setState(updater.STATE.DOWNLOAD_FAILED, "error searching version index (" .. msg .. ")")
 		response:setFail("error searching version index (" .. msg .. ")")
@@ -153,9 +160,12 @@ function M.install_POST(request, response)
 	local argNoRetain = request:get("no_retain")
 	log:info("API:update/install (noRetain: "..utils.dump(argNoRetain)..")")
 	local noRetain = argNoRetain == 'true'
-	
+
 	if not operationsAccessOrFail(request, response) then return end
-	
+
+	local includeBetas = settings.get('doodle3d.update.includeBetas')
+	local baseUrl = settings.get('doodle3d.update.baseUrl')
+	updater.setBaseUrl(baseUrl)
 	updater.setLogger(log)
 	updater.setState(updater.STATE.INSTALLING,"")
 
@@ -163,7 +173,7 @@ function M.install_POST(request, response)
 	--local rv,msg = netconf.enableAccessPoint(ssid)
 
 	if not argVersion then
-		local success,status,msg = updater.getStatus()
+		local success,status,msg = updater.getStatus(includeBetas)
 		if not success then
 			updater.setState(updater.STATE.INSTALL_FAILED, msg)
 			response:setFail(msg)
@@ -173,7 +183,7 @@ function M.install_POST(request, response)
 		end
 	end
 
-	vEnt,msg = updater.findVersion(argVersion)
+	vEnt,msg = updater.findVersion(argVersion, includeBetas)
 	if vEnt == nil then
 		updater.setState(updater.STATE.INSTALL_FAILED, "error searching version index (" .. msg .. ")")
 		response:setFail("error searching version index (" .. msg .. ")")

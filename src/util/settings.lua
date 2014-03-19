@@ -238,11 +238,7 @@ end
 -- @p[opt=nil] noCommit If true, do not commit the uci configuration; this is more efficient when setting multiple values
 -- @treturn bool|nil True if everything went well, false if validation error, nil in case of error.
 -- @treturn ?string Error message in case first return value is nil (invalid key).
-<<<<<<< HEAD
-function M.set(key, value)
-=======
 function M.set(key, value, noCommit)
->>>>>>> develop
 	log:info("settings:set: "..utils.dump(key).." to: "..utils.dump(value))
 	key = replaceDots(key)
 
@@ -255,13 +251,8 @@ function M.set(key, value, noCommit)
 	end
 
 	local base = getBaseKeyTable(key)
-<<<<<<< HEAD
-	if not base then return nil,ERR_NO_SUCH_KEY end
-	
-=======
 	if not base then return false,ERR_NO_SUCH_KEY end
 
->>>>>>> develop
 	--log:info("  base.type: "..utils.dump(base.type))
 	if base.type == 'bool' then
 		if value ~= "" then
@@ -324,25 +315,6 @@ end
 function M.resetAll()
 	log:info("settings:resetAll")
 
-<<<<<<< HEAD
-	-- delete all uci sections but system
-	local allSections = uci:get_all(UCI_CONFIG_NAME)
-	for key,value in pairs(allSections) do 
-		if key ~= "system" and not key:match('^[A-Z_]*$') then --TEMP: skip 'constants', which should be moved anyway
-			
-			uci:delete(UCI_CONFIG_NAME,key)
-		end 
-	end
-	
-	-- reset all to defaults
-	for k,_ in pairs(baseconfig) do
-		if not k:match('^[A-Z_]*$') then --TEMP: skip 'constants', which should be moved anyway
-			M.reset(k)
-		end
-	end
-	
-	uci:commit(UCI_CONFIG_NAME)
-=======
 	-- find all sections
 	local allSections, msg = uci:get_all(UCI_CONFIG_NAME)
 	if not allSections and msg ~= nil then
@@ -369,7 +341,6 @@ function M.resetAll()
 			M.reset(k,true)
 		end
 	end
->>>>>>> develop
 	
 	M.commit()
 	return true
@@ -379,15 +350,9 @@ end
 -- @string key The key to reset.
 -- @p[opt=nil] noCommit If true, do not commit the uci configuration; this is more efficient when resetting multiple values
 -- @treturn bool|nil True if everything went well, nil in case of error.
-<<<<<<< HEAD
-function M.reset(key)
-	log:info("settings:reset: "..utils.dump(key))
-	
-=======
 function M.reset(key, noCommit)
 	log:info("settings:reset: "..utils.dump(key))
 
->>>>>>> develop
 	-- delete
 	key = replaceDots(key)
 	local base = getBaseKeyTable(key)
@@ -395,15 +360,6 @@ function M.reset(key, noCommit)
 	local section = UCI_CONFIG_SECTION;
 	if base.subSection ~= nil then
 		section = M.get(base.subSection)
-<<<<<<< HEAD
-	end
-	uci:delete(UCI_CONFIG_NAME, section, key)
-	
-	-- reuse get logic to retrieve default and set it.
-	M.set(key,M.get(key))
-	
-	uci:commit(UCI_CONFIG_NAME)
-=======
 	end 
 	local rv, msg = uci:delete(UCI_CONFIG_NAME, section, key)
 	-- we can't respond to errors in general here because when a key isn't found 
@@ -418,7 +374,6 @@ function M.reset(key, noCommit)
 	M.set(key,M.get(key),true)
 
 	if noCommit ~= true then uci:commit(UCI_CONFIG_NAME) end
->>>>>>> develop
 	return true
 end
 

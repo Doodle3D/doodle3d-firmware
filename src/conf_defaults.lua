@@ -347,4 +347,18 @@ M.doodle3d_update_baseUrl = {
 	description = ''
 }
 
+M.doodle3d_raster_size = {
+	default = 0,
+	type = 'int',
+	min = 0,
+	max = 50,
+	description = 'Rasterization coarseness, 0 to disable'
+}
+
+M.doodle3d_raster_diagonals = {
+	default = true,
+	type = 'bool',
+	description = 'Allow diagonal lines with raster'
+}
+
 return M

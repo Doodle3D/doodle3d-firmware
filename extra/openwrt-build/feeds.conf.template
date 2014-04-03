@@ -1,0 +1,3 @@
+src-git packages git://git.openwrt.org/packages.git^e5f758e0729d094441aad849bbab4117b816567d
+# Edit the path below to point to the directory of the Doodle3D feed.
+src-link wifibox /Users/USERNAME/xxxFiles/doodle3d_feed_path

@@ -6,8 +6,14 @@
 -- then synchronized to the release repository online.
 --
 -- USAGE:
--- The only dependency of this script is the penlight library, which can be installed using
--- LuaRocks (http://luarocks.org/) as follows: 'sudo luarocks install penlight'.
+-- The only dependency of this script are the penlight and luafilesystem libraries, which can be installed using
+-- LuaRocks (http://luarocks.org/) as follows: 
+-- sudo luarocks install penlight
+-- If the penlight libary is not found you might need to add the following to /etc/launchd.conf
+-- setenv LUA_CPATH /opt/local/share/luarocks/lib/lua/5.2/?.so
+-- setenv LUA_PATH /opt/local/share/luarocks/share/lua/5.2/?.lua
+-- Reboot
+--
 -- This script will automatically locate the Doodle3D repo's. 
 -- Index files are fetched from the online repository.
 -- For synchronizing, rsync must have passwordless SSH access to the server, for a

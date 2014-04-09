@@ -1,4 +1,11 @@
 Changelog
+# 0.10.3 (9th apr 2014)
+- Fixed Makerbot issue where printer driver didn't get past connecting state
+
+# 0.10.2-makerbotfix (27th mar 2014)
+- Fixed Makerbot issue where printer driver didn't get past connecting state
+
+Changelog
 # 0.10.2 (14th mar 2014)
 - Fixed connection issues to networks with multiple routers sharing the same ssid
 - Option to update to beta releases (Beta testers are welcome)

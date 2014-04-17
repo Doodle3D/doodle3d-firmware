@@ -126,9 +126,10 @@ end
 --returns the wireless local ip address
 function M.getLocalIP()
 	local ifconfig, rv = utils.captureCommandOutput("ifconfig wlan0");
-	--log:debug("  ifconfig: \n"..utils.dump(ifconfig));
-	local localip = ifconfig:match('inet addr:([%d\.]+)')
-	return localip;
+	--log:verbose("  ifconfig: \n"..utils.dump(ifconfig));
+
+	local localip = ifconfig:match('inet addr:([%d%.]+)')
+	return localip
 end
 
 function M.getDeviceName()
@@ -241,7 +242,7 @@ function M.createConfigFromScanInfo(info, passphrase, disabled)
 	uci:foreach('wireless', 'wifi-iface', function(s)
 		--if s.bssid == info.bssid then
 		if s.ssid == info.ssid then
-			log:debug("removing old wireless config for net '" .. s.ssid .. "'")
+			log:verbose("removing old wireless config for net '" .. s.ssid .. "'")
 			uci:delete('wireless', s['.name'])
 --			return false --keep looking, just in case multiple entries with this bssid exist
 		end

@@ -25,9 +25,9 @@ M.WWW_RENAME_NAME = '/www-regular'
 M.CONNECTING_FAILED = -1
 M.NOT_CONNECTED 	= 0
 M.CONNECTING 		= 1
-M.CONNECTED 		= 2 
-M.CREATING 			= 3 
-M.CREATED 			= 4 
+M.CONNECTED 		= 2
+M.CREATING 			= 3
+M.CREATED 			= 4
 
 local function reloadBit(dlist, itemname)
 	if dlist[itemname] == nil then dlist[itemname] = '' end
@@ -62,10 +62,10 @@ function M.switchConfiguration(components)
 	for k,v in pairs(components) do
 		local fname = k .. '_' .. v
 		if type(reconf[fname]) == 'function' then
-			log:debug("reconfiguring component '" .. k .. "' (" .. v .. ")")
+			log:verbose("reconfiguring component '" .. k .. "' (" .. v .. ")")
 			reconf[fname](dirtyList)
 		else
-			log:warn("unknown component or action '" .. fname .. "' skipped")
+			log:warning("unknown component or action '" .. fname .. "' skipped")
 		end
 	end
 
@@ -84,15 +84,15 @@ function M.commitComponent(c)
 end
 
 function M.reloadComponent(c, silent)
-	log:info("reloading component '" .. c .. "'") 
+	log:info("reloading component '" .. c .. "'")
 	local command = 'reload'
 	local cmd = '/etc/init.d/' .. c .. ' '..command
-	if silent ~= nil and silent then 
+	if silent ~= nil and silent then
 		cmd = cmd .. ' &> /dev/null'
 		os.execute(cmd)
 	else
 		rv = utils.captureCommandOutput(cmd)
-		log:debug("  result reloading component '" .. c .. "' (cmd: '"..cmd.."'): \n"..utils.dump(rv))
+		log:verbose("  result reloading component '" .. c .. "' (cmd: '"..cmd.."'): \n"..utils.dump(rv))
 	end
 end
 
@@ -213,7 +213,7 @@ function reconf.dnsredir_add(dirtyList)
 	local redirText = '/#/' .. settings.get('network.ap.address')
 	local sname = utils.getUciSectionName('dhcp', 'dnsmasq')
 	if sname == nil then return log:error("dhcp config does not contain a dnsmasq section") end
-	if uci:get('dhcp', sname, 'address') ~= nil then return log:debug("DNS address redirection already in place, not re-adding", false) end
+	if uci:get('dhcp', sname, 'address') ~= nil then return log:verbose("DNS address redirection already in place, not re-adding", false) end
 
 	uci:set('dhcp', sname, 'address', {redirText})
 	commitBit(dirtyList, 'dhcp'); reloadBit(dirtyList, 'dnsmasq')
@@ -230,7 +230,7 @@ end
 --TODO: handle os.rename() return values (nil+msg on error)
 function reconf.wwwcaptive_add(dirtyList)
 	if utils.exists(M.WWW_CAPTIVE_INDICATOR) then
-		return log:debug("WWW captive directory already in place, not redoing", false)
+		return log:verbose("WWW captive directory already in place, not redoing", false)
 	end
 	local rv,reason = os.rename('/www', M.WWW_RENAME_NAME)
 	if rv == true then
@@ -241,7 +241,7 @@ function reconf.wwwcaptive_add(dirtyList)
 	end
 end
 function reconf.wwwcaptive_rm(dirtyList)
-	if not utils.exists(M.WWW_CAPTIVE_INDICATOR) then return log:debug("WWW captive directory not in place, not undoing", false) end
+	if not utils.exists(M.WWW_CAPTIVE_INDICATOR) then return log:verbose("WWW captive directory not in place, not undoing", false) end
 	os.remove('/www')
 	if os.rename(M.WWW_RENAME_NAME, '/www') ~= true then
 		return log:error("Could not rename " .. M.WWW_RENAME_NAME .. " to /www")
@@ -275,16 +275,16 @@ end
 -- @return True on success or nil+msg on error.
 function M.setupAccessPoint(ssid)
 	M.setStatus(M.CREATING,"Creating access point '"..ssid.."'...");
-	
-	-- add access point configuration 
+
+	-- add access point configuration
 	M.switchConfiguration({apnet="add_noreload"})
 	wifi.activateConfig(ssid)
 	-- NOTE: dnsmasq must be reloaded after network or it will be unable to serve IP addresses
 	M.switchConfiguration({ wifiiface="add", network="reload", staticaddr="add", dhcppool="add_noreload", wwwredir="add", dnsredir="add" })
 	M.switchConfiguration({dhcp="reload"})
-	
+
 	M.setStatus(M.CREATED,"Access point created");
-	
+
 	local ds = wifi.getDeviceState()
 	--log:info("  network/status: ")
 	log:info("    ssid: ".. utils.dump(ds.ssid))
@@ -298,10 +298,10 @@ function M.setupAccessPoint(ssid)
 	log:info("    signal: ".. utils.dump(ds.signal))
 	log:info("    noise: ".. utils.dump(ds.noise))
 	log:info("    raw: ".. utils.dump(ds))
-	
+
 	local localip = wifi.getLocalIP()
 	log:info("    localip: "..utils.dump(localip))]]--
-			
+
 	return true
 end
 
@@ -311,14 +311,14 @@ end
 -- @tparam string ssid The SSID to use for the access point.
 -- @return True on success or nil+msg on error.
 function M.enableAccessPoint(ssid)
-	log:debug("enableAccessPoint ssid: ".. utils.dump(ssid))
-	
+	log:verbose("enableAccessPoint ssid: ".. utils.dump(ssid))
+
 	M.switchConfiguration{apnet="add_noreload"}
 	wifi.activateConfig(ssid)
-	
+
 	local ds = wifi.getDeviceState()
-	log:debug("    ssid: ".. utils.dump(ds.ssid))
-			
+	log:verbose("    ssid: ".. utils.dump(ds.ssid))
+
 	return true
 end
 
@@ -332,7 +332,7 @@ end
 function M.associateSsid(ssid, passphrase, recreate)
 	log:info("netconfig:associateSsid: "..(ssid or "<nil>")..", "..(recreate or "<nil>"))
 	M.setStatus(M.CONNECTING,"Connecting...");
-	
+
 	-- see if previously configured network for given ssid exists
 	local cfg = nil
 	for _, net in ipairs(wifi.getConfigs()) do
@@ -341,7 +341,7 @@ function M.associateSsid(ssid, passphrase, recreate)
 			break
 		end
 	end
-	
+
 	-- if not, or if newly created configuration is requested, create a new configuration
 	if cfg == nil or recreate ~= nil then
 		local scanResult, msg = wifi.getScanInfo(ssid)
@@ -365,16 +365,16 @@ function M.associateSsid(ssid, passphrase, recreate)
 	--M.switchConfiguration{ wifiiface="add", apnet="rm", staticaddr="rm", dhcppool="rm", wwwredir="rm", dnsredir="rm", wireless="reload" }
   	--M.switchConfiguration{ wifiiface="add", staticaddr="rm", dhcppool="rm", wwwredir="rm", dnsredir="rm", wireless="reload" }
   	M.switchConfiguration({ wifiiface="add", staticaddr="rm", dhcppool="rm", wwwredir="rm", dnsredir="rm" })
-	
+
 	-- we check if we get a ssid and ip in max 5 seconds
-	-- if not there is probably a issue 
+	-- if not there is probably a issue
 	local attemptInterval = 1
 	local maxAttempts = 5
 	local attempt = 0
 	local nextAttemptTime = os.time()
 	while true do
 		if os.time() > nextAttemptTime then
-			log:debug("associated check "..utils.dump(attempt).."/"..utils.dump(maxAttempts))
+			log:verbose("associated check "..utils.dump(attempt).."/"..utils.dump(maxAttempts))
 			if wifi.getLocalIP() ~= nil and wifi.getDeviceState().ssid == ssid then
 				break
 			else
@@ -390,18 +390,18 @@ function M.associateSsid(ssid, passphrase, recreate)
 			end
 		end
 	end
-	
+
 	-- signin to connect.doodle3d.com
 	local success, output = signin.signin()
 	if success then
   		log:info("Signed in")
-	else 
+	else
 		log:info("Signing in failed")
 	end
-	
+
 	-- report we are connected after signin attempt
 	M.setStatus(M.CONNECTED,"Connected");
-	
+
 	return true
 end
 --- Disassociate wlan device as client from all SSID's.
@@ -411,7 +411,7 @@ end
 function M.disassociate()
 
 	M.setStatus(M.NOT_CONNECTED,"Not connected");
-	
+
 	wifi.activateConfig()
 	return wifi.restart()
 end

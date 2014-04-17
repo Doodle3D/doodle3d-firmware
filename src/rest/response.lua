@@ -15,7 +15,7 @@ local settings = require('util.settings')
 local defaults = require('conf_defaults')
 local utils = require('util.utils')
 local log = require('util.logger')
-  
+
 local M = {}
 M.__index = M
 
@@ -167,10 +167,10 @@ function M:send()
 		io.write("\r\n")
 		io.write(self.binaryData)
 	end
-	
-	if self.body.status ~= "success" then 
-		log:debug("Response:"..utils.dump(self.body.status).." ("..utils.dump(self.body.msg)..")")
-	end 
+
+	if self.body.status ~= "success" then
+		log:verbose("Response:"..utils.dump(self.body.status).." ("..utils.dump(self.body.msg)..")")
+	end
 end
 
 --- Sets the response object to return binary data instead of JSON as its body.

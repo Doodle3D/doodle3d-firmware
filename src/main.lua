@@ -125,7 +125,7 @@ end
 -- @treturn bool True on success, false on error.
 local function setupLogger()
 	local logStream = io.stderr -- use stderr as hard-coded default target
-	local logLevel = log.LEVEL.debug -- use debug logging as hard-coded default level
+	local logLevel = log.LEVEL.verbose -- use verbose logging as hard-coded default level
 
 	local logTargetSetting = settings.getSystemKey('logfile')
 	local logLevelSetting = settings.get('system.log.level')
@@ -178,7 +178,7 @@ local function setupLogger()
 	end
 
 	if logLevelError then
-		log:error("uci config specifies invalid log level '" .. logLevelSetting .. "', using debug level as fallback")
+		log:error("uci config specifies invalid log level '" .. logLevelSetting .. "', using verbose level as fallback")
 		rv = false
 	end
 
@@ -222,10 +222,10 @@ local function main(environment)
 	local rq = RequestClass.new(environment, postData, confDefaults.DEBUG_API)
 
 	if rq:getRequestMethod() == 'CMDLINE' and rq:get('autowifi') ~= nil then
-	
+
 		local version = updater.formatVersion(updater.getCurrentVersion());
 		log:info("Doodle3D version: "..util.dump(version))
-	
+
 		log:info("running in autowifi mode")
 		local rv,msg = setupAutoWifiMode()
 
@@ -255,7 +255,7 @@ local function main(environment)
 				.. "/" .. (rq:getRealApiFunctionName() or "<unknown>"))
 		if rq:getRequestMethod() ~= 'CMDLINE' then
 			log:info("remote IP/port: " .. rq:getRemoteHost() .. "/" .. rq:getRemotePort())
-			--log:debug("user agent: " .. rq:getUserAgent())
+			--log:verbose("user agent: " .. rq:getUserAgent())
 		end
 
 		local response, err = rq:handle()

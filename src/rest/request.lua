@@ -167,7 +167,8 @@ setmetatable(M, {
 })
 
 --This function initializes itself using various environment variables, the arg array and the given postData
---NOTE: if debugging is enabled, commandline arguments 'm' and 'f' override requested module and function
+--NOTE: if debugging is enabled, commandline argument 'p' (path) overrides requested module and function and
+--      'r' (rqType) overrides request method
 function M.new(environment, postData, debugEnabled)
 	local self = setmetatable({}, M)
 

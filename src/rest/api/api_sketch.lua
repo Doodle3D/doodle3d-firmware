@@ -133,7 +133,7 @@ function M._global_POST(request, response)
 	local sketchIdx = listSize > 0 and sketches[listSize] + 1 or 1
 	local sketchFile = M.SKETCH_DIR .. '/' .. constructSketchFilename(sketchIdx)
 
-	log:debug("saving sketch #" .. sketchIdx .. " (" .. argData:len() .. " bytes)")
+	log:verbose("saving sketch #" .. sketchIdx .. " (" .. argData:len() .. " bytes)")
 	local saveFile,msg = io.open(sketchFile, 'w')
 
 	if not saveFile then

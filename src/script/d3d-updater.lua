@@ -82,7 +82,7 @@ local baseUrl = M.DEFAULT_BASE_URL -- default, can be overwritten by M.setBaseUr
 -- @string msg The message to log.
 local function P(lvl, msg)
 	if log then
-		if lvl == -1 then log:debug(msg)
+		if lvl == -1 then log:verbose(msg)
 		elseif lvl == 0 or lvl == 1 then log:info(msg)
 		end
 	else
@@ -90,7 +90,7 @@ local function P(lvl, msg)
 	end
 end
 
---- Log a debug message, this function wraps @{P}.
+--- Log a debug/verbose message, this function wraps @{P}.
 -- The message will be logged with level -1 and be prefixed with '(DBG)'.
 -- @string msg The message to log.
 local function D(msg) P(-1, (log and msg or "(DBG) " .. msg)) end

@@ -81,7 +81,7 @@ end
 --returns a printer instance or nil (and sets error state on response in the latter case)
 function M.createPrinterOrFail(deviceId, response)
 
-	--log:debug("API:printer:createPrinterOrFail: "..utils.dump(deviceId))
+	--log:verbose("API:printer:createPrinterOrFail: "..utils.dump(deviceId))
 	local msg,printer = nil, nil
 
 	if deviceId == nil or deviceId == "" then
@@ -97,6 +97,8 @@ function M.createPrinterOrFail(deviceId, response)
 		end
 		return nil
 	end
+
+	printer:setLocalLogLevel(log:getLevel())
 
 	return printer
 end

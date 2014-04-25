@@ -13,6 +13,8 @@ local iwinfo = require('iwinfo')
 
 local M = {}
 
+local MOD_ABBR = "NTWL"
+
 -- NOTE: fallback device 'radio0' is required because sometimes the wlan0 device disappears
 M.DFL_DEVICE = 'wlan0'
 M.DFL_DEVICE_FALLBACK = 'radio0'
@@ -75,7 +77,7 @@ function M.init(device)
 		deviceName = M.DFL_DEVICE_FALLBACK
 		deviceApi = iwinfo.type(deviceName)
 
-		log:info("wireless device '" .. devInitial .. "' not found, trying fallback '" .. deviceName .. "'")
+		log:info(MOD_ABBR, "wireless device '" .. devInitial .. "' not found, trying fallback '" .. deviceName .. "'")
 
 		if not deviceApi then
 			return false, "No such wireless device: '" .. devInitial .. "' (and fallback '" .. deviceName .. "' does not exist either)"
@@ -126,7 +128,7 @@ end
 --returns the wireless local ip address
 function M.getLocalIP()
 	local ifconfig, rv = utils.captureCommandOutput("ifconfig wlan0");
-	--log:verbose("  ifconfig: \n"..utils.dump(ifconfig));
+	--log:verbose(MOD_ABBR, "  ifconfig: \n"..utils.dump(ifconfig));
 
 	local localip = ifconfig:match('inet addr:([%d%.]+)')
 	return localip
@@ -187,12 +189,12 @@ end
 --- Activate wireless section for given SSID and disable all others
 -- @param ssid	SSID of config to enable, or nil to disable all network configs
 function M.activateConfig(ssid)
-	--log:info("wlanconfig.activateConfig: "..ssid);
+	--log:info(MOD_ABBR, "wlanconfig.activateConfig: "..ssid);
 
 	-- make sure only one is enabled
 	uci:foreach('wireless', 'wifi-iface', function(s)
 		local disabled = s.ssid ~= ssid and '1' or '0'
-		--log:info("    "..utils.dump(s.ssid).." disable: "..utils.dump(disabled))
+		--log:info(MOD_ABBR, "    "..utils.dump(s.ssid).." disable: "..utils.dump(disabled))
 		uci:set('wireless', s['.name'], 'disabled', disabled)
 	end)
 
@@ -210,10 +212,10 @@ function M.activateConfig(ssid)
 			return false
 		end
 	end)
-	--[[log:info("  result:");
+	--[[log:info(MOD_ABBR, "  result:");
 	uci:foreach('wireless', 'wifi-iface', function(s)
 		local disabled = s.ssid ~= ssid and '1' or '0'
-		log:info("    "..utils.dump(s.ssid).." disable: "..utils.dump(disabled))
+		log:info(MOD_ABBR, "    "..utils.dump(s.ssid).." disable: "..utils.dump(disabled))
 	end)]]--
 
 	uci:commit('wireless')
@@ -242,7 +244,7 @@ function M.createConfigFromScanInfo(info, passphrase, disabled)
 	uci:foreach('wireless', 'wifi-iface', function(s)
 		--if s.bssid == info.bssid then
 		if s.ssid == info.ssid then
-			log:verbose("removing old wireless config for net '" .. s.ssid .. "'")
+			log:verbose(MOD_ABBR, "removing old wireless config for net '" .. s.ssid .. "'")
 			uci:delete('wireless', s['.name'])
 --			return false --keep looking, just in case multiple entries with this bssid exist
 		end

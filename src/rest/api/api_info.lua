@@ -21,6 +21,7 @@ local LOG_COLLECT_DIRNAME = 'wifibox-logs'
 local LOG_COLLECT_DIR = TMP_DIR .. '/' .. LOG_COLLECT_DIRNAME
 local WIFIBOX_LOG_FILENAME = 'wifibox.log'
 local WIFIBOX_LOG_FILE = TMP_DIR .. '/' .. WIFIBOX_LOG_FILENAME
+local MOD_ABBR = "AINF"
 
 local SYSLOG_FILENAME = 'syslog'
 local PROCESS_LIST_FILENAME = 'processes'
@@ -50,10 +51,10 @@ local M = {
 -- returns wifiboxid (since version 0.10.2)
 function M._global(request, response)
 	response:setSuccess()
-	
+
 	local wifiboxid = wifi.getSubstitutedSsid(settings.get('network.cl.wifiboxid'))
 	response:addData('wifiboxid', wifiboxid)
-	
+
 end
 
 -- TODO: redirect stdout+stderr; handle errors
@@ -147,12 +148,12 @@ function M.logfiles(request, response)
 end
 
 function M.access(request, response)
-	--log:info("  remoteAddress: |"..utils.dump(request.remoteAddress).."|");
-	--log:info("  controller: |"..utils.dump(accessManager.getController()).."|");
+	--log:info(MOD_ABBR, "  remoteAddress: |"..utils.dump(request.remoteAddress).."|");
+	--log:info(MOD_ABBR, "  controller: |"..utils.dump(accessManager.getController()).."|");
 
 	local hasControl = accessManager.hasControl(request.remoteAddress)
-	-- if hasControl then log:info("  hasControl: true")
-	-- else log:info("  hasControl: false") end
+	-- if hasControl then log:info(MOD_ABBR, "  hasControl: true")
+	-- else log:info(MOD_ABBR, "  hasControl: false") end
 	response:setSuccess()
 	response:addData('has_control', hasControl)
 

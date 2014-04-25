@@ -32,7 +32,7 @@ for i,v in ipairs(M.LEVEL) do
 end
 
 
-local function log(level, msg, verboseFmt)
+local function log(level, module, msg, verboseFmt)
 	if level <= logLevel then
 		local now = os.date('%m-%d %H:%M:%S')
 		local i = debug.getinfo(3) --the stack frame just above the logger call
@@ -41,9 +41,10 @@ local function log(level, msg, verboseFmt)
 		local name = i.name or "(nil)"
 		local vVal = 'nil'
 		local m = (type(msg) == 'string') and msg or utils.dump(msg)
+		if module == nil then module = "LUA " end
 
-		if v then logStream:write(now .. " (" .. M.LEVEL[level] .. ")     " .. m .. "  [" .. name .. "@" .. i.short_src .. ":" .. i.linedefined .. "]\n")
-		else logStream:write(now .. " (" .. M.LEVEL[level] .. ")     " .. m .. "\n") end
+		if v then logStream:write(now .. " [" .. module .. "] (" .. M.LEVEL[level] .. "): " .. m .. "  [" .. name .. "@" .. i.short_src .. ":" .. i.linedefined .. "]\n")
+		else logStream:write(now .. " [" .. module .. "] (" .. M.LEVEL[level] .. "): " .. m .. "\n") end
 
 		logStream:flush()
 	end
@@ -52,11 +53,11 @@ end
 
 --- Initializes the logger.
 -- @tparam @{util.logger.LEVEL} level Minimum level of messages to log.
--- @tparam bool verbose Write verbose log messages (include file/line inforomation).
+-- @tparam bool verbose Write verbose log messages (include file/line information).
 function M:init(level, verboseFmt)
 	logLevel = level or M.LEVEL.warning
 	logVerboseFmt = verboseFmt or false
-	logStream = stream or io.stdout
+	--logStream = stream or io.stdout
 end
 
 function M:setLevel(level, verboseFmt)
@@ -73,10 +74,14 @@ function M:getLevel()
 	return logLevel, logVerboseFmt
 end
 
-function M:error(msg, verboseFmt) log(M.LEVEL.error, msg, verboseFmt); return false end
-function M:warning(msg, verboseFmt) log(M.LEVEL.warning, msg, verboseFmt); return true end
-function M:info(msg, verboseFmt) log(M.LEVEL.info, msg, verboseFmt); return true end
-function M:verbose(msg, verboseFmt) log(M.LEVEL.verbose, msg, verboseFmt); return true end
-function M:bulk(msg, verboseFmt) log(M.LEVEL.bulk, msg, verboseFmt); return true end
+function M:getStream()
+	return logStream
+end
+
+function M:error(module, msg, verboseFmt) log(M.LEVEL.error, module, msg, verboseFmt); return false end
+function M:warning(module, msg, verboseFmt) log(M.LEVEL.warning, module, msg, verboseFmt); return true end
+function M:info(module, msg, verboseFmt) log(M.LEVEL.info, module, msg, verboseFmt); return true end
+function M:verbose(module, msg, verboseFmt) log(M.LEVEL.verbose, module, msg, verboseFmt); return true end
+function M:bulk(module, msg, verboseFmt) log(M.LEVEL.bulk, module, msg, verboseFmt); return true end
 
 return M

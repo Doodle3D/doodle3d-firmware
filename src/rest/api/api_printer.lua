@@ -14,6 +14,8 @@ local printDriver = require('print3d')
 local printerUtils = require('util.printer')
 local accessManager = require('util.access')
 
+local MOD_ABBR = "APRN"
+
 local M = {
 	isApi = true
 }
@@ -68,7 +70,7 @@ function M.progress(request, response)
 	return true;
 end
 
--- NOTE: onlyReturnState is optional and prevents response from being modified
+-- NOTE: onlyReturnState is optional and prevents response from being modified, used when calling from within other api call
 function M.state(request, response, onlyReturnState)
 	local argId = request:get("id")
 	if not onlyReturnState then response:addData('id', argId) end
@@ -136,7 +138,7 @@ end
 
 function M.stop_POST(request, response)
 
-	log:info("API:printer/stop")
+	log:info(MOD_ABBR, "API:printer/stop")
 
 	if not accessManager.hasControl(request.remoteAddress) then
 		response:setFail("No control access")
@@ -159,6 +161,8 @@ function M.stop_POST(request, response)
 	end
 end
 
+--requires: gcode(string) (the gcode to be appended)
+--accepts: id(string) (the printer ID to append to)
 --accepts: first(bool) (chunks will be concatenated but output file will be cleared first if this argument is true)
 --accepts: start(bool) (only when this argument is true will printing be started)
 function M.print_POST(request, response)
@@ -172,7 +176,7 @@ function M.print_POST(request, response)
 		hasControl = true
 	end
 
-	log:info("  hasControl: "..utils.dump(hasControl))
+	log:info(MOD_ABBR, "  hasControl: "..utils.dump(hasControl))
 	if not hasControl then
 		response:setFail("No control access")
 		return
@@ -194,7 +198,7 @@ function M.print_POST(request, response)
 	end
 
 	if argIsFirst == true then
-		log:verbose("clearing all gcode for " .. printer:getId())
+		log:verbose(MOD_ABBR, "clearing all gcode for " .. printer:getId())
 		response:addData('gcode_clear',true)
 		local rv,msg = printer:clearGcode()
 

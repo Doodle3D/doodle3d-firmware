@@ -19,6 +19,8 @@ local baseconfig = require('conf_defaults')
 local utils = require('util.utils')
 local log = require('util.logger')
 
+local MOD_ABBR = "USET"
+
 local M = {}
 
 --- UCI config name (i.e., file under `/etc/config`)
@@ -159,7 +161,7 @@ end]]--
 -- @return The associated value, beware (!) that this may be boolean false for keys of 'bool' type, or nil if the key could not be read because of a UCI error.
 -- @treturn string Message in case of error.
 function M.get(key)
-	--log:info("settings:get: "..utils.dump(key))
+	--log:info(MOD_ABBR, "settings:get: "..utils.dump(key))
 	key = replaceDots(key)
 	
 	-- retrieve settings's base settings from conf_defaults.lua
@@ -177,7 +179,7 @@ function M.get(key)
 	local uciV,msg = uci:get(UCI_CONFIG_NAME, section, key)
 	if not uciV and msg ~= nil then
 		local errorMSG = "Issue reading setting '"..utils.dump(key).."': "..utils.dump(msg);
-		log:info(errorMSG)
+		log:info(MOD_ABBR, errorMSG)
 		return nil, errorMSG;
 	end
 	
@@ -244,21 +246,21 @@ end
 -- @treturn bool|nil True if everything went well, false if validation error, nil in case of error.
 -- @treturn ?string Error message in case first return value is nil (invalid key).
 function M.set(key, value, noCommit)
-	log:info("settings:set: "..utils.dump(key).." to: "..utils.dump(value))
+	log:info(MOD_ABBR, "settings:set: "..utils.dump(key).." to: "..utils.dump(value))
 	key = replaceDots(key)
 
 	local r = utils.create(UCI_CONFIG_FILE)
 	local rv, msg = uci:set(UCI_CONFIG_NAME, UCI_CONFIG_SECTION, UCI_CONFIG_TYPE)
 	if not rv and msg ~= nil then
 		local errorMSG = "Issue creating section '"..utils.dump(UCI_CONFIG_SECTION).."': "..utils.dump(msg);
-		log:info(errorMSG)
+		log:info(MOD_ABBR, errorMSG)
 		return nil, errorMSG;
 	end
 
 	local base = getBaseKeyTable(key)
 	if not base then return false,ERR_NO_SUCH_KEY end
 
-	--log:info("  base.type: "..utils.dump(base.type))
+	--log:info(MOD_ABBR, "  base.type: "..utils.dump(base.type))
 	if base.type == 'bool' then
 		if value ~= "" then
 			value = utils.toboolean(value)
@@ -271,7 +273,7 @@ function M.set(key, value, noCommit)
 			return false,"Value isn't a valid int or float"
 		end
 	end
-	
+
 	local valid,m = isValid(value, base)
 	if not valid then
 		return false,m
@@ -283,7 +285,7 @@ function M.set(key, value, noCommit)
 		local rv, msg = uci:set(UCI_CONFIG_NAME, section, UCI_CONFIG_TYPE)
 		if not rv and msg ~= nil then
 			local errorMSG = "Issue getting subsection '"..utils.dump(base.subSection).."': "..utils.dump(msg);
-			log:info(errorMSG)
+			log:info(MOD_ABBR, errorMSG)
 			return nil, errorMSG;
 		end
 	end
@@ -292,14 +294,14 @@ function M.set(key, value, noCommit)
 		local rv, msg = uci:set(UCI_CONFIG_NAME, section, key, toUciValue(value, base.type))
 		if not rv and msg ~= nil then
 			local errorMSG = "Issue setting setting '"..utils.dump(key).."' in section '"..utils.dump(section).."': "..utils.dump(msg);
-			log:info(errorMSG)
+			log:info(MOD_ABBR, errorMSG)
 			return nil, errorMSG;
 		end
 	else
 		local rv, msg = uci:delete(UCI_CONFIG_NAME, section, key)
 		if not rv and msg ~= nil then
 			local errorMSG = "Issue deleting setting '"..utils.dump(key).."' in section '"..utils.dump(section).."': "..utils.dump(msg);
-			log:info(errorMSG)
+			log:info(MOD_ABBR, errorMSG)
 			return nil, errorMSG;
 		end
 	end
@@ -318,35 +320,35 @@ end
 -- @string key The key to set.
 -- @treturn bool|nil True if everything went well, nil in case of error.
 function M.resetAll()
-	log:info("settings:resetAll")
+	log:info(MOD_ABBR, "settings:resetAll")
 
 	-- find all sections
 	local allSections, msg = uci:get_all(UCI_CONFIG_NAME)
 	if not allSections and msg ~= nil then
 		local errorMSG = "Issue reading all settings: "..utils.dump(msg);
-		log:info(errorMSG)
+		log:info(MOD_ABBR, errorMSG)
 		return nil, errorMSG;
 	end
-	
+
 	-- delete all uci sections but system
 	for key,value in pairs(allSections) do
 		if key ~= "system" and not key:match('^[A-Z_]*$') then --TEMP: skip 'constants', which should be moved anyway
 			local rv, msg = uci:delete(UCI_CONFIG_NAME,key)
 			if not rv and msg ~= nil then
 				local errorMSG = "Issue deleting setting '"..utils.dump(key).."': "..utils.dump(msg);
-				log:info(errorMSG)
+				log:info(MOD_ABBR, errorMSG)
 				return nil, errorMSG;
 			end
 		end
 	end
-	
+
 	-- reset all to defaults
 	for k,_ in pairs(baseconfig) do
 		if not k:match('^[A-Z_]*$') then --TEMP: skip 'constants', which should be moved anyway
 			M.reset(k,true)
 		end
 	end
-	
+
 	M.commit()
 	return true
 end
@@ -356,7 +358,7 @@ end
 -- @p[opt=nil] noCommit If true, do not commit the uci configuration; this is more efficient when resetting multiple values
 -- @treturn bool|nil True if everything went well, nil in case of error.
 function M.reset(key, noCommit)
-	log:info("settings:reset: "..utils.dump(key))
+	log:info(MOD_ABBR, "settings:reset: "..utils.dump(key))
 
 	-- delete
 	key = replaceDots(key)
@@ -365,13 +367,13 @@ function M.reset(key, noCommit)
 	local section = UCI_CONFIG_SECTION;
 	if base.subSection ~= nil then
 		section = M.get(base.subSection)
-	end 
+	end
 	local rv, msg = uci:delete(UCI_CONFIG_NAME, section, key)
-	-- we can't respond to errors in general here because when a key isn't found 
+	-- we can't respond to errors in general here because when a key isn't found
 	--   (which always happens when reset is used in resetall) it will also generate a error
 	--if not rv and msg ~= nil then
 	--	local errorMSG = "Issue deleting setting '"..utils.dump(key).."' in section '"..section.."': "..utils.dump(msg);
-	--	log:info(errorMSG)
+	--	log:info(MOD_ABBR, errorMSG)
 	--	return nil, errorMSG;
 	--end
 

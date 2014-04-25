@@ -10,6 +10,8 @@ local wifi = require('network.wlanconfig')
 local netconf = require('network.netconfig')
 local settings = require('util.settings')
 
+local MOD_ABBR = "AUPD"
+
 -- NOTE: the updater module 'detects' command-line invocation by existence of 'arg', so we have to make sure it is not defined.
 argStash = arg
 arg = nil
@@ -158,7 +160,7 @@ end
 function M.install_POST(request, response)
 	local argVersion = request:get("version")
 	local argNoRetain = request:get("no_retain")
-	log:info("API:update/install (noRetain: "..utils.dump(argNoRetain)..")")
+	log:info(MOD_ABBR, "API:update/install (noRetain: "..utils.dump(argNoRetain)..")")
 	local noRetain = argNoRetain == 'true'
 
 	if not operationsAccessOrFail(request, response) then return end

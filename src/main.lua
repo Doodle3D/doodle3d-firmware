@@ -30,6 +30,7 @@ local updater = require('script.d3d-updater')
 arg = argStash
 
 local postData = nil
+local MOD_ABBR = "ENTR"
 
 
 --- Switches to wifi client mode or to access point mode based on availability of known wifi networks.
@@ -48,11 +49,11 @@ local function setupAutoWifiMode()
 
 	local wifiState = wifi.getDeviceState()
 	local netName, netMode = wifiState.ssid, wifiState.mode
-	log:info("current wifi name: " .. (netName or "<nil>") .. ", mode: " .. netMode)
+	log:info(MOD_ABBR, "current wifi name: " .. (netName or "<nil>") .. ", mode: " .. netMode)
 
 	local apSsid = wifi.getSubstitutedSsid(settings.get('network.ap.ssid'))
 	local apMode = (apSsid == netName) and (netMode == 'ap')
-	log:info("ssid of self: " .. apSsid)
+	log:info(MOD_ABBR, "ssid of self: " .. apSsid)
 
 	local scanList,msg = wifi.getScanInfo()
 	if not scanList then
@@ -60,7 +61,7 @@ local function setupAutoWifiMode()
 	end
 
 	local knownSsids = wifi.getConfigs()
-	-- log:info("current wifi name: " .. (netName or "<nil>") .. ", mode: " .. netMode .. ", ssid of self: " .. apSsid)
+	-- log:info(MOD_ABBR, "current wifi name: " .. (netName or "<nil>") .. ", mode: " .. netMode .. ", ssid of self: " .. apSsid)
 	local visNet, knownNet = {}, {}
 	for _,sn in ipairs(scanList) do
 		table.insert(visNet, sn.ssid)
@@ -68,8 +69,8 @@ local function setupAutoWifiMode()
 	for _,kn in ipairs(knownSsids) do
 		table.insert(knownNet, kn.ssid .. "/" .. kn.mode)
 	end
-	log:info("visible networks: " .. table.concat(visNet, ", "))
-	log:info("known networks: " .. table.concat(knownNet, ", "))
+	log:info(MOD_ABBR, "visible networks: " .. table.concat(visNet, ", "))
+	log:info(MOD_ABBR, "known networks: " .. table.concat(knownNet, ", "))
 
 	-- if the currently active network is client mode and is also visible, do nothing since it will connect automatically further along the boot process
 	if netMode == 'sta' and netName ~= nil and netName ~= "" and findSsidInList(scanList, netName) then
@@ -173,12 +174,12 @@ local function setupLogger()
 
 	local rv = true
 	if logTargetError then
-		log:error("could not open logfile '" .. logTargetSetting .. "', using stderr as fallback (" .. logTargetError .. ")")
+		log:error(MOD_ABBR, "could not open logfile '" .. logTargetSetting .. "', using stderr as fallback (" .. logTargetError .. ")")
 		rv = false
 	end
 
 	if logLevelError then
-		log:error("uci config specifies invalid log level '" .. logLevelSetting .. "', using verbose level as fallback")
+		log:error(MOD_ABBR, "uci config specifies invalid log level '" .. logLevelSetting .. "', using verbose level as fallback")
 		rv = false
 	end
 
@@ -198,7 +199,7 @@ local function init(environment)
 	end
 
 	if dbgText ~= "" then dbgText = " (" .. dbgText .. " debugging)" end
-	log:info("=======rest api" .. dbgText .. "=======")
+	log:info(MOD_ABBR, "=======rest api" .. dbgText .. "=======")
 
 	if (environment['REQUEST_METHOD'] == 'POST') then
 		local n = tonumber(environment['CONTENT_LENGTH'])
@@ -224,48 +225,48 @@ local function main(environment)
 	if rq:getRequestMethod() == 'CMDLINE' and rq:get('autowifi') ~= nil then
 
 		local version = updater.formatVersion(updater.getCurrentVersion());
-		log:info("Doodle3D version: "..util.dump(version))
+		log:info(MOD_ABBR, "Doodle3D version: "..util.dump(version))
 
-		log:info("running in autowifi mode")
+		log:info(MOD_ABBR, "running in autowifi mode")
 		local rv,msg = setupAutoWifiMode()
 
 		if rv then
-			log:info("autowifi setup done (" .. msg .. ")")
+			log:info(MOD_ABBR, "autowifi setup done (" .. msg .. ")")
 		else
-			log:error("autowifi setup failed (" .. msg .. ")")
+			log:error(MOD_ABBR, "autowifi setup failed (" .. msg .. ")")
 		end
 	elseif rq:getRequestMethod() == 'CMDLINE' and rq:get('signin') ~= nil then
-		log:info("running in signin mode")
+		log:info(MOD_ABBR, "running in signin mode")
 
 		local ds = wifi.getDeviceState()
-		log:info("  ds.mode: "..util.dump(ds.mode))
+		log:info(MOD_ABBR, "  ds.mode: "..util.dump(ds.mode))
 		if ds.mode == "sta" then
-			log:info("  attempting signin")
+			log:info(MOD_ABBR, "  attempting signin")
 			local success,msg = Signin.signin()
 			if success then
-		  		log:info("Signin successful")
+		  		log:info(MOD_ABBR, "Signin successful")
 			else
-				log:info("Signin failed: "..util.dump(msg))
+				log:info(MOD_ABBR, "Signin failed: "..util.dump(msg))
 			end
 		end
 	elseif rq:getRequestMethod() ~= 'CMDLINE' or confDefaults.DEBUG_API then
-	--	log:info("received request of type " .. rq:getRequestMethod() .. " for " .. (rq:getRequestedApiModule() or "<unknown>")
+	--	log:info(MOD_ABBR, "received request of type " .. rq:getRequestMethod() .. " for " .. (rq:getRequestedApiModule() or "<unknown>")
 	--			.. "/" .. (rq:getRealApiFunctionName() or "<unknown>") .. " with arguments: " .. util.dump(rq:getAll()))
-		log:info("received request of type " .. rq:getRequestMethod() .. " for " .. (rq:getRequestedApiModule() or "<unknown>")
+		log:info(MOD_ABBR, "received request of type " .. rq:getRequestMethod() .. " for " .. (rq:getRequestedApiModule() or "<unknown>")
 				.. "/" .. (rq:getRealApiFunctionName() or "<unknown>"))
 		if rq:getRequestMethod() ~= 'CMDLINE' then
-			log:info("remote IP/port: " .. rq:getRemoteHost() .. "/" .. rq:getRemotePort())
-			--log:verbose("user agent: " .. rq:getUserAgent())
+			log:info(MOD_ABBR, "remote IP/port: " .. rq:getRemoteHost() .. "/" .. rq:getRemotePort())
+			--log:verbose(MOD_ABBR, "user agent: " .. rq:getUserAgent())
 		end
 
 		local response, err = rq:handle()
 
-		if err ~= nil then log:error(err) end
+		if err ~= nil then log:error(MOD_ABBR, err) end
 		response:send()
 
     	response:executePostResponseQueue()
 	else
-		log:info("Nothing to do...bye.\n")
+		log:info(MOD_ABBR, "Nothing to do...bye.\n")
 	end
 end
 
@@ -286,7 +287,7 @@ function handle_request(env)
 
 		resp:setError("initialization failed" .. errSuffix)
 		resp:send()
-		log:error("initialization failed" .. errSuffix) --NOTE: this assumes the logger has been initialized properly, despite init() having failed
+		log:error(MOD_ABBR, "initialization failed" .. errSuffix) --NOTE: this assumes the logger has been initialized properly, despite init() having failed
 
 		return 1
 	else

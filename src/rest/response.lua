@@ -20,6 +20,7 @@ local M = {}
 M.__index = M
 
 local REQUEST_ID_ARGUMENT = 'rq_id'
+local MOD_ABBR = "HRSP"
 
 M.httpStatusCode, M.httpStatusText, M.contentType = nil, nil, nil
 M.binaryData, M.binarySavename = nil, nil
@@ -131,7 +132,7 @@ end
 
 --- Call all function on the post-response queue, see @{M:addPostResponseFunction} for details and a side-note.
 function M:executePostResponseQueue()
-  --log:info("Response:executePostResponseQueue: " .. utils.dump(self.postResponseQueue))
+  --log:info(MOD_ABBR, "Response:executePostResponseQueue: " .. utils.dump(self.postResponseQueue))
 
   for i,fn in ipairs(self.postResponseQueue) do fn() end
 end
@@ -169,7 +170,7 @@ function M:send()
 	end
 
 	if self.body.status ~= "success" then
-		log:verbose("Response:"..utils.dump(self.body.status).." ("..utils.dump(self.body.msg)..")")
+		log:verbose(MOD_ABBR, "Response:"..utils.dump(self.body.status).." ("..utils.dump(self.body.msg)..")")
 	end
 end
 

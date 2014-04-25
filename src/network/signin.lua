@@ -20,6 +20,7 @@ local status = require('util.status')
 local M = {}
 
 local STATUS_FILE = "signinstatus"
+local MOD_ABBR = "NTSI"
 
 local IDLE_STATUS 			= 1
 local SIGNING_IN_STATUS 	= 2
@@ -28,14 +29,14 @@ local SIGNING_IN_STATUS 	= 2
 --
 function M.signin()
 
-	--log:verbose("signin:signin");
+	--log:verbose(MOD_ABBR, "signin:signin");
 
 	local code, msg = M.getStatus()
-	--log:verbose("  status: "..utils.dump(code).." "..utils.dump(msg));
+	--log:verbose(MOD_ABBR, "  status: "..utils.dump(code).." "..utils.dump(msg));
 
 	-- if we are already signin in, skip
 	if(code == SIGNING_IN_STATUS) then
-		log:verbose("  skipping signin")
+		log:verbose(MOD_ABBR, "  skipping signin")
 		return
 	end
 
@@ -53,10 +54,10 @@ function M.signin()
 	local signinResponse = ""
 	while true do
 		if os.time() > nextAttemptTime then
-			log:verbose("signin attempt "..utils.dump(attempt).."/"..utils.dump(maxAttempts))
+			log:verbose(MOD_ABBR, "signin attempt "..utils.dump(attempt).."/"..utils.dump(maxAttempts))
 			local signedin = false
 			local localip = wifi.getLocalIP();
-			--log:verbose("  localip: "..utils.dump(localip))
+			--log:verbose(MOD_ABBR, "  localip: "..utils.dump(localip))
 			if localip ~= nil then
 
 				local wifiboxid = wifi.getSubstitutedSsid(settings.get('network.cl.wifiboxid'))
@@ -64,16 +65,16 @@ function M.signin()
 
 				local cmd = "wget -q -T 2 -t 1 -O - "..baseurl.."?wifiboxid="..wifiboxid.."\\&localip="..localip;
 				signinResponse = utils.captureCommandOutput(cmd);
-				log:verbose("  signin response: \n"..utils.dump(signinResponse))
+				log:verbose(MOD_ABBR, "  signin response: \n"..utils.dump(signinResponse))
 				local success = signinResponse:match('"status":"success"')
-				log:verbose("  success: "..utils.dump(success))
+				log:verbose(MOD_ABBR, "  success: "..utils.dump(success))
 				if success ~= nil then
 					signedin = true
 				else
-					log:warning("signin failed request failed (response: "..utils.dump(signinResponse)..")")
+					log:warning(MOD_ABBR, "signin failed request failed (response: "..utils.dump(signinResponse)..")")
 				end
 			else
-				log:warning("signin failed no local ip found (attempt: "..utils.dump(attempt).."/"..utils.dump(maxAttempts)..")")
+				log:warning(MOD_ABBR, "signin failed no local ip found (attempt: "..utils.dump(attempt).."/"..utils.dump(maxAttempts)..")")
 			end
 
 			if signedin then
@@ -100,7 +101,7 @@ function M.getStatus()
 end
 
 function M.setStatus(code,msg)
-	log:info("signin:setStatus: "..code.." | "..msg)
+	log:info(MOD_ABBR, "signin:setStatus: "..code.." | "..msg)
 	status.set(STATUS_FILE,code,msg);
 end
 

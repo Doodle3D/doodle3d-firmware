@@ -10,6 +10,8 @@ local log = require('util.logger')
 local utils = require('util.utils')
 local printDriver = require('print3d')
 
+local MOD_ABBR = "UPRN"
+
 local SUPPORTED_PRINTERS = {
 	rigidbot = "Rigidbot",
 	ultimaker = "Ultimaker",
@@ -81,8 +83,8 @@ end
 --returns a printer instance or nil (and sets error state on response in the latter case)
 function M.createPrinterOrFail(deviceId, response)
 
-	--log:verbose("API:printer:createPrinterOrFail: "..utils.dump(deviceId))
-	local msg,printer = nil, nil
+	--log:verbose(MOD_ABBR, "API:printer:createPrinterOrFail: "..utils.dump(deviceId))
+	local rv,msg,printer = nil, nil, nil
 
 	if deviceId == nil or deviceId == "" then
 		printer,msg = printDriver.getPrinter()
@@ -98,7 +100,17 @@ function M.createPrinterOrFail(deviceId, response)
 		return nil
 	end
 
-	printer:setLocalLogLevel(log:getLevel())
+	-- only log these log setup errors, do not let them prevent further request handling
+
+	rv,msg = printer:setLocalLogStream(log:getStream())
+	if not rv then
+		log:error(MOD_ABBR, "could not set log stream in Lua binding (" .. msg .. ")")
+	end
+
+	rv,msg = printer:setLocalLogLevel(log:getLevel())
+	if not rv then
+		log:error(MOD_ABBR, "could not set log level '" .. log:getLevel() .. "' in Lua binding (" .. msg .. ")")
+	end
 
 	return printer
 end

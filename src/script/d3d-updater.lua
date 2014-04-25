@@ -24,6 +24,8 @@
 -- note: take care not to print any text in module functions, as this breaks http responses
 -- change representation of sysupgrade/factory info in versionInfo? (and also in image index?) <- create api call to get all info on all versions?
 
+local MOD_ABBR = "UPDA"
+
 local M = {}
 
 --- Possible states the updater can be in, they are stored in @{STATE_FILE}.
@@ -82,8 +84,8 @@ local baseUrl = M.DEFAULT_BASE_URL -- default, can be overwritten by M.setBaseUr
 -- @string msg The message to log.
 local function P(lvl, msg)
 	if log then
-		if lvl == -1 then log:verbose(msg)
-		elseif lvl == 0 or lvl == 1 then log:info(msg)
+		if lvl == -1 then log:verbose(MOD_ABBR, msg)
+		elseif lvl == 0 or lvl == 1 then log:info(MOD_ABBR, msg)
 		end
 	else
 		if (-lvl <= verbosity) then print(msg) end
@@ -99,7 +101,7 @@ local function D(msg) P(-1, (log and msg or "(DBG) " .. msg)) end
 -- Messages will be written to [stderr](http://www.cplusplus.com/reference/cstdio/stderr/), or logged using the logger set with @{setLogger}.
 -- @string msg The message to log.
 local function E(msg)
-	if log then log:error(msg)
+	if log then log:error(MOD_ABBR, msg)
 	else io.stderr:write(msg .. '\n')
 	end
 end
@@ -792,7 +794,7 @@ end
 -- @treturn bool|nil True on success (with the 'exception' as noted above) or nil on error.
 -- @treturn ?string|number (optional) Descriptive message or sysupgrade exit status on error.
 function M.flashImageVersion(versionEntry, noRetain, devType, isFactory)
-	if log then log:info("flashImageVersion") end
+	if log then log:info(MOD_ABBR, "flashImageVersion") end
 	local imgName = M.constructImageFilename(versionEntry.version, devType, isFactory)
 	local cmd = noRetain and 'sysupgrade -n ' or 'sysupgrade '
 	cmd = cmd .. cachePath .. '/' .. imgName

@@ -344,9 +344,13 @@ function M.associateSsid(ssid, passphrase, recreate)
 	
 	-- if not, or if newly created configuration is requested, create a new configuration
 	if cfg == nil or recreate ~= nil then
-		local scanResult = wifi.getScanInfo(ssid)
+		local scanResult, msg = wifi.getScanInfo(ssid)
 		if scanResult ~= nil then
 			wifi.createConfigFromScanInfo(scanResult, passphrase)
+		elseif scanResult == false then
+			--check for error
+			M.setStatus(M.CONNECTING_FAILED,msg);
+			return nil,msg
 		else
 			--check for error
 			local msg = "Wireless network "..ssid.." is not available"

@@ -50,7 +50,7 @@ local function setupAutoWifiMode()
 	local netName, netMode = wifiState.ssid, wifiState.mode
 
 	local apSsid = wifi.getSubstitutedSsid(settings.get('network.ap.ssid'))
-	local apMode = (apSsid == netName) and netMode == 'ap'
+	local apMode = (apSsid == netName) and (netMode == 'ap')
 
 	local scanList,msg = wifi.getScanInfo()
 	local knownSsids = wifi.getConfigs()
@@ -80,7 +80,7 @@ local function setupAutoWifiMode()
 	local connectWith = nil
 	for _,kn in ipairs(knownSsids) do
     	if kn.mode == 'ap' and kn.ssid == apSsid then break end
-		if findSsidInList(scanList, kn.ssid) then
+		if findSsidInList(scanList, kn.ssid) and kn.mode == 'sta' then
 			connectWith = kn.ssid
 			break
 		end

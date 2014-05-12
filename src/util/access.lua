@@ -43,7 +43,7 @@ end
 function M.getController()
 	local file, error = io.open('/tmp/controller.txt','r')
 	if file == nil then
-		--log:error(MOD_ABBR, "Util:Access:Can't read controller file. Error: "..error)
+		--log:error(MOD_ABBR, "Util:Access: Can't read controller file. Error: "..error)
 		return ""
 	else
 		controllerIP = file:read('*a')

@@ -25,7 +25,7 @@ function M.get(fileName)
 	local path = getPath(fileName)
 	local file, error = io.open(path,'r')
 	if file == nil then
-		--log:error(MOD_ABBR, "Util:Access:Can't read controller file. Error: "..error)
+		--log:warning(MOD_ABBR, "Util:Access:Can't read controller file. Error: "..error)
 		return "",""
 	else
 		local status = file:read('*a')

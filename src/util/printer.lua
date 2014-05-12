@@ -83,7 +83,7 @@ end
 --returns a printer instance or nil (and sets error state on response in the latter case)
 function M.createPrinterOrFail(deviceId, response)
 
-	--log:verbose(MOD_ABBR, "API:printer:createPrinterOrFail: "..utils.dump(deviceId))
+	--log:info(MOD_ABBR, "API:printer:createPrinterOrFail: "..utils.dump(deviceId))
 	local rv,msg,printer = nil, nil, nil
 
 	if deviceId == nil or deviceId == "" then

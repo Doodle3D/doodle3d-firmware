@@ -179,7 +179,7 @@ function M.get(key)
 	local uciV,msg = uci:get(UCI_CONFIG_NAME, section, key)
 	if not uciV and msg ~= nil then
 		local errorMSG = "Issue reading setting '"..utils.dump(key).."': "..utils.dump(msg);
-		log:info(MOD_ABBR, errorMSG)
+		log:warning(MOD_ABBR, errorMSG)
 		return nil, errorMSG;
 	end
 	
@@ -246,14 +246,14 @@ end
 -- @treturn bool|nil True if everything went well, false if validation error, nil in case of error.
 -- @treturn ?string Error message in case first return value is nil (invalid key).
 function M.set(key, value, noCommit)
-	log:info(MOD_ABBR, "settings:set: "..utils.dump(key).." to: "..utils.dump(value))
+	--log:info(MOD_ABBR, "settings:set: "..utils.dump(key).." to: "..utils.dump(value))
 	key = replaceDots(key)
 
 	local r = utils.create(UCI_CONFIG_FILE)
 	local rv, msg = uci:set(UCI_CONFIG_NAME, UCI_CONFIG_SECTION, UCI_CONFIG_TYPE)
 	if not rv and msg ~= nil then
 		local errorMSG = "Issue creating section '"..utils.dump(UCI_CONFIG_SECTION).."': "..utils.dump(msg);
-		log:info(MOD_ABBR, errorMSG)
+		log:warning(MOD_ABBR, errorMSG)
 		return nil, errorMSG;
 	end
 
@@ -285,7 +285,7 @@ function M.set(key, value, noCommit)
 		local rv, msg = uci:set(UCI_CONFIG_NAME, section, UCI_CONFIG_TYPE)
 		if not rv and msg ~= nil then
 			local errorMSG = "Issue getting subsection '"..utils.dump(base.subSection).."': "..utils.dump(msg);
-			log:info(MOD_ABBR, errorMSG)
+			log:warning(MOD_ABBR, errorMSG)
 			return nil, errorMSG;
 		end
 	end
@@ -294,14 +294,14 @@ function M.set(key, value, noCommit)
 		local rv, msg = uci:set(UCI_CONFIG_NAME, section, key, toUciValue(value, base.type))
 		if not rv and msg ~= nil then
 			local errorMSG = "Issue setting setting '"..utils.dump(key).."' in section '"..utils.dump(section).."': "..utils.dump(msg);
-			log:info(MOD_ABBR, errorMSG)
+			log:warning(MOD_ABBR, errorMSG)
 			return nil, errorMSG;
 		end
 	else
 		local rv, msg = uci:delete(UCI_CONFIG_NAME, section, key)
 		if not rv and msg ~= nil then
 			local errorMSG = "Issue deleting setting '"..utils.dump(key).."' in section '"..utils.dump(section).."': "..utils.dump(msg);
-			log:info(MOD_ABBR, errorMSG)
+			log:warning(MOD_ABBR, errorMSG)
 			return nil, errorMSG;
 		end
 	end
@@ -326,7 +326,7 @@ function M.resetAll()
 	local allSections, msg = uci:get_all(UCI_CONFIG_NAME)
 	if not allSections and msg ~= nil then
 		local errorMSG = "Issue reading all settings: "..utils.dump(msg);
-		log:info(MOD_ABBR, errorMSG)
+		log:warning(MOD_ABBR, errorMSG)
 		return nil, errorMSG;
 	end
 
@@ -336,7 +336,7 @@ function M.resetAll()
 			local rv, msg = uci:delete(UCI_CONFIG_NAME,key)
 			if not rv and msg ~= nil then
 				local errorMSG = "Issue deleting setting '"..utils.dump(key).."': "..utils.dump(msg);
-				log:info(MOD_ABBR, errorMSG)
+				log:warning(MOD_ABBR, errorMSG)
 				return nil, errorMSG;
 			end
 		end
@@ -373,7 +373,7 @@ function M.reset(key, noCommit)
 	--   (which always happens when reset is used in resetall) it will also generate a error
 	--if not rv and msg ~= nil then
 	--	local errorMSG = "Issue deleting setting '"..utils.dump(key).."' in section '"..section.."': "..utils.dump(msg);
-	--	log:info(MOD_ABBR, errorMSG)
+	--	log:warning(MOD_ABBR, errorMSG)
 	--	return nil, errorMSG;
 	--end
 

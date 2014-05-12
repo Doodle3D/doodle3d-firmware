@@ -130,11 +130,11 @@ function M:addPostResponseFunction(fn)
   table.insert(self.postResponseQueue, fn)
 end
 
---- Call all function on the post-response queue, see @{M:addPostResponseFunction} for details and a side-note.
+--- Call all functions on the post-response queue, see @{M:addPostResponseFunction} for details and a side-note.
 function M:executePostResponseQueue()
-  --log:info(MOD_ABBR, "Response:executePostResponseQueue: " .. utils.dump(self.postResponseQueue))
+	log:verbose(MOD_ABBR, "Response:executePostResponseQueue: " .. utils.dump(self.postResponseQueue))
 
-  for i,fn in ipairs(self.postResponseQueue) do fn() end
+	for i,fn in ipairs(self.postResponseQueue) do fn() end
 end
 
 --- Returns an API url pointing to @{conf_defaults.API_BASE_URL_PATH}, which is quite useless.
@@ -153,7 +153,7 @@ function M:serializeAsJson()
 	return JSON:encode(self.body)
 end
 
---- Writes HTTP headers, followed by an HTTP body containing JSON data to stdout.
+--- Writes HTTP headers to stdout, followed by an HTTP body containing either JSON data or a file attachment.
 function M:send()
 	printHeaderLine("Status", self.httpStatusCode .. " " .. self.httpStatusText)
 	printHeaderLine("Content-Type", self.contentType)
@@ -170,7 +170,7 @@ function M:send()
 	end
 
 	if self.body.status ~= "success" then
-		log:verbose(MOD_ABBR, "Response:"..utils.dump(self.body.status).." ("..utils.dump(self.body.msg)..")")
+		log:verbose(MOD_ABBR, "Response: "..utils.dump(self.body.status).." ("..utils.dump(self.body.msg)..")")
 	end
 end
 

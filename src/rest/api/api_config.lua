@@ -59,7 +59,7 @@ end
 -- returns substituted_wifiboxid (since version 0.10.2)
 -- returns substituted_ssid (since version 0.9.1)
 function M._global_POST(request, response)
-	--log:info(MOD_ABBR, "API:config:set")
+	log:verbose(MOD_ABBR, "API:config(set)")
 
 	if not operationsAccessOrFail(request, response) then return end
 
@@ -67,14 +67,14 @@ function M._global_POST(request, response)
 
 	local validation = {}
 	for k,v in pairs(request:getAll()) do
-		--log:info(MOD_ABBR, "  "..k..": "..v);
+		log:verbose(MOD_ABBR, "  about to set '"..k.."' -> '"..v.."'");
 		local r,m = settings.set(k, v, true)
 
 		if r then
 			validation[k] = "ok"
 		elseif r == false then
 			validation[k] = "could not save setting ('" .. m .. "')"
-			log:info(MOD_ABBR, "  m: "..utils.dump(m))
+			log:info(MOD_ABBR, "  failed to set '"..k.."' ("..utils.dump(m)..")")
 		elseif r == nil then
 			settings.commit()
 			response:setError(m)
@@ -111,7 +111,7 @@ end
 -- and printer.type is set to 'ultimaker' then
 -- only the printer.startcode under the ultimaker subsection is removed.
 function M.reset_POST(request, response)
-	--log:info(MOD_ABBR, "API:reset");
+	--log:verbose(MOD_ABBR, "API:config/reset")
 	if not operationsAccessOrFail(request, response) then return end
 	response:setSuccess()
 
@@ -120,9 +120,11 @@ function M.reset_POST(request, response)
 		local r,m = settings.reset(k);
 		if r ~= nil then
 			response:addData(k, "ok")
+			log:verbose(MOD_ABBR, "  reset " .. k)
 		else
 			response:addData(k, "could not reset key ('" .. m .. "')")
 			response:setError(m)
+			log:verbose(MOD_ABBR, "  could not reset key " .. k .. "(" .. m .. ")")
 			return
 		end
 	end

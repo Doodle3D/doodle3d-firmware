@@ -166,6 +166,7 @@ end
 --accepts: first(bool) (chunks will be concatenated but output file will be cleared first if this argument is true)
 --accepts: start(bool) (only when this argument is true will printing be started)
 function M.print_POST(request, response)
+	log:info(MOD_ABBR, "API:printer/print")
 
 	local controllerIP = accessManager.getController()
 	local hasControl = false
@@ -198,7 +199,7 @@ function M.print_POST(request, response)
 	end
 
 	if argIsFirst == true then
-		log:verbose(MOD_ABBR, "clearing all gcode for " .. printer:getId())
+		log:verbose(MOD_ABBR, "  clearing all gcode for " .. printer:getId())
 		response:addData('gcode_clear',true)
 		local rv,msg = printer:clearGcode()
 

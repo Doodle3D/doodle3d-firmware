@@ -54,7 +54,7 @@ function M.signin()
 	local signinResponse = ""
 	while true do
 		if os.time() > nextAttemptTime then
-			log:verbose(MOD_ABBR, "signin attempt "..utils.dump(attempt).."/"..utils.dump(maxAttempts))
+			log:verbose(MOD_ABBR, "  signin attempt "..utils.dump(attempt).."/"..utils.dump(maxAttempts))
 			local signedin = false
 			local localip = wifi.getLocalIP();
 			--log:verbose(MOD_ABBR, "  localip: "..utils.dump(localip))
@@ -71,10 +71,10 @@ function M.signin()
 				if success ~= nil then
 					signedin = true
 				else
-					log:warning(MOD_ABBR, "signin failed request failed (response: "..utils.dump(signinResponse)..")")
+					log:warning(MOD_ABBR, "signin failed, request failed (response: "..utils.dump(signinResponse)..")")
 				end
 			else
-				log:warning(MOD_ABBR, "signin failed no local ip found (attempt: "..utils.dump(attempt).."/"..utils.dump(maxAttempts)..")")
+				log:warning(MOD_ABBR, "signin failed, no local ip found (attempt: "..utils.dump(attempt).."/"..utils.dump(maxAttempts)..")")
 			end
 
 			if signedin then

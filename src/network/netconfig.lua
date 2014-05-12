@@ -64,7 +64,7 @@ function M.switchConfiguration(components)
 	for k,v in pairs(components) do
 		local fname = k .. '_' .. v
 		if type(reconf[fname]) == 'function' then
-			log:verbose(MOD_ABBR, "reconfiguring component '" .. k .. "' (" .. v .. ")")
+			log:info(MOD_ABBR, "reconfiguring component '" .. k .. "' (" .. v .. ")")
 			reconf[fname](dirtyList)
 		else
 			log:warning(MOD_ABBR, "unknown component or action '" .. fname .. "' skipped")
@@ -94,7 +94,7 @@ function M.reloadComponent(c, silent)
 		os.execute(cmd)
 	else
 		rv = utils.captureCommandOutput(cmd)
-		log:verbose(MOD_ABBR, "  result reloading component '" .. c .. "' (cmd: '"..cmd.."'): \n"..utils.dump(rv))
+		log:info(MOD_ABBR, "  result reloading component '" .. c .. "' (cmd: '"..cmd.."'): \n"..utils.dump(rv))
 	end
 end
 
@@ -215,7 +215,7 @@ function reconf.dnsredir_add(dirtyList)
 	local redirText = '/#/' .. settings.get('network.ap.address')
 	local sname = utils.getUciSectionName('dhcp', 'dnsmasq')
 	if sname == nil then return log:error(MOD_ABBR, "dhcp config does not contain a dnsmasq section") end
-	if uci:get('dhcp', sname, 'address') ~= nil then return log:verbose(MOD_ABBR, "DNS address redirection already in place, not re-adding", false) end
+	if uci:get('dhcp', sname, 'address') ~= nil then return log:info(MOD_ABBR, "DNS address redirection already in place, not re-adding", false) end
 
 	uci:set('dhcp', sname, 'address', {redirText})
 	commitBit(dirtyList, 'dhcp'); reloadBit(dirtyList, 'dnsmasq')
@@ -232,7 +232,7 @@ end
 --TODO: handle os.rename() return values (nil+msg on error)
 function reconf.wwwcaptive_add(dirtyList)
 	if utils.exists(M.WWW_CAPTIVE_INDICATOR) then
-		return log:verbose(MOD_ABBR, "WWW captive directory already in place, not redoing", false)
+		return log:info(MOD_ABBR, "WWW captive directory already in place, not redoing", false)
 	end
 	local rv,reason = os.rename('/www', M.WWW_RENAME_NAME)
 	if rv == true then
@@ -243,7 +243,7 @@ function reconf.wwwcaptive_add(dirtyList)
 	end
 end
 function reconf.wwwcaptive_rm(dirtyList)
-	if not utils.exists(M.WWW_CAPTIVE_INDICATOR) then return log:verbose(MOD_ABBR, "WWW captive directory not in place, not undoing", false) end
+	if not utils.exists(M.WWW_CAPTIVE_INDICATOR) then return log:info(MOD_ABBR, "WWW captive directory not in place, not undoing", false) end
 	os.remove('/www')
 	if os.rename(M.WWW_RENAME_NAME, '/www') ~= true then
 		return log:error(MOD_ABBR, "Could not rename " .. M.WWW_RENAME_NAME .. " to /www")
@@ -290,7 +290,8 @@ function M.setupAccessPoint(ssid)
 	local ds = wifi.getDeviceState()
 	--log:info(MOD_ABBR, "  network/status: ")
 	log:info(MOD_ABBR, "    ssid: ".. utils.dump(ds.ssid))
-	--[[log:info(MOD_ABBR, "    bssid: ".. utils.dump(ds.bssid))
+	--[[
+	log:info(MOD_ABBR, "    bssid: ".. utils.dump(ds.bssid))
 	log:info(MOD_ABBR, "    channel: ".. utils.dump(ds.channel))
 	log:info(MOD_ABBR, "    mode: ".. utils.dump(ds.mode))
 	log:info(MOD_ABBR, "    encryption: ".. utils.dump(ds.encryption))
@@ -302,7 +303,8 @@ function M.setupAccessPoint(ssid)
 	log:info(MOD_ABBR, "    raw: ".. utils.dump(ds))
 
 	local localip = wifi.getLocalIP()
-	log:info(MOD_ABBR, "    localip: "..utils.dump(localip))]]--
+	log:info(MOD_ABBR, "    localip: "..utils.dump(localip))
+	--]]
 
 	return true
 end
@@ -313,13 +315,13 @@ end
 -- @tparam string ssid The SSID to use for the access point.
 -- @return True on success or nil+msg on error.
 function M.enableAccessPoint(ssid)
-	log:verbose(MOD_ABBR, "enableAccessPoint ssid: ".. utils.dump(ssid))
+	log:info(MOD_ABBR, "enableAccessPoint ssid: ".. utils.dump(ssid))
 
 	M.switchConfiguration{apnet="add_noreload"}
 	wifi.activateConfig(ssid)
 
 	local ds = wifi.getDeviceState()
-	log:verbose(MOD_ABBR, "    ssid: ".. utils.dump(ds.ssid))
+	log:info(MOD_ABBR, "    deviceState.ssid: ".. utils.dump(ds.ssid))
 
 	return true
 end
@@ -392,6 +394,7 @@ function M.associateSsid(ssid, passphrase, recreate)
 			end
 		end
 	end
+	log:info(MOD_ABBR, "Network associated")
 
 	-- signin to connect.doodle3d.com
 	local success, output = signin.signin()
@@ -426,11 +429,9 @@ function M.getStatus()
 		return "",""
 	else
 		local status = file:read('*a')
-		--log:info(MOD_ABBR, "  status: "..utils.dump(status))
 		file:close()
 		local code, msg = string.match(status, '([^|]+)|+(.*)')
-		--log:info(MOD_ABBR, "  code: "..utils.dump(code))
-		--log:info(MOD_ABBR, "  msg: "..utils.dump(msg))
+		log:verbose(MOD_ABBR, "  raw status: "..utils.dump(status).." (code: "..utils.dump(code)..", msg: "..utils.dump(msg)..")")
 		return code,msg
 	end
 end

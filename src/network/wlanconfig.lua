@@ -128,7 +128,7 @@ end
 --returns the wireless local ip address
 function M.getLocalIP()
 	local ifconfig, rv = utils.captureCommandOutput("ifconfig wlan0");
-	--log:verbose(MOD_ABBR, "  ifconfig: \n"..utils.dump(ifconfig));
+	log:bulk(MOD_ABBR, "  ifconfig: \n"..utils.dump(ifconfig));
 
 	local localip = ifconfig:match('inet addr:([%d%.]+)')
 	return localip
@@ -189,12 +189,12 @@ end
 --- Activate wireless section for given SSID and disable all others
 -- @param ssid	SSID of config to enable, or nil to disable all network configs
 function M.activateConfig(ssid)
-	--log:info(MOD_ABBR, "wlanconfig.activateConfig: "..ssid);
+	log:verbose(MOD_ABBR, "wlanconfig.activateConfig: "..ssid);
 
 	-- make sure only one is enabled
 	uci:foreach('wireless', 'wifi-iface', function(s)
 		local disabled = s.ssid ~= ssid and '1' or '0'
-		--log:info(MOD_ABBR, "    "..utils.dump(s.ssid).." disable: "..utils.dump(disabled))
+		log:verbose(MOD_ABBR, "  ssid: "..utils.dump(s.ssid).." disabled: "..utils.dump(disabled))
 		uci:set('wireless', s['.name'], 'disabled', disabled)
 	end)
 
@@ -212,11 +212,14 @@ function M.activateConfig(ssid)
 			return false
 		end
 	end)
-	--[[log:info(MOD_ABBR, "  result:");
+
+	--[[
+	log:verbose(MOD_ABBR, "  wifi reorder result:");
 	uci:foreach('wireless', 'wifi-iface', function(s)
 		local disabled = s.ssid ~= ssid and '1' or '0'
-		log:info(MOD_ABBR, "    "..utils.dump(s.ssid).." disable: "..utils.dump(disabled))
-	end)]]--
+		log:verbose(MOD_ABBR, "    ssid: "..utils.dump(s.ssid).." disabled: "..utils.dump(disabled))
+	end)
+	--]]
 
 	uci:commit('wireless')
 end

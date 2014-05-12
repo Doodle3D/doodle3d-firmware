@@ -31,7 +31,7 @@ local SKETCH_FILE_EXTENSION = 'svg'
 -- creates sketch directory, and sets response to error state on failure
 local function createSketchDirectory()
 	if os.execute('mkdir -p ' .. M.SKETCH_DIR) ~= 0 then
-		log:error(MOD_ABBR, "Error: could not create sketch directory '" .. M.SKETCH_DIR .. "'")
+		log:error(MOD_ABBR, "could not create sketch directory '" .. M.SKETCH_DIR .. "'")
 		response:setError("could not create sketch directory")
 		return false
 	end

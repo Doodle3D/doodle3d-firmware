@@ -227,31 +227,32 @@ local function main(environment)
 		local version = updater.formatVersion(updater.getCurrentVersion());
 		log:info(MOD_ABBR, "Doodle3D version: "..util.dump(version))
 
-		log:info(MOD_ABBR, "running in autowifi mode")
+		log:info(MOD_ABBR, "Running in autowifi mode")
 		local rv,msg = setupAutoWifiMode()
 
 		if rv then
-			log:info(MOD_ABBR, "autowifi setup done (" .. msg .. ")")
+			log:info(MOD_ABBR, "Autowifi setup done (" .. msg .. ")")
 		else
-			log:error(MOD_ABBR, "autowifi setup failed (" .. msg .. ")")
+			log:error(MOD_ABBR, "Autowifi setup failed (" .. msg .. ")")
 		end
 	elseif rq:getRequestMethod() == 'CMDLINE' and rq:get('signin') ~= nil then
-		log:info(MOD_ABBR, "running in signin mode")
+		log:info(MOD_ABBR, "Running in signin mode")
 
 		local ds = wifi.getDeviceState()
-		log:info(MOD_ABBR, "  ds.mode: "..util.dump(ds.mode))
+		log:info(MOD_ABBR, "  wifi deviceState.mode: "..util.dump(ds.mode))
 		if ds.mode == "sta" then
 			log:info(MOD_ABBR, "  attempting signin")
 			local success,msg = Signin.signin()
 			if success then
 		  		log:info(MOD_ABBR, "Signin successful")
 			else
-				log:info(MOD_ABBR, "Signin failed: "..util.dump(msg))
+				log:warning(MOD_ABBR, "Signin failed: "..util.dump(msg))
 			end
 		end
 	elseif rq:getRequestMethod() ~= 'CMDLINE' or confDefaults.DEBUG_API then
-	--	log:info(MOD_ABBR, "received request of type " .. rq:getRequestMethod() .. " for " .. (rq:getRequestedApiModule() or "<unknown>")
-	--			.. "/" .. (rq:getRealApiFunctionName() or "<unknown>") .. " with arguments: " .. util.dump(rq:getAll()))
+		-- Note: the commented log statement will print too many data if it's for instance dumping a gcode add request
+		--log:info(MOD_ABBR, "received request of type " .. rq:getRequestMethod() .. " for " .. (rq:getRequestedApiModule() or "<unknown>")
+		--		.. "/" .. (rq:getRealApiFunctionName() or "<unknown>") .. " with arguments: " .. util.dump(rq:getAll()))
 		log:info(MOD_ABBR, "received request of type " .. rq:getRequestMethod() .. " for " .. (rq:getRequestedApiModule() or "<unknown>")
 				.. "/" .. (rq:getRealApiFunctionName() or "<unknown>"))
 		if rq:getRequestMethod() ~= 'CMDLINE' then
@@ -287,7 +288,7 @@ function handle_request(env)
 
 		resp:setError("initialization failed" .. errSuffix)
 		resp:send()
-		log:error(MOD_ABBR, "initialization failed" .. errSuffix) --NOTE: this assumes the logger has been initialized properly, despite init() having failed
+		log:error(MOD_ABBR, "Initialization failed" .. errSuffix) --NOTE: this assumes the logger has been initialized properly, despite init() having failed
 
 		return 1
 	else

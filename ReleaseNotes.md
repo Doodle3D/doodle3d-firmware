@@ -1,4 +1,7 @@
 Changelog
+# 0.10.4-webcamexperiment (16th apr 2014)
+- Experimental webcam streaming support. 
+
 # 0.10.3 (9th apr 2014)
 - Fixed Makerbot issue where printer driver didn't get past connecting state
 

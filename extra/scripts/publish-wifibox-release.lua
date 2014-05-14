@@ -425,7 +425,7 @@ local function uploadFiles()
 end
 
 local function checkWrtConfig()
-	local goodConfigPath = pl.path.join(paths.firmware, "extra/openwrt-build/openwrt-diffconfig-extramini")
+	local goodConfigPath = pl.path.join(paths.firmware, "extra/openwrt-build/openwrt-diffconfig-webcam")
 	local wrtConfigPath = pl.path.tmpname()
 	--print("diffonfig output file: " .. wrtConfigPath)
 

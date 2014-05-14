@@ -54,6 +54,8 @@ function M._global_GET(request, response)
 	end
 end
 
+-- returns substituted_wifiboxid (since version 0.10.2)
+-- returns substituted_ssid (since version 0.9.1)
 function M._global_POST(request, response)
 	--log:info("API:config:set")
 

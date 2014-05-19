@@ -181,6 +181,10 @@ function M.new(environment, postData, debugEnabled)
 		self.remoteAddress = environment['REMOTE_ADDR']
 	else
 		self.requestMethod = 'CMDLINE'
+		self.remoteHost = "cmdline"
+		self.remotePort = "0"
+		self.userAgent = "shell"
+		self.remoteAddress = "0.0.0.0"
 	end
 
 	self.cmdLineArgs = kvTableFromArray(arg)

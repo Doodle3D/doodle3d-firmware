@@ -1,3 +1,5 @@
+#!/usr/bin/env lua
+
 -- Notes
 -- * directives: either a color, a color prefixed by 'b' or one of: _delete, _nodelete, [_matchonly]
 -- * pattern rules are matched top to bottom, the last one encountered overriding any previous conflicting directive
@@ -50,9 +52,9 @@ local DFL_FILTERSET_FILE = "loglite-filters.lua"
 local DEFAULT_FILTERSET = {
 	['options'] = { 'default_enabled', 'keep_mode' },
 	['patterns'] = {
-		['(error)'] = 'red',
-		['(warning)'] = 'yellow',
-		['(bulk)'] = 'gray'
+		['%(error%)'] = 'red',
+		['%(warning%)'] = 'yellow',
+		['%(bulk%)'] = 'gray'
 	}
 }
 
@@ -174,7 +176,7 @@ local function main()
 	local tailin = followFile and io.popen('tail -f ' .. followFile, 'r') or io.stdin
 
 	local patterns = DEFAULT_FILTERSET.patterns
-	local options = { ['mode'] = 'keep', count = 'all' }
+	local options = { ['mode'] = 'keep', count = 'none' }
 
 	pcall(tailStream, tailin, patterns, options) -- Note: protected call to suppress interrupt error thrown by lines iterator
 end

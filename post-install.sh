@@ -38,7 +38,7 @@ if [ ! -f $IPKG_INSTROOT/etc/banner.default ]; then
 	mv $IPKG_INSTROOT/etc/banner $IPKG_INSTROOT/etc/banner.default
 	cat <<-'EOM' > $IPKG_INSTROOT/etc/banner
 		........D o o d l e 3 D
-		.......________     _____  _____  v \$(PACKAGE_VERSION)
+		.......________     _____  _____
 		....../  /  /  |__ /  __/ /  - /___ __
 		...../  /  /  /--//  _|-//  --| . /v /
 		..../________/__//__/__//____/___/_^_\

@@ -27,8 +27,8 @@
 --        HostName ftp.greenhost.nl
 -- Some basic sanity checks are built in (unique version, updated release notes, 'clean' openwrt config)
 -- but lots others are still missing (mainly: clean git repo's, freshly built images).
--- The script must be run from within the openwrt build root. So it's handy to create a symlink 
--- to this file. You could to something like from the build root: 
+-- The script must be run from within the openwrt build root. So it's handy to create a symlink
+-- to this file. You could to something like from the build root:
 -- ln -s ~/wrt-wifibox-feed/doodle3d-firmware/extra/scripts/publish-wifibox-release.lua .
 -- Then you can start with:
 -- cd trunk ../publish-wifibox-release.lua

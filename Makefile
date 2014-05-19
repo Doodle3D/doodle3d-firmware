@@ -88,6 +88,7 @@ define Package/wifibox/install
 	#$(INSTALL_DIR) $(1)/etc
 	$(INSTALL_DIR) $(1)/etc/init.d
 	$(INSTALL_DIR) $(1)/etc/config
+	$(INSTALL_DIR) $(1)/root/
 	#$(INSTALL_DIR) $(1)/www
 	$(INSTALL_DIR) $(1)/www/cgi-bin
 	
@@ -102,6 +103,9 @@ define Package/wifibox/install
 	
 	$(INSTALL_BIN) $(WIFIBOX_BASE_DIR)/script/d3d-updater.lua $(1)/$(TGT_LUA_DIR_SUFFIX)/script
 	$(LN) -s /$(TGT_LUA_DIR_SUFFIX)/script/d3d-updater.lua $(1)/bin/d3d-updater
+	$(CP) $(WIFIBOX_BASE_DIR)/script/loglite-filters.lua $(1)/root/
+	$(INSTALL_BIN) $(WIFIBOX_BASE_DIR)/script/loglite.lua $(1)/$(TGT_LUA_DIR_SUFFIX)/script
+	$(LN) -s /$(TGT_LUA_DIR_SUFFIX)/script/loglite.lua $(1)/bin/loglite
 	$(INSTALL_BIN) $(WIFIBOX_BASE_DIR)/script/wifibox_init $(1)/etc/init.d/wifibox
 	$(INSTALL_BIN) $(WIFIBOX_BASE_DIR)/script/dhcpcheck_init $(1)/etc/init.d/dhcpcheck
 	$(INSTALL_BIN) $(WIFIBOX_BASE_DIR)/script/d3dapi $(1)/$(TGT_LUA_DIR_SUFFIX)/script

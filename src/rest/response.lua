@@ -132,7 +132,7 @@ end
 
 --- Call all functions on the post-response queue, see @{M:addPostResponseFunction} for details and a side-note.
 function M:executePostResponseQueue()
-	log:verbose(MOD_ABBR, "Response:executePostResponseQueue: " .. utils.dump(self.postResponseQueue))
+	if #self.postResponseQueue > 0 then log:verbose(MOD_ABBR, "Response:executePostResponseQueue: " .. utils.dump(self.postResponseQueue)) end
 
 	for i,fn in ipairs(self.postResponseQueue) do fn() end
 end

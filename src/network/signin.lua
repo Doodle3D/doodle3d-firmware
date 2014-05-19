@@ -28,15 +28,21 @@ local SIGNING_IN_STATUS 	= 2
 --- Signin to connect.doodle3d.com server
 --
 function M.signin()
-
-	--log:verbose(MOD_ABBR, "signin:signin");
+	log:verbose(MOD_ABBR, "signin:signin");
 
 	local code, msg = M.getStatus()
 	--log:verbose(MOD_ABBR, "  status: "..utils.dump(code).." "..utils.dump(msg));
 
 	-- if we are already signin in, skip
 	if(code == SIGNING_IN_STATUS) then
-		log:verbose(MOD_ABBR, "  skipping signin")
+		log:verbose(MOD_ABBR, "  already signing in, skipping")
+		return
+	end
+
+	local ds = wifi.getDeviceState()
+	log:verbose(MOD_ABBR, "  wifi deviceState.mode: "..utils.dump(ds.mode))
+	if ds.mode ~= "sta" then
+		log:verbose(MOD_ABBR, "  wifi not in station mode, skipping signin")
 		return
 	end
 

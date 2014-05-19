@@ -160,7 +160,7 @@ function M.access(request, response)
 	response:setSuccess()
 	response:addData('has_control', hasControl)
 
-	return true
+	return
 end
 
 function M.status(request, response)

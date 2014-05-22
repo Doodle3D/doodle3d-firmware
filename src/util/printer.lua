@@ -45,6 +45,8 @@ local SUPPORTED_PRINTERS = {
 	tantillus = "Tantillus",
 	vision_3d_printer = "Vision 3D Printer",
 	minifactory = "miniFactory",
+	builder3d = "Builder 3D",
+	bigbuilder3d = "Big Builder 3D",
 	marlin_generic = "Generic Marlin Printer",
     makerbot_generic = "Generic Makerbot Printer"
 }

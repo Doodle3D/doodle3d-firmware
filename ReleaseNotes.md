@@ -1,4 +1,10 @@
 Changelog
+# 0.10.4 (28th may 2014)
+- Pulled  improvements by Ultimaker. 
+- Fixed printing isues with gcode containing whitelines. 
+- Added Builder3D to printer types 
+- iOS captive portal fix
+
 # 0.10.3 (9th apr 2014)
 - Fixed Makerbot issue where printer driver didn't get past connecting state
 

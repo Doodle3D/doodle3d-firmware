@@ -47,6 +47,7 @@ local SUPPORTED_PRINTERS = {
 	minifactory = "miniFactory",
 	builder3d = "Builder 3D",
 	bigbuilder3d = "Big Builder 3D",
+	mamba3d = "Mamba3D",
 	marlin_generic = "Generic Marlin Printer",
     makerbot_generic = "Generic Makerbot Printer"
 }

@@ -54,7 +54,8 @@ local DEFAULT_FILTERSET = {
 	['patterns'] = {
 		['%(error%)'] = 'red',
 		['%(warning%)'] = 'yellow',
-		['%(bulk%)'] = 'gray'
+		['%(bulk%)'] = 'gray',
+		['setState%(%)'] = 'bblue'
 	}
 }
 

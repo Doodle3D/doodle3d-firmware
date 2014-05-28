@@ -15,6 +15,8 @@ local M = {}
 
 local logLevel, logVerboseFmt, logStream
 
+local LONGEST_LEVEL_NAME = -1
+
 --- Available log levels (starting at 1)
 -- @table LEVEL
 M.LEVEL = {
@@ -26,10 +28,17 @@ M.LEVEL = {
 	'bulk'			-- debug information (in large amounts)
 }
 
--- M.LEVEL already has idx=>name entries, now create name=>idx entries so it can be indexed both ways
+
+--[[== module initialization code ==]]--
+
+-- M.LEVEL already has idx=>name entries, now create name=>idx entries so it can be indexed both ways, and init LONGEST_LEVEL_NAME
 for i,v in ipairs(M.LEVEL) do
 	M.LEVEL[v] = i
+	if v:len() > LONGEST_LEVEL_NAME then LONGEST_LEVEL_NAME = v:len() end
 end
+
+
+--[[================================]]--
 
 
 local function log(level, module, msg, verboseFmt)
@@ -43,8 +52,11 @@ local function log(level, module, msg, verboseFmt)
 		local m = (type(msg) == 'string') and msg or utils.dump(msg)
 		if module == nil then module = "LUA " end
 
-		if v then logStream:write(now .. " [" .. module .. "] (" .. M.LEVEL[level] .. "): " .. m .. "  [" .. name .. "@" .. i.short_src .. ":" .. i.linedefined .. "]\n")
-		else logStream:write(now .. " [" .. module .. "] (" .. M.LEVEL[level] .. "): " .. m .. "\n") end
+		local levelName = M.LEVEL[level]
+		local padding = string.rep(' ', LONGEST_LEVEL_NAME - levelName:len())
+
+		if v then logStream:write(now .. " [" .. module .. "] (" .. levelName .. ")" .. padding .. ": " .. m .. "  [" .. name .. "@" .. i.short_src .. ":" .. i.linedefined .. "]\n")
+		else logStream:write(now .. " [" .. module .. "] (" .. levelName .. ")" .. padding .. ": " .. m .. "\n") end
 
 		logStream:flush()
 	end

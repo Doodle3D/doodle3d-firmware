@@ -170,7 +170,7 @@ function M:send()
 	end
 
 	if self.body.status ~= "success" then
-		log:verbose(MOD_ABBR, "Response: "..utils.dump(self.body.status).." ("..utils.dump(self.body.msg)..")")
+		log:warning(MOD_ABBR, "Response status: "..utils.dump(self.body.status).." ("..utils.dump(self.body.msg)..")")
 	end
 end
 

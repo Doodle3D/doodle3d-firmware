@@ -47,6 +47,7 @@ local M = {
 	isApi = true
 }
 
+-- returns wifiboxid (since version 0.10.2)
 function M._global(request, response)
 	response:setSuccess()
 	

@@ -27,12 +27,12 @@ local deviceName, deviceApi
 local cachedApSsid, baseApSsid = nil, nil
 
 function M.getSubstitutedSsid(unformattedSsid)
-	log:debug("getSubstitutedSsid unformattedSsid:'" .. (unformattedSsid or "nil") .. "' baseApSsid:'" .. (baseApSsid or "nil") .. "' cachedApSsid:'" .. (cachedApSsid or "nil"))
+	log:debug(MOD_ABBR, "getSubstitutedSsid unformattedSsid:'" .. (unformattedSsid or "nil") .. "' baseApSsid:'" .. (baseApSsid or "nil") .. "' cachedApSsid:'" .. (cachedApSsid or "nil"))
 	if unformattedSsid == baseApSsid and cachedApSsid ~= nil then return cachedApSsid end
 	if not unformattedSsid or type(unformattedSsid) ~= 'string' then return nil end
 
 	local macTail = M.getMacAddress():sub(7)
-	log:debug("  macTail:'" .. macTail)
+	log:debug(MOD_ABBR, "  macTail:'" .. macTail)
 	baseApSsid = unformattedSsid
 	cachedApSsid = unformattedSsid:gsub('%%%%MAC_ADDR_TAIL%%%%', macTail)
 	return cachedApSsid
@@ -109,9 +109,9 @@ end
 --returns the wireless device's MAC address (as string, without colons)
 --(lua numbers on openWrt seem to be 32bit so they cannot represent a MAC address as one number)
 function M.getMacAddress()
-	log:debug("getMacAddress")
+	log:debug(MOD_ABBR, "getMacAddress")
 	local macText = utils.readFile('/sys/class/net/' .. deviceName .. '/address')
-	log:debug("  macText: '" .. (macText or "nil") .. "'")
+	log:debug(MOD_ABBR, "  macText: '" .. (macText or "nil") .. "'")
 	local out = ''
 
 	-- Hack to prevent failure in case the MAC address could not be obtained.
@@ -143,9 +143,9 @@ end
 -- @return data for all or requested network; false+error on failure or nil when requested network not found
 function M.getScanInfo(ssid)
 	local iw = iwinfo[deviceApi]
-	log:info("start wifi scan")
+	log:info(MOD_ABBR, "start wifi scan")
 	local sr = iw.scanlist(deviceName)
-	log:info("wifi scan done")
+	log:info(MOD_ABBR, "wifi scan done")
 	local si, se
 
 	if ssid == nil then

@@ -77,9 +77,9 @@ local function setupAutoWifiMode()
 		-- signin to connect.doodle3d.com
 		local success, output = Signin.signin()
 		if success then
-				log:info("Signed in")
+				log:info(MOD_ABBR, "Signed in")
 		else 
-			log:info("Signing in failed")
+			log:info(MOD_ABBR, "Signing in failed")
 		end
 		-- report we are connected after signin attempt
 		netconf.setStatus(netconf.CONNECTED,"Connected");
@@ -131,11 +131,6 @@ local function setupLogger()
 	local logTargetSetting = settings.getSystemKey('logfile')
 	local logLevelSetting = settings.get('system.log.level')
 	local logTargetError, logLevelError = nil, nil
-	
-	-- TEMP: for now, translate print3d log level to firmware level, these will be unfiied in the future
-	-- we get (print3d): quiet,error,warning,info,verbose,bulk -- and we need (firmware): debug,info,warn,error,fatal
-	logLevelMapping = { quiet='fatal', error='error', warning='warn', info='warn', verbose='info', bulk='debug' }
-	logLevelSetting = logLevelMapping[logLevelSetting]
 
 	if type(logTargetSetting) == 'string' then
 		local specialTarget = logTargetSetting:match('^<(.*)>$')

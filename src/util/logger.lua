@@ -14,6 +14,7 @@ local utils = require('util.utils')
 local M = {}
 
 local logLevel, logVerboseFmt, logStream
+local logFilePath = nil -- only used for reference
 
 local LONGEST_LEVEL_NAME = -1
 
@@ -89,6 +90,9 @@ end
 function M:getStream()
 	return logStream
 end
+
+function M:setLogFilePath(path) logFilePath = path end
+function M:getLogFilePath() return logFilePath end
 
 function M:error(module, msg, verboseFmt) log(M.LEVEL.error, module, msg, verboseFmt); return false end
 function M:warning(module, msg, verboseFmt) log(M.LEVEL.warning, module, msg, verboseFmt); return true end

@@ -120,36 +120,57 @@ local function setupAutoWifiMode()
 end
 
 --- Initializes the logging system to use the file and level defined in the system settings.
--- The settings used are `logfile` and `loglevel`. The former may either be a
--- reular file path, or `<stdout>` or `<stderr>`.
+-- The settings used are `log_path`, `api_log_filename` from the system section and
+-- `system_log_level` from the general section. The filename may either be a regular filename
+-- (with an absolute log_path), or `<stdout>` or `<stderr>`.
+-- TODO: also support backticks (see Logger.cpp in print3d)--
 -- @see util.settings.getSystemKey
 -- @treturn bool True on success, false on error.
 local function setupLogger()
 	local logStream = io.stderr -- use stderr as hard-coded default target
 	local logLevel = log.LEVEL.verbose -- use verbose logging as hard-coded default level
 
-	local logTargetSetting = settings.getSystemKey('logfile')
-	local logLevelSetting = settings.get('system.log.level')
+	local logPathSetting = settings.getSystemKey('log_path')
+	local logTargetSetting = settings.getSystemKey('api_log_filename')
+	local logLevelSetting = settings.get('system_log_level')
 	local logTargetError, logLevelError = nil, nil
 
 	if type(logTargetSetting) == 'string' then
-		local specialTarget = logTargetSetting:match('^<(.*)>$')
-		if specialTarget then
-			if specialTarget == 'stdout' then logStream = io.stdout
-			elseif specialTarget == 'stderr' then logStream = io.stderr
+		local streamTarget = logTargetSetting:match('^<(.*)>$')
+		local popenTarget = logTargetSetting:match('^`(.*)`$')
+		if streamTarget then
+			if streamTarget:lower() == 'stdout' then logStream = io.stdout
+			elseif streamTarget:lower() == 'stderr' then logStream = io.stderr
 			end
-		elseif logTargetSetting:sub(1, 1) == '/' then
-			local f,msg = io.open(logTargetSetting, 'a+')
+		elseif popenTarget then
+			local f,msg = io.popen(popenTarget, 'w')
 
 			if f then logStream = f
 			else logTargetError = msg
 			end
+		elseif logPathSetting:sub(1, 1) == '/' then
+			local path = logPathSetting .. '/' .. logTargetSetting
+			local f,msg = io.open(path, 'a+')
+
+			if f then
+				logStream = f
+				log:setLogFilePath(path)
+			else
+				logTargetError = msg
+			end
+		else
+			logTargetError = "log file path is not absolute"
 		end
 	else
 		-- if uci config not available, fallback to /tmp/wifibox.log
-		local f,msg = io.open('/tmp/wifibox.log', 'a+')
-		if f then logStream = f
-		else logTargetError = msg
+		local path = '/tmp/wifibox.log'
+		local f,msg = io.open(path, 'a+')
+
+		if f then
+			logStream = f
+			log:setLogFilePath(path)
+		else
+			logTargetError = msg
 		end
 	end
 
@@ -169,7 +190,7 @@ local function setupLogger()
 
 	local rv = true
 	if logTargetError then
-		log:error(MOD_ABBR, "could not open logfile '" .. logTargetSetting .. "', using stderr as fallback (" .. logTargetError .. ")")
+		log:error(MOD_ABBR, "could not open logfile '" .. logPathSetting .. '/' .. logTargetSetting .. "', using stderr as fallback (" .. logTargetError .. ")")
 		rv = false
 	end
 

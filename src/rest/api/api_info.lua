@@ -19,8 +19,8 @@ local settings = require('util.settings')
 local TMP_DIR = '/tmp'
 local LOG_COLLECT_DIRNAME = 'wifibox-logs'
 local LOG_COLLECT_DIR = TMP_DIR .. '/' .. LOG_COLLECT_DIRNAME
-local WIFIBOX_LOG_FILENAME = 'wifibox.log'
-local WIFIBOX_LOG_FILE = TMP_DIR .. '/' .. WIFIBOX_LOG_FILENAME
+local DEFAULT_WIFIBOX_LOG_FILENAME = 'wifibox.log'
+local DEFAULT_WIFIBOX_LOG_FILE = TMP_DIR .. '/' .. DEFAULT_WIFIBOX_LOG_FILENAME
 local MOD_ABBR = "AINF"
 
 local SYSLOG_FILENAME = 'syslog'
@@ -35,7 +35,7 @@ local USB_DIRTREE_COMMAND = "ls -R /sys/devices/platform/ehci-platform/usb1 | gr
 local USB_DIRTREE_FILENAME = 'sys_devices_platform_ehci-platform_usb1.tree'
 
 local PRINT3D_BASEPATH = '/tmp'
-local PRINT3D_LOG_FILENAME_PREFIX = 'print3d-'
+local PRINT3D_LOG_FILENAME_PREFIX = 'print3d.'
 local PRINT3D_LOG_FILENAME_SUFFIX = '.log'
 local LOG_COLLECT_ARCHIVE_FILENAME = LOG_COLLECT_DIRNAME .. '.tgz'
 local LOG_COLLECT_ARCHIVE_FILE = TMP_DIR .. '/' .. LOG_COLLECT_ARCHIVE_FILENAME
@@ -64,11 +64,14 @@ function M.logfiles(request, response)
 	rv,msg = lfs.mkdir(LOG_COLLECT_DIR)
 	rv,msg = lfs.chdir(TMP_DIR)
 
+	local wifiboxLogFilePath = log:getLogFilePath()
+	local wifiboxLogFileName = wifiboxLogFilePath and wifiboxLogFilePath:match('.*/(.*)')
+
 
 	--[[ create temporary files ]]--
 
 	-- copy wifibox API-script log
-	rv,sig,code = redirectedExecute('cp ' .. WIFIBOX_LOG_FILE .. ' ' .. LOG_COLLECT_DIR)
+	rv,sig,code = redirectedExecute('cp ' .. wifiboxLogFilePath .. ' ' .. LOG_COLLECT_DIR)
 
 	-- capture syslog
 	rv,sig,code = os.execute('logread > ' .. LOG_COLLECT_DIR .. '/' .. SYSLOG_FILENAME)
@@ -140,7 +143,7 @@ function M.logfiles(request, response)
 	rv,sig,code = redirectedExecute('rm ' .. LOG_COLLECT_DIR .. '/' .. MEMINFO_FILENAME)
 	rv,sig,code = redirectedExecute('rm ' .. LOG_COLLECT_DIR .. '/' .. PROCESS_LIST_FILENAME)
 	rv,sig,code = redirectedExecute('rm ' .. LOG_COLLECT_DIR .. '/' .. SYSLOG_FILENAME)
-	rv,sig,code = redirectedExecute('rm ' .. LOG_COLLECT_DIR .. '/' .. WIFIBOX_LOG_FILENAME)
+	rv,sig,code = redirectedExecute('rm ' .. LOG_COLLECT_DIR .. '/' .. wifiboxLogFileName)
 
 	rv,msg = lfs.rmdir(LOG_COLLECT_DIR)
 

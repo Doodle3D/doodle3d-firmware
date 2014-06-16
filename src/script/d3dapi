@@ -10,14 +10,15 @@
 
 LUA=lua
 SCRIPT_PATH=/usr/share/lua/wifibox
-LOG_FILE=/tmp/wifibox.log
+LOG_FILE=/tmp/wifibox.cgi-fallback.log
 
 cd $SCRIPT_PATH
-echo "CGI invocation" >> $LOG_FILE
+#echo "CGI invocation" >> $LOG_FILE
 #strace -o /tmp/trace-$$.log -ff $LUA ./cmdmain.lua $@ 2>> $LOG_FILE
 $LUA ./cmdmain.lua $@ 2>> $LOG_FILE
 
 exit $?
+
 
 # Code below is for debugging incoming CGI data
 read -n $CONTENT_LENGTH POSTDATA

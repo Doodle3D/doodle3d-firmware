@@ -10,7 +10,6 @@ local lfs = require('lfs')
 local log = require('util.logger')
 local utils = require('util.utils')
 local settings = require('util.settings')
-local printDriver = require('print3d')
 local printerUtils = require('util.printer')
 local accessManager = require('util.access')
 
@@ -165,6 +164,7 @@ end
 --accepts: id(string) (the printer ID to append to)
 --accepts: first(bool) (chunks will be concatenated but output file will be cleared first if this argument is true)
 --accepts: start(bool) (only when this argument is true will printing be started)
+--returns: when the gcode buffer cannot accept the gcode, or the IPC transaction fails, a fail with a (formal, i.e., parseable) status argument will be returned
 function M.print_POST(request, response)
 	log:info(MOD_ABBR, "API:printer/print")
 

@@ -1,4 +1,8 @@
 Changelog
+# 0.10.4-photoguide (9th oct 2014)
+- Added the PhotoGuide feature which is kind of a manual Scan & Trace. Use a photo as a background image and create your doodle on top of it.
+- Added support for the '3Dison plus' printer.
+
 # 0.10.4 (28th may 2014)
 - Pulled  improvements by Ultimaker. 
 - Fixed printing isues with gcode containing whitelines. 

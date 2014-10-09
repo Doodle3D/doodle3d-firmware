@@ -48,8 +48,9 @@ local SUPPORTED_PRINTERS = {
 	builder3d = "Builder 3D",
 	bigbuilder3d = "Big Builder 3D",
 	mamba3d = "Mamba3D",
+	_3Dison_plus = "3Dison plus",
 	marlin_generic = "Generic Marlin Printer",
-    makerbot_generic = "Generic Makerbot Printer"
+  makerbot_generic = "Generic Makerbot Printer"
 }
 local SUPPORTED_BAUDRATES = {
 	["115200"] = "115200 bps",

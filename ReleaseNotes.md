@@ -1,4 +1,5 @@
 Changelog
+# 0.10.4-photoguide3 (10th oct 2014)
 # 0.10.4-photoguide2 (9th oct 2014)
 # 0.10.4-photoguide (9th oct 2014)
 - Added the PhotoGuide feature which is kind of a manual Scan & Trace. Use a photo as a background image and create your doodle on top of it.

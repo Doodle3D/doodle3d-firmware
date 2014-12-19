@@ -169,4 +169,56 @@ function M.clear_POST(request, response)
 	end
 end
 
+-- remove single sketch
+-- function M.delete_POST(request, response)
+-- 	local argId = tonumber(request:get("id")) --to number will raise exception in case of illegal input
+-- 	local filename = M.SKETCH_DIR .. '/' .. constructSketchFilename(argId)
+-- 	local rv = os.execute("rm -f " .. filename)
+-- 	if rv == 0 then response:setSuccess()
+-- 	else response:setFail("could not remove " .. filename)
+-- 	end
+-- end
+
+-- recreate directory sequence by renaming files
+function M.index_POST(request, response)
+	local list = {}
+	local index = 1
+	for item in lfs.dir(M.SKETCH_DIR) do
+		if item ~= '.' and item ~= '..' then
+			local idx = item:match('^(%d+)\.'..SKETCH_FILE_EXTENSION..'$')
+			if idx and idx:len() == NUMBER_PAD_WIDTH then
+				local src = M.SKETCH_DIR .. '/' .. item
+				local dst = M.SKETCH_DIR .. '/' .. constructSketchFilename(index)
+				
+				if src ~= dst then
+					table.insert(list, src .. ' ' .. dst)
+					local rv = os.execute("mv " .. src .. ' ' .. dst)
+				end
+
+				index = index + 1
+				
+			end
+		end
+	end
+
+	response:addData('list',list)
+	response:setSuccess()
+end
+
+-- list files by fileID (not by index)
+function M.list_GET(request, response)
+	response:addData("list",createSketchList())
+	response:setSuccess()
+end
+
+-- remove single sketch by fileID (not by index)
+function M.delete_POST(request, response)
+	local argId = tonumber(request:get("id")) --to number will raise exception in case of illegal input
+	local filename = M.SKETCH_DIR .. '/' .. constructSketchFilename(argId)
+	local rv = os.execute("rm -f " .. filename)
+	if rv == 0 then response:setSuccess()
+	else response:setFail("could not remove " .. filename)
+	end
+end
+
 return M

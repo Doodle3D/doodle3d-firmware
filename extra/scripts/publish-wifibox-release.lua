@@ -90,7 +90,7 @@ local D3D_REPO_PRINT3D_NAME = 'print3d'
 local IMAGE_BASENAME = 'doodle3d-wifibox'
 local BACKUP_FILE_SUFFIX = 'bkp'
 local RELEASE_NOTES_FILE = "ReleaseNotes.md"
-local RSYNC_TIMEOUT = 2
+local RSYNC_TIMEOUT = 20
 local MAX_VIABLE_IMAGE_SIZE = 3500000
 
 local deviceType = 'tl-mr3020' -- or 'tl-wr703'

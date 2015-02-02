@@ -1,4 +1,13 @@
 Changelog
+
+# 0.10.5-a (2 Feb 2015)
+- Removed gray lines where printer needs to 'travel' (move without printing)
+- Enabled traveling also for first couple of layers. This prevents straight lines crossing your print
+- Added url parameter l=1 which disables parts of the user interface. The 'Print' button 'saves' the sketch instead of sending it to the printer. This is useful for public events where a moderator needs to start prints instead of the user.
+- Fixed a small bug where the last sketch was skipped when pressing the previous button for the first time.
+- changed WordArt font to a self-made single line handwritting font. This font prints faster and is more playful.
+
+
 # 0.10.5
 - Added the PhotoGuide feature which is kind of a manual Scan & Trace. Use a photo as a background image and create your doodle on top of it.
 - Added support for the '3Dison plus' printer.

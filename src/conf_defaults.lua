@@ -241,6 +241,7 @@ M.printer_travelSpeed = {
 
 M.printer_filamentThickness = {
 	default = 2.89,
+	default_doodle_dream = 1.75,
 	type = 'float',
 	description = '',
 	min = 0.0

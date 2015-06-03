@@ -1,4 +1,26 @@
 Changelog
+
+# 0.10.5-a (2 Feb 2015)
+- Removed gray lines where printer needs to 'travel' (move without printing)
+- Enabled traveling also for first couple of layers. This prevents straight lines crossing your print
+- Added url parameter l=1 which disables parts of the user interface. The 'Print' button 'saves' the sketch instead of sending it to the printer. This is useful for public events where a moderator needs to start prints instead of the user.
+- Fixed a small bug where the last sketch was skipped when pressing the previous button for the first time.
+- changed WordArt font to a self-made single line handwritting font. This font prints faster and is more playful.
+
+
+# 0.10.5
+- Added the PhotoGuide feature which is kind of a manual Scan & Trace. Use a photo as a background image and create your doodle on top of it.
+- Added support for the '3Dison plus' printer.
+- Added a File Manager for downloading, uploading and deleting sketches (can be opened via the Settings Panel)
+- Improved the way sketches are loaded
+- Fixed scrolling issue in Settings Panel
+
+# 0.10.4-photoguide3 (10th oct 2014)
+# 0.10.4-photoguide2 (9th oct 2014)
+# 0.10.4-photoguide (9th oct 2014)
+- Added the PhotoGuide feature which is kind of a manual Scan & Trace. Use a photo as a background image and create your doodle on top of it.
+- Added support for the '3Dison plus' printer.
+
 # 0.10.4 (28th may 2014)
 - Pulled  improvements by Ultimaker. 
 - Fixed printing isues with gcode containing whitelines. 

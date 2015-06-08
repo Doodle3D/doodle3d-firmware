@@ -52,7 +52,7 @@ local SUPPORTED_PRINTERS = {
 	_3Dison_plus = "3Dison plus",
 	marlin_generic = "Generic Marlin Printer",
   makerbot_generic = "Generic Makerbot Printer",
-	doodle_dream = "Doodle Dream"
+	--doodle_dream = "Doodle Dream"
 }
 local SUPPORTED_BAUDRATES = {
 	["115200"] = "115200 bps",

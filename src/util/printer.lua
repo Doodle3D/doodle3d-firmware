@@ -52,8 +52,8 @@ local SUPPORTED_PRINTERS = {
 	mamba3d = "Mamba3D",
 	_3Dison_plus = "3Dison plus",
 	marlin_generic = "Generic Marlin Printer",
-  makerbot_generic = "Generic Makerbot Printer",
-	--doodle_dream = "Doodle Dream"
+	makerbot_generic = "Generic Makerbot Printer",
+	doodle_dream = "Doodle Dream"
 }
 local SUPPORTED_BAUDRATES = {
 	["115200"] = "115200 bps",

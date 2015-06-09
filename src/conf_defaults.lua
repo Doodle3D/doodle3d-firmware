@@ -153,6 +153,14 @@ M.printer_heatedbed = {
 	type = 'bool',
 	description = 'Printer has heated bed',
 }
+M.printer_filamentThickness = {
+	default = 2.89,
+	default_doodle_dream = 1.75,
+	type = 'float',
+	description = '',
+	min = 0.0,
+	subSection = 'printer_type'
+}
 
 local default_makerbot_startcode = ";@printer {printerType}\nM136 (enable build)\nM73 P0 (Set build percentage to 0)\nG162 X Y F2000 (home XY axes to maximum)\nG161 Z F900 (home Z axis to minimum quick)\nG92 X0 Y0 Z0 A0 B0 (set axis positions to 0)\nG1 Z5.0 F900 (move Z axis down)\nG161 Z F100 (home Z axis to minimum more precise)\nG92 X0 Y0 Z0 A0 B0 (set axis positions to 0)\nG1 Z2.0 F900 (move Z axis to safety height)\nG1 X-264 Y-145 Z0 F3300.0 (move XY to start position)\nG92 X0 Y0 Z0 A0 B0 (set axis position to 0)\nG130 X20 Y20 A20 B20 (Lower stepper Vrefs while heating)\n{if heatedBed}M140 S{printingBedTemp} T0 (Set bed temp)\nM135 T0 (use first extruder)\nM104 S{printingTemp} T0 (set extruder temp)\nM133 T0 (Wait for extruder)\nG130 X127 Y127 A127 B127 (Set Stepper motor Vref to defaults)\nG1 F100 A10 (extrude 10mm)\nG92 A0 (reset extruder)\nG0 Z20 (move up, to lose filament)"
 local default_deltabot_startcode = ';Generated with Doodle3D (deltabot)\nM109 S{printingTemp} ;set target temperature\n{if heatedBed}M190 S{printingBedTemp} ;set target bed temperature\nG21 ;metric values\nG91 ;relative positioning\nM107 ;start with the fan off\nG28 ; move to home\nG92 E0 ;zero the extruded length\nG90 ;absolute positioning\nM117 Printing Doodle...   ;display message (20 characters to clear whole screen)'
@@ -242,14 +250,6 @@ M.printer_travelSpeed = {
 	type = 'int',
 	description = '',
 	min = 0
-}
-
-M.printer_filamentThickness = {
-	default = 2.89,
-	default_doodle_dream = 1.75,
-	type = 'float',
-	description = '',
-	min = 0.0
 }
 
 M.printer_useSubLayers = {

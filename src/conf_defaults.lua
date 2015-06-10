@@ -187,7 +187,7 @@ M.printer_startcode = {
 	description = ''
 }
 
-local default_makerbot_endcode = 'M73 P100\nG92 A0 B0 ;reset extruder position to prevent retraction\nM18 A B(Turn off A and B Steppers)\nG1 Z155 F900\nG162 X Y F2000\nM18 X Y Z(Turn off steppers after a build)\n{if heatedBed}M140 S{preheatBedTemp} T0\nM104 S{preheatTemp} T0\nM73 P100 (end  build progress )\nM72 P1  ( Play Ta-Da song )\nM137 (build end notification)'
+local default_makerbot_endcode = 'M73 P100\nG92 A0 B0 ;reset extruder position to prevent retraction\nM18 A B(Turn off A and B Steppers)\nG162 Z F900\nG162 X Y F2000\nM18 X Y Z(Turn off steppers after a build)\n{if heatedBed}M140 S{preheatBedTemp} T0\nM104 S{preheatTemp} T0\nM73 P100 (end  build progress )\nM72 P1  ( Play Ta-Da song )\nM137 (build end notification)'
 local default_deltabot_endcode = 'M107 ;fan offG91 ;relative positioningG1 E-1 F300 ;retract the filament a bit before lifting the nozzle, to release some of the pressureG1 Z+0.5 E-5 X-20 Y-20 F9000 ;move Z up a bit and retract filament even moreG28 ;move to homeM84 ;disable axes / steppersG90 ;absolute positioningM109 S0 ; hot end off{if heatedBed}M140 S{preheatBedTemp}M117 Done                 ;display message (20 characters to clear whole screen)'
 M.printer_endcode = {
 	default = 'M107 ;fan off\nG91 ;relative positioning\nG1 E-1 F300 ;retract the filament a bit before lifting the nozzle, to release some of the pressure\nG1 Z+0.5 E-5 X-20 Y-20 F9000 ;move Z up a bit and retract filament even more\nG28 X0 Y0 ;move X/Y to min endstops, so the head is out of the way\nM84 ;disable axes / steppers\nG90 ;absolute positioning\nM104 S{preheatTemp}\n{if heatedBed}M140 S{preheatBedTemp}\nM117 Done                 ;display message (20 characters to clear whole screen)',

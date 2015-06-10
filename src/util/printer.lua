@@ -18,6 +18,7 @@ local SUPPORTED_PRINTERS = {
 	makerbot_replicator2 = "MakerBot Replicator2",
 	makerbot_replicator2x = "MakerBot Replicator2x",
 	makerbot_thingomatic = "MakerBot Thing-o-matic",
+	wanhao_duplicator4 = "Wanhao Duplicator 4",
 	printrbot = "Printrbot",
 	bukobot = "Bukobot",
 	cartesio = "Cartesio",

@@ -79,6 +79,7 @@ $IPKG_INSTROOT/etc/init.d/dhcpcheck enable
 if [ -z "$IPKG_INSTROOT" ]; then
 	echo "Enabling and configuring wifi device..."
 	uci set wireless.@wifi-device[0].disabled=0
+	uci delete wireless.radio0.channel
 	uci commit wireless; wifi
 
 	echo "Disabling default route and DNS server for lan network interface..."
@@ -103,6 +104,7 @@ else
 	uci set uhttpd.main.lua_prefix='/d3dapi'
 
 	uci set wireless.@wifi-device[0].disabled=0
+	uci delete wireless.radio0.channel
 	# TODO: add firewall net
 	uci set network.wlan=interface
 

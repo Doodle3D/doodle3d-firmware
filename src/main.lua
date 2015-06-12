@@ -48,18 +48,19 @@ local function setupAutoWifiMode()
 
 	local wifiState = wifi.getDeviceState()
 	local netName, netMode = wifiState.ssid, wifiState.mode
+	log:info("current wifi name: " .. (netName or "<nil>") .. ", mode: " .. netMode)
 
 	local apSsid = wifi.getSubstitutedSsid(settings.get('network.ap.ssid'))
 	local apMode = (apSsid == netName) and (netMode == 'ap')
+	log:info("ssid of self: " .. apSsid)
 
 	local scanList,msg = wifi.getScanInfo()
-	local knownSsids = wifi.getConfigs()
-
 	if not scanList then
 		return nil, "autowifi: could not scan wifi networks (" .. msg .. ")"
 	end
 
-	log:info("current wifi name: " .. (netName or "<nil>") .. ", mode: " .. netMode .. ", ssid of self: " .. apSsid)
+	local knownSsids = wifi.getConfigs()
+	-- log:info("current wifi name: " .. (netName or "<nil>") .. ", mode: " .. netMode .. ", ssid of self: " .. apSsid)
 	local visNet, knownNet = {}, {}
 	for _,sn in ipairs(scanList) do
 		table.insert(visNet, sn.ssid)

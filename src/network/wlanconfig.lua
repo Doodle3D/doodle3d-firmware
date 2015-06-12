@@ -137,9 +137,10 @@ end
 -- @param ssid	return data for given SSID or for all networks if SSID not given
 -- @return data for all or requested network; false+error on failure or nil when requested network not found
 function M.getScanInfo(ssid)
-
 	local iw = iwinfo[deviceApi]
+	log:info("start wifi scan")
 	local sr = iw.scanlist(deviceName)
+	log:info("wifi scan done")
 	local si, se
 
 	if ssid == nil then

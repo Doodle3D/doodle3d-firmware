@@ -25,7 +25,7 @@ local deviceName, deviceApi
 local cachedApSsid, baseApSsid = nil, nil
 
 function M.getSubstitutedSsid(unformattedSsid)
-	log:debug("getSubstitutedSsid unformattedSsid:'" .. unformattedSsid .. "' baseApSsid:'" .. (baseApSsid or "nil") .. "' cachedApSsid:'" .. (cachedApSsid or "nil"))
+	log:debug("getSubstitutedSsid unformattedSsid:'" .. (unformattedSsid or "nil") .. "' baseApSsid:'" .. (baseApSsid or "nil") .. "' cachedApSsid:'" .. (cachedApSsid or "nil"))
 	if unformattedSsid == baseApSsid and cachedApSsid ~= nil then return cachedApSsid end
 	if not unformattedSsid or type(unformattedSsid) ~= 'string' then return nil end
 

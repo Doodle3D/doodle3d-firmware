@@ -1,5 +1,6 @@
 Changelog
 
+# 0.10.6-rc2 (16 jun 2015)
 # 0.10.6-rc1 (16 jun 2015)
 This release sees several connectivity bugs resolved as we continue to look to 
 create the most stable experience we can offer for Doodle3D users. A new 

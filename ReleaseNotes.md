@@ -1,7 +1,12 @@
 Changelog
 
 # 0.10.6-rc1 (16 jun 2015)
-This release sees several connectivity bugs resolved as we continue to look to create the most stable experience we can offer for Doodle3D users. A new addition that has been realized in that the filament thickness is now printer dependent. This is important for printers that use 1,75mm filament. When changing the printer type it switches automatically. Please contact us for better filament thickness defaults. For more details please review the notes below: 
+This release sees several connectivity bugs resolved as we continue to look to 
+create the most stable experience we can offer for Doodle3D users. A new 
+addition that has been realized in that the filament thickness is now 
+printer dependent. This is important for printers that use 1,75mm filament. 
+When changing the printer type it switches automatically. Please contact us for 
+better filament thickness defaults. For more details please review the notes below: 
 
 General:
 - Updated OpenWRT (the operating system) to 14.07.

@@ -1,5 +1,38 @@
 Changelog
 
+# 0.10.6 (17 jun 2015)
+# 0.10.6-rc3 (17 jun 2015)
+# 0.10.6-rc2 (16 jun 2015)
+# 0.10.6-rc1 (16 jun 2015)
+This release sees several connectivity bugs resolved as we continue to look to 
+create the most stable experience we can offer for Doodle3D users. A new 
+addition that has been realized in that the filament thickness is now 
+printer dependent. This is important for printers that use 1,75mm filament. 
+When changing the printer type it switches automatically. Please contact us for 
+better filament thickness defaults. For more details please review the notes below: 
+
+General:
+- Updated OpenWRT (the operating system) to 14.07.
+- Fixed several big issues around connecting to printers.
+- Big files for Marlin based printers are processed faster.
+- Target temperature retrieval is improved.
+- Changed the Accesspoint's settings to the default because of startup issues (country: NL to US, channel: 11 to 1).
+- Improved 404 page. 
+
+Additions
+- Filament thickness is now printer type dependent and automatically change when selecting a printer. (Please contact us for better filament thickness defaults.)
+
+Support for more 3D printers:
+- DoodleDream
+- 3Dison
+- LulzBot TAZ 4
+- Wanhao Duplicator 4
+- Ultimaker 2 Go
+
+Improvements for Makerbot based printers (like the Wanhao printer):
+- Prevent that the nozzle bumps into the bed when starting a new print.
+- Prevent that the nozzle moves though a print after printing. 
+
 # 0.10.5-a (2 Feb 2015)
 - Removed gray lines where printer needs to 'travel' (move without printing)
 - Enabled traveling also for first couple of layers. This prevents straight lines crossing your print

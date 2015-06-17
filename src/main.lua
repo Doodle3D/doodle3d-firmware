@@ -48,18 +48,19 @@ local function setupAutoWifiMode()
 
 	local wifiState = wifi.getDeviceState()
 	local netName, netMode = wifiState.ssid, wifiState.mode
+	log:info("current wifi name: " .. (netName or "<nil>") .. ", mode: " .. netMode)
 
 	local apSsid = wifi.getSubstitutedSsid(settings.get('network.ap.ssid'))
 	local apMode = (apSsid == netName) and (netMode == 'ap')
+	log:info("ssid of self: " .. apSsid)
 
 	local scanList,msg = wifi.getScanInfo()
-	local knownSsids = wifi.getConfigs()
-
 	if not scanList then
 		return nil, "autowifi: could not scan wifi networks (" .. msg .. ")"
 	end
 
-	log:info("current wifi name: " .. (netName or "<nil>") .. ", mode: " .. netMode .. ", ssid of self: " .. apSsid)
+	local knownSsids = wifi.getConfigs()
+	-- log:info("current wifi name: " .. (netName or "<nil>") .. ", mode: " .. netMode .. ", ssid of self: " .. apSsid)
 	local visNet, knownNet = {}, {}
 	for _,sn in ipairs(scanList) do
 		table.insert(visNet, sn.ssid)
@@ -72,6 +73,15 @@ local function setupAutoWifiMode()
 
 	-- if the currently active network is client mode and is also visible, do nothing since it will connect automatically further along the boot process
 	if netMode == 'sta' and netName ~= nil and netName ~= "" and findSsidInList(scanList, netName) then
+		-- signin to connect.doodle3d.com
+		local success, output = Signin.signin()
+		if success then
+				log:info("Signed in")
+		else 
+			log:info("Signing in failed")
+		end
+		-- report we are connected after signin attempt
+		netconf.setStatus(netconf.CONNECTED,"Connected");
 		return true, "autowifi: no action - existing configuration found for currently wifi visible network (" .. netName .. ")"
 	end
 
@@ -101,6 +111,7 @@ local function setupAutoWifiMode()
 			return nil, "autowifi: failed to configure as access point with ssid '" .. apSsid .. "' (" .. msg .. ")"
 		end
 	else
+		netconf.setStatus(netconf.CREATED,"Access point created");
 		return true, "autowifi: no action - no known networks found, already in access point mode"
 	end
 

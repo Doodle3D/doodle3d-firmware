@@ -161,22 +161,27 @@ end]]--
 function M.get(key)
 	--log:info("settings:get: "..utils.dump(key))
 	key = replaceDots(key)
+	
+	-- retrieve settings's base settings from conf_defaults.lua
 	local base = getBaseKeyTable(key)
-
 	if not base then return nil,ERR_NO_SUCH_KEY end
 
+	-- check which uci section to read. 
+	-- By default it will read from the general section, but if a base setting contains a subSection it will check that subSection
 	local section = UCI_CONFIG_SECTION;
 	if base.subSection ~= nil then
 		section = M.get(base.subSection)
 	end
-
+	
+	-- get setting from uci 
 	local uciV,msg = uci:get(UCI_CONFIG_NAME, section, key)
 	if not uciV and msg ~= nil then
 		local errorMSG = "Issue reading setting '"..utils.dump(key).."': "..utils.dump(msg);
 		log:info(errorMSG)
 		return nil, errorMSG;
 	end
-
+	
+	-- convert uci value into proper lua value 
 	local uciV = fromUciValue(uciV, base.type)
 	if uciV ~= nil then
 		-- returning value from uci

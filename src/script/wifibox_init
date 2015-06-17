@@ -12,7 +12,7 @@ START=61
 LOGGER="logger -t autowifi -p 6"
 
 boot() {
-	sleep 1
+	sleep 5
 
 	$LOGGER "Invoking Doodle3D WiFi box network auto-initialization..."
 	/usr/share/lua/wifibox/script/d3dapi autowifi

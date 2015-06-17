@@ -13,6 +13,7 @@
 -- setenv LUA_CPATH /opt/local/share/luarocks/lib/lua/5.2/?.so
 -- setenv LUA_PATH /opt/local/share/luarocks/share/lua/5.2/?.lua
 -- Reboot
+-- Also see: https://github.com/keplerproject/luarocks/wiki/Using-LuaRocks#rocks-trees-and-the-lua-libraries-path
 --
 -- This script will automatically locate the Doodle3D repo's. 
 -- Index files are fetched from the online repository.
@@ -66,8 +67,11 @@ end
 pl = pl()
 local um --- update manager module, will be loaded later through @{loadUpdateManager}
 
-local lfs = require('lfs') -- assume this exists since it's required by penlight as well
-
+local ok, lfs = pcall(require, 'lfs')
+if not ok then
+	ERR('This script requires the LuaFileSystem library')
+	os.exit(2)
+end
 
 -----------------------------
 -- CONSTANTS AND VARIABLES --
@@ -148,13 +152,17 @@ local function findInFile(needle, file)
 	return not not t:find(needle, 1, true)
 end
 
-local function detectOpenWrtRoot()
-	local f = io.open('Makefile', 'r')
-	local line = f and f:read('*line')
-	local rv = (line and line:find('# Makefile for OpenWrt') == 1) and true or false
+local function fileExists(path)
+    local attr = lfs.attributes (path)
+    return attr ~= nil
+end
 
-	if f then f:close() end
-	return rv
+local function detectBuildroot()
+	if not fileExists("customfeeds") or not fileExists("bin") then 
+		return false 
+	else 
+		return true
+	end
 end
 
 -- returns uri (file path) of the wifibox feed, nil if not found or nil+msg on error
@@ -244,24 +252,15 @@ end
 local function prepare()
 	local msg = nil
 
-	io.write("* Checking if working directory is the OpenWrt root... ")
-	local isOpenWrtRoot = detectOpenWrtRoot()
-	if isOpenWrtRoot then
-		paths.wrt = pl.path.currentdir()
-		print("found " .. paths.wrt)
-	else
-		print("unrecognized directory, try changing directories or using -wrt-root")
-		return nil
-	end
-
 	io.write("* Looking for Doodle3D feed path... ")
-	local d3dFeed,msg = getWifiboxFeedRoot('feeds.conf')
-	if d3dFeed then
-		print("found " .. d3dFeed)
-	else
-		if msg then print("not found: " .. msg) else print("not found.") end
-		return nil
-	end
+	-- local d3dFeed,msg = getWifiboxFeedRoot('feeds.conf')
+	-- if d3dFeed then
+	-- 	print("found " .. d3dFeed)
+	-- else
+	-- 	if msg then print("not found: " .. msg) else print("not found.") end
+	-- 	return nil
+	-- end
+	local d3dFeed = "customfeeds"
 
 	paths.firmware = pl.path.join(d3dFeed, D3D_REPO_FIRMWARE_NAME)
 	paths.client = pl.path.join(d3dFeed, D3D_REPO_CLIENT_NAME)
@@ -315,8 +314,8 @@ local function collectLocalInfo()
 	local info = {}
 
 	-- temporary fields required for copying image files
-	info.factoryImgPath = pl.path.join(paths.wrt, 'bin/ar71xx/openwrt-ar71xx-generic-' .. deviceType .. '-v1-squashfs-factory.bin')
-	info.sysupgradeImgPath = pl.path.join(paths.wrt, 'bin/ar71xx/openwrt-ar71xx-generic-' .. deviceType .. '-v1-squashfs-sysupgrade.bin')
+	info.factoryImgPath = pl.path.join(paths.root, 'bin/ar71xx/openwrt-ar71xx-generic-' .. deviceType .. '-v1-squashfs-factory.bin')
+	info.sysupgradeImgPath = pl.path.join(paths.root, 'bin/ar71xx/openwrt-ar71xx-generic-' .. deviceType .. '-v1-squashfs-sysupgrade.bin')
 
 	info.version = um.parseVersion(pl.file.read(pl.path.join(paths.firmware, 'src/FIRMWARE-VERSION')))
 	if not info.version then return nil,"could not determine current firmware version" end
@@ -410,7 +409,7 @@ end
 -- TODO: the packages are not really used and the openwrt script to generate the
 -- package index requires all packages to be present so this has been skipped for now
 local function buildFeedDir()
-	local scriptPath = pl.path.join(paths.wrt, 'scripts/ipkg-make-index.sh')
+	local scriptPath = pl.path.join(paths.root, 'scripts/ipkg-make-index.sh')
 
 	return nil
 end
@@ -422,26 +421,6 @@ local function uploadFiles()
 	print("Running command: '" .. cmd .. "'")
 	local rv,ev = um.compatexecute(cmd)
 	return rv and true or nil,("rsync failed, exit status: " .. ev)
-end
-
-local function checkWrtConfig()
-	local goodConfigPath = pl.path.join(paths.firmware, "extra/openwrt-build/openwrt-diffconfig-extramini")
-	local wrtConfigPath = pl.path.tmpname()
-	--print("diffonfig output file: " .. wrtConfigPath)
-
-	local rv,ev = pl.utils.execute('./scripts/diffconfig.sh > "' .. wrtConfigPath .. '" 2> /dev/null')
-	if not rv then return nil,"could not run diffconfig script (exit status: " .. ev .. ")" end
-
-	local _,rv,output = pl.utils.executeex('diff "' .. wrtConfigPath .. '" "' .. goodConfigPath .. '"')
-
-	if rv == 0 then
-		return true
-	elseif rv == 1 then
-		print("configurations differ:\n-----------------------\n" .. output .. "\n-----------------------")
-		--ask for confirmation?
-	else
-		return nil,"unexpected exit status from diff (" .. rv .. ")"
-	end
 end
 
 local function main()
@@ -457,6 +436,16 @@ local function main()
 --	if opts['cache-dir'] then paths.cache = opts['cache-dir'] end
 -- more options: clear cache, rebuild (download all and generate index from actual files), dry-run, force
 
+	io.write("* Checking if working directory is the Buildroot... ")
+	local isBuildroot = detectBuildroot()
+	if isBuildroot then
+		paths.root = pl.path.currentdir()
+		print("found " .. paths.root)
+	else
+		print("unrecognized directory, try changing directories or using -wrt-root")
+		return nil
+	end
+
 	if not prepare() then quit(1) end
 
 
@@ -465,7 +454,7 @@ local function main()
 		print("Error: could not collect local version information (" .. msg .. ")")
 		quit(3)
 	end
-
+	
 	local stables,betas = fetchVersionInfo()
 	if not stables then
 		print("Error: could not get version information (" .. betas .. ")")
@@ -473,7 +462,6 @@ local function main()
 	end
 
 	--TODO: if requested, fetch images and packages (i.e., mirror whole directory)
-
 
 --	pl.pretty.dump(newVersion)
 --	print("stables: "); pl.pretty.dump(stables)
@@ -487,8 +475,6 @@ local function main()
 			"firmware version " .. um.formatVersion(newVersion.version) .. " already exists", 3, function()
 		return not (um.findVersion(newVersion.version, nil, stables) or um.findVersion(newVersion.version, nil, betas)) and true or nil
 	end)
-
-	runAction("Checking OpenWrt config", "failed", 3, checkWrtConfig)
 
 	--TODO: check git repos (`git log -n 1 --pretty=format:%ct` gives commit date of last commit (not author date))
 
@@ -516,8 +502,7 @@ local function main()
 	print("skipped - not implemented")
 --	runAction("Building package feed directory", "failed", 5, buildFeedDir)
 
-
-	local answer = getYesNo("? Local updates cache will be synced to remote server, proceed? (y/n) ")
+	local answer = getYesNo("? Are you SURE you want to publish? (y/n) ")
 	if answer ~= true then
 		print("Did not get green light, quitting.")
 		quit(5)
@@ -525,7 +510,7 @@ local function main()
 
 	runAction("About to sync files to server", "could not upload files", 6, uploadFiles)
 
-	print("Done.")
+	print("Released version " .. um.formatVersion(newVersion.version) .. "!")
 	quit()
 end
 

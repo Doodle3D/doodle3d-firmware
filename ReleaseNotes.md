@@ -1,15 +1,18 @@
 Changelog
 
+# 0.10.7 (21 aug 2015)
+Added ColiDo printer profiles
+
 # 0.10.6 (17 jun 2015)
 # 0.10.6-rc3 (17 jun 2015)
 # 0.10.6-rc2 (16 jun 2015)
 # 0.10.6-rc1 (16 jun 2015)
-This release sees several connectivity bugs resolved as we continue to look to 
-create the most stable experience we can offer for Doodle3D users. A new 
-addition that has been realized in that the filament thickness is now 
-printer dependent. This is important for printers that use 1,75mm filament. 
-When changing the printer type it switches automatically. Please contact us for 
-better filament thickness defaults. For more details please review the notes below: 
+This release sees several connectivity bugs resolved as we continue to look to
+create the most stable experience we can offer for Doodle3D users. A new
+addition that has been realized in that the filament thickness is now
+printer dependent. This is important for printers that use 1,75mm filament.
+When changing the printer type it switches automatically. Please contact us for
+better filament thickness defaults. For more details please review the notes below:
 
 General:
 - Updated OpenWRT (the operating system) to 14.07.
@@ -17,7 +20,7 @@ General:
 - Big files for Marlin based printers are processed faster.
 - Target temperature retrieval is improved.
 - Changed the Accesspoint's settings to the default because of startup issues (country: NL to US, channel: 11 to 1).
-- Improved 404 page. 
+- Improved 404 page.
 
 Additions
 - Filament thickness is now printer type dependent and automatically change when selecting a printer. (Please contact us for better filament thickness defaults.)
@@ -31,7 +34,7 @@ Support for more 3D printers:
 
 Improvements for Makerbot based printers (like the Wanhao printer):
 - Prevent that the nozzle bumps into the bed when starting a new print.
-- Prevent that the nozzle moves though a print after printing. 
+- Prevent that the nozzle moves though a print after printing.
 
 # 0.10.5-a (2 Feb 2015)
 - Removed gray lines where printer needs to 'travel' (move without printing)
@@ -55,9 +58,9 @@ Improvements for Makerbot based printers (like the Wanhao printer):
 - Added support for the '3Dison plus' printer.
 
 # 0.10.4 (28th may 2014)
-- Pulled  improvements by Ultimaker. 
-- Fixed printing isues with gcode containing whitelines. 
-- Added Builder3D to printer types 
+- Pulled  improvements by Ultimaker.
+- Fixed printing isues with gcode containing whitelines.
+- Added Builder3D to printer types
 - iOS captive portal fix
 
 # 0.10.3 (9th apr 2014)
@@ -71,16 +74,16 @@ Changelog
 - Fixed connection issues to networks with multiple routers sharing the same ssid
 - Option to update to beta releases (Beta testers are welcome)
 - Substituted wifiboxid retrievable through info api
-- Added a "connecting" printer state where it found a printer but couldn't communicate yet. (Not yet implemented for Makerbot's) 
-- When connecting takes to long, we display a warning that the user might have selected the wrong printer type (Not yet implemented for Makerbot's) 
+- Added a "connecting" printer state where it found a printer but couldn't communicate yet. (Not yet implemented for Makerbot's)
+- When connecting takes to long, we display a warning that the user might have selected the wrong printer type (Not yet implemented for Makerbot's)
 - API's printer/state doesn't return an error anymore when a printer is just connected
-- Allowing WiFi channels 12 & 13 
+- Allowing WiFi channels 12 & 13
 - Fixed issue that control access wasn't properly reset after print
 - Fixed another issue where the box in access point wouldn't give ip addresses
 
 # 0.10.1 (12th feb 2014)
 - miniFactory support
-- Fixed most Makerbot display issues 
+- Fixed most Makerbot display issues
 - Allowing wifi channels 12 and 13
 - Allow floats for retraction amount setting
 - Also preheating reconnected printer
@@ -100,7 +103,7 @@ Changelog
 - Feedback on 'restore settings to default'-button
 - Reimplemented layout, lots of improvements
 - Re-enabled regular browser keyboard shortcuts
-- Faster click responses on iOS 
+- Faster click responses on iOS
 - magnifying glass on iOS is now prevented from showing up
 
 # 0.9.13 (23th dec 2013)

@@ -54,7 +54,12 @@ local SUPPORTED_PRINTERS = {
 	_3Dison_plus = "3Dison plus",
 	marlin_generic = "Generic Marlin Printer",
 	makerbot_generic = "Generic Makerbot Printer",
-	doodle_dream = "Doodle Dream"
+	doodle_dream = "Doodle Dream",
+	colido_2_0_plus = "ColiDo 2.0plus",
+	colido_m2020 = "ColiDo M2020",
+	colido_x3045 = "ColiDo X3045",
+	colido_compact = "ColiDo Compact",
+	colido_diy = "ColiDo DIY"
 }
 local SUPPORTED_BAUDRATES = {
 	["115200"] = "115200 bps",

@@ -1,5 +1,8 @@
 Changelog
 
+# 0.10.8-a (11 nov 2015)
+Added ch341 and cp210x usb-serial drivers to diffconfig
+
 # 0.10.7 (21 aug 2015)
 Added ColiDo printer profiles
 

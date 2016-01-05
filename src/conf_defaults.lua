@@ -44,6 +44,22 @@ M.API_INCLUDE_ENDPOINT_INFO = false
 --- This base path is used in @{rest.response}. It includes any base path if necessary (e.g. 'localhost/~user').
 M.API_BASE_URL_PATH = 'doodle3d.com'
 
+M.system_log_level = {
+	default = 'info',
+	type = 'string',
+	description = 'Log level for firmware and print server',
+	isValid = function(value)
+		-- Note: level names mimic those in print3d
+		levelNames = { 'quiet', 'error', 'warning', 'info', 'verbose', 'bulk' }
+		for i,v in ipairs(levelNames) do
+			if value == v then
+				return true
+			end
+		end
+		return false, 'not one of '..table.concat(levelNames, ',')
+	end
+}
+
 M.network_ap_ssid = {
 	default = 'Doodle3D-%%MAC_ADDR_TAIL%%',
 	type = 'string',

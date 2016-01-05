@@ -97,7 +97,7 @@ end
 
 --- Reports whether a value is valid given the constraints specified in a base table.
 -- @p value The value to test.
--- @tab baseTable The base table to use constraint data from (min,max,regex).
+-- @tab baseTable The base table to use constraint data from (min,max,regex,isValid).
 -- @treturn bool Returns true if the value is valid, false if it is not.
 local function isValid(value, baseTable)
 	local varType, min, max, regex, isValid = baseTable.type, baseTable.min, baseTable.max, baseTable.regex, baseTable.isValid

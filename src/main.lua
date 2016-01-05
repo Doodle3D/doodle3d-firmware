@@ -128,8 +128,13 @@ local function setupLogger()
 	local logLevel = log.LEVEL.debug -- use debug logging as hard-coded default level
 
 	local logTargetSetting = settings.getSystemKey('logfile')
-	local logLevelSetting = settings.getSystemKey('loglevel')
+	local logLevelSetting = settings.get('system.log.level')
 	local logTargetError, logLevelError = nil, nil
+	
+	-- TEMP: for now, translate print3d log level to firmware level, these will be unfiied in the future
+	-- we get (print3d): quiet,error,warning,info,verbose,bulk -- and we need (firmware): debug,info,warn,error,fatal
+	logLevelMapping = { quiet='fatal', error='error', warning='warn', info='info', verbose='info', bulk='debug' }
+	logLevelSetting = logLevelMapping[logLevelSetting]
 
 	if type(logTargetSetting) == 'string' then
 		local specialTarget = logTargetSetting:match('^<(.*)>$')

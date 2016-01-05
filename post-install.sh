@@ -77,6 +77,8 @@ $IPKG_INSTROOT/etc/init.d/wifibox start
 $IPKG_INSTROOT/etc/init.d/dhcpcheck enable
 
 if [ -z "$IPKG_INSTROOT" ]; then
+	# No installation root, we are being installed on a live box so run uci commands directly.
+
 	echo "Enabling and configuring wifi device..."
 	uci set wireless.@wifi-device[0].disabled=0
 	uci delete wireless.radio0.channel
@@ -91,9 +93,15 @@ if [ -z "$IPKG_INSTROOT" ]; then
 	echo "Adding network interface 'wlan'..."
 	uci set network.wlan=interface
 	uci commit network; /etc/init.d/network reload
+	
+	echo "Setting default wifibox log level..."
+	uci set wifibox.general.system_log_level='info'
+	uci -q delete wifibox.system.loglevel  # remove key used in older versions (<=0.10.8a) if it exists
+	uci commit wifibox
 
 else
-	# Create a script to setup the system as wifibox, it will be deleted after it has been run, except if it returns > 0
+	# Create a script to setup the system as wifibox, it will be deleted after it has been run, except if it returns > 0.
+
 	cat <<-EOM >> $IPKG_INSTROOT/etc/uci-defaults/setup-wifibox.sh
 	uci set system.@system[0].hostname=wifibox
 	uci set system.@system[0].log_size=64
@@ -109,6 +117,9 @@ else
 	uci set network.wlan=interface
 
 	uci set dhcp.lan.dhcp_option='3 6'
+
+	uci set wifibox.general.system_log_level='info'
+	uci -q delete wifibox.system.loglevel  # remove key used in older versions (<=0.10.8a) if it exists
 EOM
 
 	echo "WARNING: WiFiBox network configuration can only be fully prepared when installing on real device"

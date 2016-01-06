@@ -120,6 +120,8 @@ else
 
 	uci set wifibox.general.system_log_level='info'
 	uci -q delete wifibox.system.loglevel  # remove key used in older versions (<=0.10.8a) if it exists
+
+	exit 0
 EOM
 
 	echo "WARNING: WiFiBox network configuration can only be fully prepared when installing on real device"

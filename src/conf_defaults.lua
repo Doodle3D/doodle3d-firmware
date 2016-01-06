@@ -314,6 +314,12 @@ M.printer_bottomFlowRate = {
   description = 'Multiplication factor for filament flow rate in first few layers'
 }
 
+M.printer_bottomEnableTraveling = {
+	default = true,
+	type = 'bool',
+	description = 'Enable traveling on bottom layers, disabling this might improve adhesion on some printers'
+}
+
 M.printer_heatup_enabled = {
 	default = true,
 	type = 'bool',

@@ -133,7 +133,7 @@ local function setupLogger()
 	
 	-- TEMP: for now, translate print3d log level to firmware level, these will be unfiied in the future
 	-- we get (print3d): quiet,error,warning,info,verbose,bulk -- and we need (firmware): debug,info,warn,error,fatal
-	logLevelMapping = { quiet='fatal', error='error', warning='warn', info='info', verbose='info', bulk='debug' }
+	logLevelMapping = { quiet='fatal', error='error', warning='warn', info='warn', verbose='info', bulk='debug' }
 	logLevelSetting = logLevelMapping[logLevelSetting]
 
 	if type(logTargetSetting) == 'string' then

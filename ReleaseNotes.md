@@ -1,5 +1,6 @@
 Changelog
-# 0.10.8
+# 0.10.9 (11 jan 2016)
+# 0.10.8 (11 jan 2016)
 # 0.10.8-b (7 jan 2016)
 Logging less by default, fixing some pretty serious memory issues, which could cause the WiFi-box to 'crash' while printing bigger files.
 Log level setting, enabling users to log more if they run into problems.

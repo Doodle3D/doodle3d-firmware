@@ -7,15 +7,23 @@
 --
 -- USAGE:
 -- The only dependency of this script are the penlight and luafilesystem libraries, which can be installed using
--- LuaRocks (http://luarocks.org/) as follows: 
--- sudo luarocks install penlight
+-- LuaRocks (http://luarocks.org/) as follows:
+-- $ sudo luarocks install penlight
 -- If the penlight libary is not found you might need to add the following to /etc/launchd.conf
 -- setenv LUA_CPATH /opt/local/share/luarocks/lib/lua/5.2/?.so
 -- setenv LUA_PATH /opt/local/share/luarocks/share/lua/5.2/?.lua
 -- Reboot
 -- Also see: https://github.com/keplerproject/luarocks/wiki/Using-LuaRocks#rocks-trees-and-the-lua-libraries-path
 --
--- This script will automatically locate the Doodle3D repo's. 
+-- Lua + Luarocks installation on Linux:
+--   $ sudo apt-get install lua5.2 liblua5.2-dev
+--   # Build Luarocks from source, configured for lua 5.2:
+--   $ wget http://luarocks.org/releases/luarocks-2.2.2.tar.gz
+--   $ tar zxpf luarocks-2.2.2.tar.gz
+--   $ cd luarocks-2.2.2
+--   $ ./configure --lua-version=5.2
+--   $ sudo make bootstrap
+-- This script will automatically locate the Doodle3D repo's.
 -- Index files are fetched from the online repository.
 -- For synchronizing, rsync must have passwordless SSH access to the server, for a
 -- guide, see: http://www.linuxproblem.org/art_9.html.
@@ -27,8 +35,8 @@
 --        HostName ftp.greenhost.nl
 -- Some basic sanity checks are built in (unique version, updated release notes, 'clean' openwrt config)
 -- but lots others are still missing (mainly: clean git repo's, freshly built images).
--- The script must be run from within the openwrt build root. So it's handy to create a symlink 
--- to this file. You could to something like from the build root: 
+-- The script must be run from within the openwrt build root. So it's handy to create a symlink
+-- to this file. You could to something like from the build root:
 -- ln -s ~/wrt-wifibox-feed/doodle3d-firmware/extra/scripts/publish-wifibox-release.lua .
 -- Then you can start with:
 -- cd trunk ../publish-wifibox-release.lua
@@ -158,9 +166,9 @@ local function fileExists(path)
 end
 
 local function detectBuildroot()
-	if not fileExists("customfeeds") or not fileExists("bin") then 
-		return false 
-	else 
+	if not fileExists("customfeeds") or not fileExists("bin") then
+		return false
+	else
 		return true
 	end
 end
@@ -454,7 +462,7 @@ local function main()
 		print("Error: could not collect local version information (" .. msg .. ")")
 		quit(3)
 	end
-	
+
 	local stables,betas = fetchVersionInfo()
 	if not stables then
 		print("Error: could not get version information (" .. betas .. ")")

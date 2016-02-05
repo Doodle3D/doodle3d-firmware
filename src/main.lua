@@ -254,16 +254,12 @@ local function main(environment)
 	elseif rq:getRequestMethod() == 'CMDLINE' and rq:get('signin') ~= nil then
 		log:info(MOD_ABBR, "Running in signin mode")
 
-		local ds = wifi.getDeviceState()
-		log:info(MOD_ABBR, "  wifi deviceState.mode: "..util.dump(ds.mode))
-		if ds.mode == "sta" then
-			log:info(MOD_ABBR, "  attempting signin")
-			local success,msg = Signin.signin()
-			if success then
-		  		log:info(MOD_ABBR, "Signin successful")
-			else
-				log:warning(MOD_ABBR, "Signin failed: "..util.dump(msg))
-			end
+		log:info(MOD_ABBR, "  attempting signin")
+		local success,msg = Signin.signin()
+		if success then
+	  		log:info(MOD_ABBR, "Signin successful")
+		else
+			log:warning(MOD_ABBR, "Signin failed: "..util.dump(msg))
 		end
 	elseif rq:getRequestMethod() ~= 'CMDLINE' or confDefaults.DEBUG_API then
 		-- Note: the commented log statement will print too many data if it's for instance dumping a gcode add request
@@ -280,8 +276,7 @@ local function main(environment)
 
 		if err ~= nil then log:error(MOD_ABBR, err) end
 		response:send()
-
-    	response:executePostResponseQueue()
+		response:executePostResponseQueue()
 	else
 		log:info(MOD_ABBR, "Nothing to do...bye.\n")
 	end

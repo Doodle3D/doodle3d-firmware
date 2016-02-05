@@ -409,6 +409,7 @@ function M.associateSsid(ssid, passphrase, recreate)
 
 	return true
 end
+
 --- Disassociate wlan device as client from all SSID's.
 -- Note: this function might belong in the wlanconfig module but that would introduce
 -- a circular dependency, easiest solution is to place the function here.

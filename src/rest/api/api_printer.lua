@@ -5,6 +5,7 @@
 -- @license This software is licensed under the terms of the GNU GPL v2 or later.
 -- See file LICENSE.txt or visit http://www.gnu.org/licenses/gpl.html for full license details.
 
+-- TODO: return errors like in print_POST (error message in a 'msg' key instead of directly in the response) if this does not break API compatibility
 
 local lfs = require('lfs')
 local log = require('util.logger')
@@ -28,7 +29,7 @@ end
 function M.temperature(request, response)
 	local argId = request:get("id")
 	local printer,msg = printerUtils.createPrinterOrFail(argId, response)
-	if not printer or not printer:hasSocket() then return false end
+	if not printer or not printer:hasSocket() then return end
 
 	local temperatures,msg = printer:getTemperatures()
 
@@ -39,18 +40,18 @@ function M.temperature(request, response)
 		response:addData('hotend_target', temperatures.hotend_target)
 		response:addData('bed', temperatures.bed)
 		response:addData('bed_target', temperatures.bed_target)
+	elseif temperatures == false then
+		response:addData('status', msg)
+		response:setFail()
 	else
 		response:setError(msg)
-		return false;
 	end
-
-	return true;
 end
 
 function M.progress(request, response)
 	local argId = request:get("id")
 	local printer,msg = printerUtils.createPrinterOrFail(argId, response)
-	if not printer or not printer:hasSocket() then return false end
+	if not printer or not printer:hasSocket() then return end
 
 	-- NOTE: despite their names, `currentLine` is still the error indicator and `bufferedLines` the message in such case.
 	local currentLine,bufferedLines,totalLines = printer:getProgress()
@@ -61,15 +62,16 @@ function M.progress(request, response)
 		response:addData('current_line', currentLine)
 		response:addData('buffered_lines', bufferedLines)
 		response:addData('total_lines', totalLines)
+	elseif progress == false then
+		response:addData('status', bufferedLines)
+		response:setFail()
 	else
 		response:setError(bufferedLines)
-		return false
 	end
-
-	return true;
 end
 
--- NOTE: onlyReturnState is optional and prevents response from being modified, used when calling from within other api call
+-- Note: onlyReturnState is optional and prevents response from being modified, used when calling from within other api call
+-- Note: unlike regular API-functions, this one returns either true+state or false
 function M.state(request, response, onlyReturnState)
 	local argId = request:get("id")
 	if not onlyReturnState then response:addData('id', argId) end
@@ -98,19 +100,19 @@ function M.state(request, response, onlyReturnState)
 				response:addData('state', rv)
 			end
 			return true, rv
-		else
+		else -- Note: do not differentiate between false and nil here, false should never be returned
 			if not onlyReturnState then response:setError(msg) end
 			return false
 		end
 	end
-	return true
+
+	--this point cannot be reached, no return necessary
 end
 
 -- retrieve a list of 3D printers currently supported
 function M.listall(request, response)
 	response:setSuccess()
 	response:addData('printers', printerUtils.supportedPrinters())
-	return true
 end
 
 
@@ -130,13 +132,17 @@ function M.heatup_POST(request, response)
 	local rv,msg = printer:heatup(temperature)
 
 	response:addData('id', argId)
-	if rv then response:setSuccess()
-	else response:setFail(msg)
+	if rv then
+		response:setSuccess()
+	elseif rv == false then
+		response:addData('status', msg)
+		response:setFail()
+	else
+		response:setError(msg)
 	end
 end
 
 function M.stop_POST(request, response)
-
 	log:info(MOD_ABBR, "API:printer/stop")
 
 	if not accessManager.hasControl(request.remoteAddress) then
@@ -147,7 +153,7 @@ function M.stop_POST(request, response)
 	local argId = request:get("id")
 	local argGcode = request:get("gcode")
 	local printer,msg = printerUtils.createPrinterOrFail(argId, response)
-	if not printer or not printer:hasSocket() then return false end
+	if not printer or not printer:hasSocket() then return end
 
 	if(argGcode == nil) then
 		argGcode = ""
@@ -155,8 +161,13 @@ function M.stop_POST(request, response)
 	local rv,msg = printer:stopPrint(argGcode)
 
 	response:addData('id', argId)
-	if rv then response:setSuccess()
-	else response:setError(msg)
+	if rv then
+		response:setSuccess()
+	elseif rv == false then
+		response:addData('status', msg)
+		response:setFail()
+	else
+		response:setError(msg)
 	end
 end
 
@@ -164,6 +175,8 @@ end
 --accepts: id(string) (the printer ID to append to)
 --accepts: first(bool) (chunks will be concatenated but output file will be cleared first if this argument is true)
 --accepts: start(bool) (only when this argument is true will printing be started)
+--accepts: seq_number(int) (sequence number of the chunk, must be given until clear() after given once, and incremented each time)
+--accepts: seq_total(int) (total number of gcode chunks to be appended, must be given until clear() after given once, and stay the same)
 --returns: when the gcode buffer cannot accept the gcode, or the IPC transaction fails, a fail with a (formal, i.e., parseable) status argument will be returned
 function M.print_POST(request, response)
 	log:info(MOD_ABBR, "API:printer/print")
@@ -187,9 +200,12 @@ function M.print_POST(request, response)
 	local argGcode = request:get("gcode")
 	local argIsFirst = utils.toboolean(request:get("first"))
 	local argStart = utils.toboolean(request:get("start"))
+	local argSeqNumber = request:get("seq_number") or -1
+	local argSeqTotal = request:get("seq_total") or -1
+	local remoteHost = request:getRemoteHost()
 
 	local printer,msg = printerUtils.createPrinterOrFail(argId, response)
-	if not printer or not printer:hasSocket() then return false end
+	if not printer or not printer:hasSocket() then return end
 
 	response:addData('id', argId)
 
@@ -203,7 +219,10 @@ function M.print_POST(request, response)
 		response:addData('gcode_clear',true)
 		local rv,msg = printer:clearGcode()
 
-		if not rv then
+		if rv == false then
+			response:addData('status', msg)
+			response:setFail("could not clear gcode")
+		elseif rv == nil then
 			response:setError(msg)
 			return
 		end
@@ -211,14 +230,17 @@ function M.print_POST(request, response)
 
 	local rv,msg
 
-	-- TODO: return errors with a separate argument like here in the rest of the code (this is how we designed the API right?)
-	rv,msg = printer:appendGcode(argGcode)
+	rv,msg = printer:appendGcode(argGcode, { seq_number = argSeqNumber, seq_total = argSeqTotal, source = remoteHost })
 	if rv then
 		--NOTE: this does not report the number of lines, but only the block which has just been added
 		response:addData('gcode_append',argGcode:len())
+	elseif rv == false then
+		response:addData('status', msg)
+		response:setFail("could not add gcode")
+		return
 	else
-		response:setError("could not add gcode")
 		response:addData('msg', msg)
+		response:setError("could not add gcode")
 		return
 	end
 
@@ -228,9 +250,14 @@ function M.print_POST(request, response)
 		if rv then
 			response:setSuccess()
 			response:addData('gcode_print',true)
+		elseif rv == false then
+			response:addData('status', msg)
+			response:setFail("could not send gcode")
+			return
 		else
-			response:setError("could not send gcode")
 			response:addData('msg', msg)
+			response:setError("could not send gcode")
+			return
 		end
 	else
 		response:setSuccess()

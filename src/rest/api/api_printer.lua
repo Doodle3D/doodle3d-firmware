@@ -54,7 +54,7 @@ function M.progress(request, response)
 	if not printer or not printer:hasSocket() then return end
 
 	-- NOTE: despite their names, `currentLine` is still the error indicator and `bufferedLines` the message in such case.
-	local currentLine,bufferedLines,totalLines = printer:getProgress()
+	local currentLine,bufferedLines,totalLines,bufferSize,maxBufferSize = printer:getProgress()
 
 	response:addData('id', argId)
 	if currentLine then
@@ -62,6 +62,8 @@ function M.progress(request, response)
 		response:addData('current_line', currentLine)
 		response:addData('buffered_lines', bufferedLines)
 		response:addData('total_lines', totalLines)
+		response:addData('buffer_size', bufferSize)
+		response:addData('max_buffer_size', maxBufferSize)
 	elseif progress == false then
 		response:addData('status', bufferedLines)
 		response:setFail()

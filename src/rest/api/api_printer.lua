@@ -177,6 +177,7 @@ end
 --accepts: id(string) (the printer ID to append to)
 --accepts: first(bool) (chunks will be concatenated but output file will be cleared first if this argument is true)
 --accepts: start(bool) (only when this argument is true will printing be started)
+--accepts: total_lines(int) (the total number of lines that is going to be sent, will be used only for reporting progress)
 --accepts: seq_number(int) (sequence number of the chunk, must be given until clear() after given once, and incremented each time)
 --accepts: seq_total(int) (total number of gcode chunks to be appended, must be given until clear() after given once, and stay the same)
 --returns: when the gcode buffer cannot accept the gcode, or the IPC transaction fails, a fail with a (formal, i.e., parseable) status argument will be returned
@@ -202,6 +203,7 @@ function M.print_POST(request, response)
 	local argGcode = request:get("gcode")
 	local argIsFirst = utils.toboolean(request:get("first"))
 	local argStart = utils.toboolean(request:get("start"))
+	local argTotalLines = request:get("total_lines") or -1
 	local argSeqNumber = request:get("seq_number") or -1
 	local argSeqTotal = request:get("seq_total") or -1
 	local remoteHost = request:getRemoteHost()
@@ -232,7 +234,7 @@ function M.print_POST(request, response)
 
 	local rv,msg
 
-	rv,msg = printer:appendGcode(argGcode, { seq_number = argSeqNumber, seq_total = argSeqTotal, source = remoteHost })
+	rv,msg = printer:appendGcode(argGcode, argTotalLines, { seq_number = argSeqNumber, seq_total = argSeqTotal, source = remoteHost })
 	if rv then
 		--NOTE: this does not report the number of lines, but only the block which has just been added
 		response:addData('gcode_append',argGcode:len())

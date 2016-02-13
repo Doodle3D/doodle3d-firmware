@@ -175,7 +175,8 @@ end
 
 --requires: gcode(string) (the gcode to be appended)
 --accepts: id(string) (the printer ID to append to)
---accepts: first(bool) (chunks will be concatenated but output file will be cleared first if this argument is true)
+--accepts: clear(bool) (chunks will be concatenated but output file will be cleared first if this argument is true)
+--accepts: first(deprecated) (an alias for 'clear')
 --accepts: start(bool) (only when this argument is true will printing be started)
 --accepts: total_lines(int) (the total number of lines that is going to be sent, will be used only for reporting progress)
 --accepts: seq_number(int) (sequence number of the chunk, must be given until clear() after given once, and incremented each time)
@@ -201,7 +202,8 @@ function M.print_POST(request, response)
 
 	local argId = request:get("id")
 	local argGcode = request:get("gcode")
-	local argIsFirst = utils.toboolean(request:get("first"))
+	local argClear = utils.toboolean(request:get("clear"))
+	local argIsFirst = utils.toboolean(request:get("first"))  -- deprecated
 	local argStart = utils.toboolean(request:get("start"))
 	local argTotalLines = request:get("total_lines") or -1
 	local argSeqNumber = request:get("seq_number") or -1
@@ -218,7 +220,7 @@ function M.print_POST(request, response)
 		return
 	end
 
-	if argIsFirst == true then
+	if argClear == true or argIsFirst == true then
 		log:verbose(MOD_ABBR, "  clearing all gcode for " .. printer:getId())
 		response:addData('gcode_clear',true)
 		local rv,msg = printer:clearGcode()

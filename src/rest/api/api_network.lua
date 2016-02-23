@@ -203,14 +203,13 @@ function M.remove_POST(request, response)
 end
 
 function M.signin(request, response)
-	log:info(MOD_ABBR, "API:network/signin")
 	local success, output = signin.signin()
 	if success then
-  		log:info(MOD_ABBR, "  signed in")
+  		log:info(MOD_ABBR, "signed in")
   		response:setSuccess("API:Network:signed in")
   		response:addData("response", output)
 	else
-		log:info(MOD_ABBR, "signing in failed")
+		log:warning(MOD_ABBR, "signing in failed")
 		response:setError("Signing in failed")
 	end
 end

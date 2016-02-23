@@ -107,7 +107,7 @@ function M.getStatus()
 end
 
 function M.setStatus(code,msg)
-	log:info(MOD_ABBR, "signin:setStatus: "..code.." | "..msg)
+	log:verbose(MOD_ABBR, "signin:setStatus: " .. code .. " (" .. msg .. ")")
 	status.set(STATUS_FILE,code,msg);
 end
 

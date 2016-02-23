@@ -64,7 +64,7 @@ function M.switchConfiguration(components)
 	for k,v in pairs(components) do
 		local fname = k .. '_' .. v
 		if type(reconf[fname]) == 'function' then
-			log:info(MOD_ABBR, "reconfiguring component '" .. k .. "' (" .. v .. ")")
+			log:verbose(MOD_ABBR, "reconfiguring component '" .. k .. "' (" .. v .. ")")
 			reconf[fname](dirtyList)
 		else
 			log:warning(MOD_ABBR, "unknown component or action '" .. fname .. "' skipped")
@@ -81,12 +81,12 @@ function M.switchConfiguration(components)
 end
 
 function M.commitComponent(c)
-	log:info(MOD_ABBR, "committing component '" .. c .. "'")
+	log:verbose(MOD_ABBR, "committing component '" .. c .. "'")
 	uci:commit(c)
 end
 
 function M.reloadComponent(c, silent)
-	log:info(MOD_ABBR, "reloading component '" .. c .. "'")
+	log:verbose(MOD_ABBR, "reloading component '" .. c .. "'")
 	local command = 'reload'
 	local cmd = '/etc/init.d/' .. c .. ' '..command
 	if silent ~= nil and silent then
@@ -94,7 +94,7 @@ function M.reloadComponent(c, silent)
 		os.execute(cmd)
 	else
 		rv = utils.captureCommandOutput(cmd)
-		log:info(MOD_ABBR, "  result reloading component '" .. c .. "' (cmd: '"..cmd.."'): \n"..utils.dump(rv))
+		log:verbose(MOD_ABBR, "  result reloading component '" .. c .. "' (cmd: '"..cmd.."'): \n"..utils.dump(rv))
 	end
 end
 
@@ -423,7 +423,7 @@ function M.disassociate()
 end
 
 function M.getStatus()
-	log:info(MOD_ABBR, "network:getStatus")
+	log:verbose(MOD_ABBR, "network:getStatus")
 	local file, error = io.open('/tmp/networkstatus.txt','r')
 	if file == nil then
 		--log:error(MOD_ABBR, "Util:Access:Can't read controller file. Error: "..error)

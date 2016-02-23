@@ -10,7 +10,7 @@
 
 LUA=lua
 SCRIPT_PATH=/usr/share/lua/wifibox
-LOG_FILE=/tmp/wifibox.cgi-fallback.log
+LOG_FILE=/tmp/wifibox.stdout.log
 
 cd $SCRIPT_PATH
 #echo "CGI invocation" >> $LOG_FILE

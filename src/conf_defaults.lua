@@ -36,7 +36,7 @@ M.DEBUG_PCALLS = false
 
 --- This constant enables debugging of the REST API from the command-line by emulating GET/POST requests.
 -- Specify the path and optionally the request method as follows: `d3dapi p=/mod/func r=POST`.
--- Note that the command-line script redirects the output streams to '/tmp/wifibox.cgi-fallback.log'
+-- Note that the command-line script redirects the output streams to '/tmp/wifibox.stdout.log',
 -- meaning that any stack traces can be found there.
 M.DEBUG_API = true
 

@@ -21,6 +21,8 @@ local LOG_COLLECT_DIRNAME = 'wifibox-logs'
 local LOG_COLLECT_DIR = TMP_DIR .. '/' .. LOG_COLLECT_DIRNAME
 local DEFAULT_WIFIBOX_LOG_FILENAME = 'wifibox.log'
 local DEFAULT_WIFIBOX_LOG_FILE = TMP_DIR .. '/' .. DEFAULT_WIFIBOX_LOG_FILENAME
+local WIFIBOX_STDOUT_LOG_FILENAME = 'wifibox.stdout.log'
+local WIFIBOX_STDOUT_LOG_FILE = TMP_DIR .. '/' .. WIFIBOX_STDOUT_LOG_FILENAME
 local MOD_ABBR = "AINF"
 
 local SYSLOG_FILENAME = 'syslog'
@@ -72,6 +74,9 @@ function M.logfiles(request, response)
 
 	-- copy wifibox API-script log
 	rv,sig,code = redirectedExecute('cp ' .. wifiboxLogFilePath .. ' ' .. LOG_COLLECT_DIR)
+
+	-- copy d3dapi script stdout/stderr log
+	rv,sig,code = redirectedExecute('cp ' .. WIFIBOX_STDOUT_LOG_FILE .. ' ' .. LOG_COLLECT_DIR)
 
 	-- capture syslog
 	rv,sig,code = os.execute('logread > ' .. LOG_COLLECT_DIR .. '/' .. SYSLOG_FILENAME)

@@ -215,7 +215,7 @@ local function init(environment)
 	end
 
 	if dbgText ~= "" then dbgText = " (" .. dbgText .. " debugging)" end
-	log:info(MOD_ABBR, "=======rest api" .. dbgText .. "=======")
+	log:verbose(MOD_ABBR, "=======rest api" .. dbgText .. "=======")
 
 	if (environment['REQUEST_METHOD'] == 'POST') then
 		local n = tonumber(environment['CONTENT_LENGTH'])
@@ -262,15 +262,16 @@ local function main(environment)
 			log:warning(MOD_ABBR, "Signin failed: "..util.dump(msg))
 		end
 	elseif rq:getRequestMethod() ~= 'CMDLINE' or confDefaults.DEBUG_API then
-		-- Note: the commented log statement will print too many data if it's for instance dumping a gcode add request
-		--log:info(MOD_ABBR, "received request of type " .. rq:getRequestMethod() .. " for " .. (rq:getRequestedApiModule() or "<unknown>")
-		--		.. "/" .. (rq:getRealApiFunctionName() or "<unknown>") .. " with arguments: " .. util.dump(rq:getAll()))
-		log:info(MOD_ABBR, "received request of type " .. rq:getRequestMethod() .. " for " .. (rq:getRequestedApiModule() or "<unknown>")
-				.. "/" .. (rq:getRealApiFunctionName() or "<unknown>"))
+		-- Note: the commented log message will print too many data if it's for instance dumping a gcode add request
+		--logMessage = "received request of type " .. rq:getRequestMethod() .. " for " .. (rq:getRequestedApiModule() or "<unknown>")
+		--		.. "/" .. (rq:getRealApiFunctionName() or "<unknown>") .. " with arguments: " .. util.dump(rq:getAll())
+		logMessage = rq:getRequestMethod() .. " request for " .. (rq:getRequestedApiModule() or "<unknown>")
+				.. "/" .. (rq:getRealApiFunctionName() or "<unknown>")
 		if rq:getRequestMethod() ~= 'CMDLINE' then
-			log:info(MOD_ABBR, "remote IP/port: " .. rq:getRemoteHost() .. "/" .. rq:getRemotePort())
-			--log:verbose(MOD_ABBR, "user agent: " .. rq:getUserAgent())
+			logMessage = logMessage .. " (remote IP/port: " .. rq:getRemoteHost() .. "/" .. rq:getRemotePort() .. ")"
+			--logMessage = logMessage .. " (user agent: " .. rq:getUserAgent() .. ")"
 		end
+		log:info(MOD_ABBR, logMessage)
 
 		local response, err = rq:handle()
 

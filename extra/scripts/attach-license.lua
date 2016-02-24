@@ -254,6 +254,8 @@ local function main()
 			else
 				print("error: file '" .. f .. "' has uncommitted changes in git, refusing to process")
 			end
+		elseif processType == false then
+			print("Skipping excluded file '" .. f .. "'")
 		end
 	end
 end

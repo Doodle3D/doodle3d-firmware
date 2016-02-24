@@ -1,9 +1,11 @@
 Changelog
+# 0.10.9 (11 jan 2016)
+# 0.10.8 (11 jan 2016)
 # 0.10.8-b (7 jan 2016)
-Logging less by default, fixing some pretty serious memory issues, which could cause the WiFi-box to 'crash' while printing bigger files. 
-Log level setting, enabling users to log more if they run into problems. 
+Logging less by default, fixing some pretty serious memory issues, which could cause the WiFi-box to 'crash' while printing bigger files.
+Log level setting, enabling users to log more if they run into problems.
 For better adhesion we extruded even while traveling on the bottom layers, we now made it configurable and turned it off by default.  
-Fixed month display of releases in settings screen. 
+Fixed month display of releases in settings screen.
 
 # 0.10.8-a (11 nov 2015)
 Added ch341 and cp210x usb-serial drivers to diffconfig

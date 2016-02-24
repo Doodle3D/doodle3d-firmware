@@ -62,6 +62,8 @@ local SUPPORTED_PRINTERS = {
 	colido_x3045 = "ColiDo X3045",
 	colido_compact = "ColiDo Compact",
 	colido_diy = "ColiDo DIY"
+	colido_diy = "ColiDo DIY"
+	craftbot_plus = "CraftBot PLUS"
 }
 local SUPPORTED_BAUDRATES = {
 	["115200"] = "115200 bps",

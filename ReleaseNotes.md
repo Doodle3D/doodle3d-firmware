@@ -1,4 +1,19 @@
 Changelog
+# 0.10.10-a (24 feb 2016)
+- Max buffer size check: the WiFi-Box can now indicate through the API that its buffer is full and it won't accept new gcode.
+- Buffer information is communicated through the API so all clients can handle this properly. The Doodle3D client will stop sending and waits until it drops below 75%. It will check this every 30 seconds.
+- Improved progress indication: when sending a print the total number of lines can be added, causing the total lines reported through the API to be correct, instead of being approximated to be total lines in buffer, which keeps increasing while a print is still being sent.
+- When sending print parts, sequence numbers can be added which will be checked for correctness.
+- The stop button now stays enabled while still sending a print.
+- Made firmware log format consistent with print3d's.
+- Fixed local IP parsing pattern in firmware.
+- Improved log messages and log messages formatting.
+- Added loglite utility which enables filtering and coloring of logs.
+- Won't attempt sign-in when in access point mode.
+- More consistent error reporting from API.
+- API d3dapi/printer/print's 'first' parameter has been deprecated in favor of a more descriptive 'clear' parameter.
+- Support for CraftBot PLUS printer.
+
 # 0.10.9 (11 jan 2016)
 # 0.10.8 (11 jan 2016)
 # 0.10.8-b (7 jan 2016)

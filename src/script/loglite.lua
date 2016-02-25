@@ -45,18 +45,11 @@ local ANSI_COLORS = {
 
 local ESCAPE_STR = string.char(27) .. "["
 local RESET_CODE = ESCAPE_STR .. "m"
+
 local DFL_FILTERSET_FILE = "loglite-filters.lua"
 
-local DEFAULT_FILTERSET = {
-	['options'] = { ['mode'] = 'keep', count = 'none' },
-	['patterns'] = {
-		['%(error%)'] = 'red',
-		['%(warning%)'] = 'yellow',
-		['%(bulk%)'] = 'gray',
-		['setState%(%)'] = 'bblue'
-	}
-}
 
+--[[========================================================================]]--
 
 --- Stringifies the given object.
 -- From util/utils.lua
@@ -134,9 +127,10 @@ end
 --[[========================================================================]]--
 
 local function tailStream(stream, filterSet)
-	patterns = filterSet.patterns
-	options = filterSet.options
+	patterns = filterSet and filterSet.patterns or {}
+	options = filterSet and filterSet.options or { ['mode'] = 'keep' }
 	local c = 0
+
 	for line in stream:lines() do
 		--c = c + 1 -- Note: this would also count deleted lines
 		local embellished = line
@@ -146,7 +140,7 @@ local function tailStream(stream, filterSet)
 		-- look for a pattern matching this line
 		for p,c in pairs(patterns) do
 			if line:match(p) then
---				print("[DEBUG] +matched rule '" .. p .. "'/'" .. c .. "' against '" .. line .. "'")
+				--print("[DEBUG] +matched rule '" .. p .. "'/'" .. c .. "' against '" .. line .. "'")
 				local kws = c:split(',')
 
 				if hasValue(kws, '_delete') then keepLine = false; keepLineOverridden = true
@@ -181,7 +175,7 @@ local function tailStream(stream, filterSet)
 			if options.count == 'all' then print(c, embellished)
 			else print(embellished) end
 		else
---			print("[DEBUG] -skipped '"..line.."'")
+			--print("[DEBUG] -skipped '"..line.."'")
 		end
 
 		--c = line:match 'truncated' and 0 or c -- from tail on stderr apparently
@@ -192,11 +186,11 @@ end
 local function readConfigFile(filename, searchPath)
 	fullPath = searchPath .. '/' .. filename
 	if not fileExists(fullPath) then
---		print("[DEBUG] config file '" .. fullPath .. "' not found")
+		--print("[DEBUG] config file '" .. fullPath .. "' not found")
 		return nil
 	end
    
---	print("[DEBUG] using config file '" .. fullPath .. "'")
+	--print("[DEBUG] using config file '" .. fullPath .. "'")
 	-- require does not accept full paths? also, pcall does not help with dofile   
 	return dofile(fullPath)
 end
@@ -204,40 +198,44 @@ end
 --NOTE: if command-line options get any more complex, switch to a lightweight
 --      getopt like this one? https://attractivechaos.wordpress.com/2011/04/07/getopt-for-lua/
 local function main()
+	-- handle command-line arguments
+	local showHelp, followFile, filterSetName = false, nil, 'default'
 	if #arg > 0 and arg[1] == "-h" or arg[1] == "--help" then
-		print("Usage: loglite.lua [file-to-tail] [filter-set]")
-		print("  If no arguments are supplied, or if the first one is `-', stdin is used as input.")
-		print("  If no filter set is supplied, a set named `default' will be looked for.")
-		print("  Filter sets can be defined in a file `loglite-filters.lua' in your home directory.")
-		os.exit(0)
+		showHelp = true
+	else
+		if #arg > 0 and arg[1] ~= '-' then followFile = arg[1] end
+		if #arg > 1 then filterSetName = arg[2] end
 	end
 
-	local followFile = #arg > 0 and arg[1] ~= '-' and arg[1] or nil
-	local filterSetName = #arg > 1 and arg[2] or 'default'
-
-	--print("[DEBUG] following file: '" .. (followFile and followFile or "<stdin>") .. "', with filter set '" .. filterSetName .. "'.")
-
-
-	--local tailin = io.popen('tail -F '..(...)..' 2>&1', 'r')
-	local tailin = followFile and io.popen('tail -f ' .. followFile, 'r') or io.stdin
-
-	local filterSet = DEFAULT_FILTERSET
-	
-	configSets = readConfigFile(DFL_FILTERSET_FILE, os.getenv('HOME'))
+	-- read filter set file if available
+	local filterSet = nil
+	configSets = readConfigFile(DFL_FILTERSET_FILE, os.getenv('HOME')) or {}
 	for k,_ in pairs(configSets) do
 		if k == filterSetName then
 			filterSet = configSets[filterSetName]
---			print("[DEBUG] using filter set '" .. filterSetName .. "' from config")
+				--print("[DEBUG] using filter set '" .. filterSetName .. "' from config")
 			break
 		end
 	end
 
-	-- TODO: add commandline option to enable this flag
-	if listAvailableFilterSets == true then
-		print("  Available filter sets in " .. DFL_FILTERSET_FILE .. ": " .. keysToString(configSets, ', '))
+	-- if requested, display help and exit
+	if showHelp and showHelp == true then
+		print("Usage: loglite.lua [file-to-tail] [filter-set]")
+		print("  If no arguments are supplied, or if the first one is `-', stdin is used as input.")
+		print("  If no filter set is supplied, a set named `default' will be looked for.")
+		print("  Filter sets can be defined in a file `loglite-filters.lua' in your home directory.")
+		print()
+		print("  Available filter sets in " .. os.getenv('HOME') .. "/" .. DFL_FILTERSET_FILE .. ": " .. keysToString(configSets, ', ', true))
 		os.exit(0)
 	end
 
+
+	-------------------------
+
+	--print("[DEBUG] following file: '" .. (followFile and followFile or "<stdin>") .. "', with filter set '" .. filterSetName .. "'.")
+
+	--local tailin = io.popen('tail -F '..(...)..' 2>&1', 'r')
+	local tailin = followFile and io.popen('tail -f ' .. followFile, 'r') or io.stdin
 
 	pcall(tailStream, tailin, filterSet) -- Note: protected call to suppress interrupt error thrown by lines iterator
 end

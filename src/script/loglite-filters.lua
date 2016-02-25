@@ -1,9 +1,19 @@
 local M = {}
 
-M.default = {  -- TEST set
+M.default = {
+	['options'] = { ['mode'] = 'keep', count = 'none' },
+	['patterns'] = {
+		['%(error%)'] = 'red',
+		['%(warning%)'] = 'yellow',
+		['%(bulk%)'] = 'gray',
+		['setState%(%)'] = 'bblue'
+	}
+}
+
+M.test = {  -- TEST set
 	['options'] = { ['mode'] = 'keep', count = 'all' },
 	['patterns'] = {
-		['%(info%)'] = 'magenta'
+		['%(info%)'] = 'yellow'
 	}
 }
 
@@ -11,16 +21,6 @@ M.printstart = {
 	['options'] = { ['mode'] = 'delete' },
 	['patterns'] = {
 		['print started'] = '_uppercase,bwhite'
-	}
-}
-
-M.test = {
-	['options'] = { 'delete_mode' },
-	['patterns'] = {
-		['(verbose)'] = 'underline,cyan,_delete',
-		['(info)'] = 'magenta',
-		['ABSD'] = '_nodelete',
-		['SE?RV?'] = 'bblue'
 	}
 }
 

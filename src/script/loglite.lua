@@ -201,16 +201,21 @@ local function readConfigFile(filename, searchPath)
 	return dofile(fullPath)
 end
 
+--NOTE: if command-line options get any more complex, switch to a lightweight
+--      getopt like this one? https://attractivechaos.wordpress.com/2011/04/07/getopt-for-lua/
 local function main()
 	if #arg > 0 and arg[1] == "-h" or arg[1] == "--help" then
-		print("Usage: either pass file to tail as argument, or pipe through stdin.")
+		print("Usage: loglite.lua [file-to-tail] [filter-set]")
+		print("  If no arguments are supplied, or if the first one is `-', stdin is used as input.")
+		print("  If no filter set is supplied, a set named `default' will be looked for.")
+		print("  Filter sets can be defined in a file `loglite-filters.lua' in your home directory.")
 		os.exit(0)
 	end
 
-	local followFile = #arg > 0 and arg[1] or nil
-	local filterSetName = 'default'  -- TODO: parse from options and leave at 'default' if not specified
+	local followFile = #arg > 0 and arg[1] ~= '-' and arg[1] or nil
+	local filterSetName = #arg > 1 and arg[2] or 'default'
 
-	--print("[DEBUG] following file: '" .. (followFile and followFile or "<stdin>") .. "'.")
+	--print("[DEBUG] following file: '" .. (followFile and followFile or "<stdin>") .. "', with filter set '" .. filterSetName .. "'.")
 
 
 	--local tailin = io.popen('tail -F '..(...)..' 2>&1', 'r')

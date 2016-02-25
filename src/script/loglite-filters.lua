@@ -1,5 +1,12 @@
 local M = {}
 
+M.default = {  -- TEST set
+	['options'] = { ['mode'] = 'keep', count = 'all' },
+	['patterns'] = {
+		['%(info%)'] = 'magenta'
+	}
+}
+
 M.printstart = {
 	['options'] = { ['mode'] = 'delete' },
 	['patterns'] = {

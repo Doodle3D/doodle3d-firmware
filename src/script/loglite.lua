@@ -105,11 +105,22 @@ local function hasValue(t, needle)
 	return nil
 end
 
+--- Determines if filename exists and can be opened for reading.
+-- From http://stackoverflow.com/a/4991602
+-- @string filename The file to test.
+-- @return True if the file exists and is readable, false otherwise.
+function fileExists(filename)
+   local f = io.open(filename, "r")
+   if f ~= nil then io.close(f) return true else return false end
+end
+
 
 
 --[[========================================================================]]--
 
-local function tailStream(stream, patterns, options)
+local function tailStream(stream, filterSet)
+	patterns = filterSet.patterns
+	options = filterSet.options
 	local c = 0
 	for line in stream:lines() do
 		--c = c + 1 -- Note: this would also count deleted lines
@@ -120,7 +131,7 @@ local function tailStream(stream, patterns, options)
 		-- look for a pattern matching this line
 		for p,c in pairs(patterns) do
 			if line:match(p) then
---				print("+matched rule '" .. p .. "'/'" .. c .. "' against '" .. line .. "'")
+--				print("[DEBUG] +matched rule '" .. p .. "'/'" .. c .. "' against '" .. line .. "'")
 				local kws = c:split(',')
 
 				if hasValue(kws, '_delete') then keepLine = false; keepLineOverridden = true
@@ -155,11 +166,24 @@ local function tailStream(stream, patterns, options)
 			if options.count == 'all' then print(c, embellished)
 			else print(embellished) end
 		else
---			print("-skipped '"..line.."'")
+--			print("[DEBUG] -skipped '"..line.."'")
 		end
 
 		--c = line:match 'truncated' and 0 or c -- from tail on stderr apparently
 	end
+end
+
+--TODO: could be extended to look for multiple filenames in multiple paths
+local function readConfigFile(filename, searchPath)
+	fullPath = searchPath .. '/' .. filename
+	if not fileExists(fullPath) then
+--		print("[DEBUG] config file '" .. fullPath .. "' not found")
+		return nil
+	end
+   
+--	print("[DEBUG] using config file '" .. fullPath .. "'")
+	-- require does not accept full paths? also, pcall does not help with dofile   
+	return dofile(fullPath)
 end
 
 local function main()
@@ -169,17 +193,26 @@ local function main()
 	end
 
 	local followFile = #arg > 0 and arg[1] or nil
+	local filterSetName = 'default'  -- TODO: parse from options and leave at 'default' if not specified
 
-	--print("following file: '" .. (followFile and followFile or "<stdin>") .. "'.")
+	--print("[DEBUG] following file: '" .. (followFile and followFile or "<stdin>") .. "'.")
 
 
 	--local tailin = io.popen('tail -F '..(...)..' 2>&1', 'r')
 	local tailin = followFile and io.popen('tail -f ' .. followFile, 'r') or io.stdin
 
-	local patterns = DEFAULT_FILTERSET.patterns
-	local options = { ['mode'] = 'keep', count = 'none' }
+	local filterSet = DEFAULT_FILTERSET
+	
+	configSets = readConfigFile(DFL_FILTERSET_FILE, os.getenv('HOME'))
+	for k,_ in pairs(configSets) do
+		if k == filterSetName then
+			filterSet = configSets[filterSetName]
+--			print("[DEBUG] using filter set '" .. filterSetName .. "' from config")
+			break
+		end
+	end
 
-	pcall(tailStream, tailin, patterns, options) -- Note: protected call to suppress interrupt error thrown by lines iterator
+	pcall(tailStream, tailin, filterSet) -- Note: protected call to suppress interrupt error thrown by lines iterator
 end
 
 main()

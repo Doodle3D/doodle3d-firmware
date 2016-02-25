@@ -5,12 +5,10 @@
 -- * pattern rules are matched top to bottom, the last one encountered overriding any previous conflicting directive
 --
 -- TODO:
--- * move script to firmware repo (since it's shared between that and print3d) and remove commit from print3d
 -- * pre-split keyword lists for efficiency?
--- * keep formats separate and only concat in the end, so things like upperasing can work properly
+-- * keep formats separate and only concat in the end, so things like uppercasing can work properly
 -- * add more directives like uppercase, prefix/suffix?
 -- * options: en/dis total count, en/dis match count (how to deal with multiple matches?), en/dis keep_mode / delete_mode/
--- * create named sets of options+patterns to allow for task-specific filter sets - choose/parse options and includes (pcall require()d) in main and pass on to workhorse function
 -- * add specialized patterns for levels/modules?
 --
 -- FIXME:
@@ -50,7 +48,7 @@ local RESET_CODE = ESCAPE_STR .. "m"
 local DFL_FILTERSET_FILE = "loglite-filters.lua"
 
 local DEFAULT_FILTERSET = {
-	['options'] = { 'default_enabled', 'keep_mode' },
+	['options'] = { ['mode'] = 'keep', count = 'none' },
 	['patterns'] = {
 		['%(error%)'] = 'red',
 		['%(warning%)'] = 'yellow',
@@ -93,9 +91,30 @@ function string:split(div)
 	return arr
 end
 
-local function makeAnsiCode(key)
-	if not ANSI_COLORS[key] then return nil end
-	return ESCAPE_STR .. ANSI_COLORS[key] .. 'm'
+--- Determines if filename exists and can be opened for reading.
+-- From http://stackoverflow.com/a/4991602
+-- @string filename The file to test.
+-- @return True if the file exists and is readable, false otherwise.
+function fileExists(filename)
+   local f = io.open(filename, "r")
+   if f ~= nil then io.close(f) return true else return false end
+end
+
+--- Converts keys of a table into a string.
+-- Adapted from http://stackoverflow.com/a/12674376.
+-- @string tbl A key/value table.
+-- @string[opt=','] sep Separator to use between items.
+-- @boolean[opt=false] sort Whether or not to sort the resulting list.
+-- @return A string with all keys from the given table.
+local function keysToString(tbl, sep, sort)
+	local sep, sort = sep or ',', sort or false
+	local keyset, n = {}, 0
+	for k,_ in pairs(tbl) do
+		n = n + 1
+		keyset[n] = k
+	end
+	if sort then table.sort(keyset) end
+	return table.concat(keyset, sep)
 end
 
 local function hasValue(t, needle)
@@ -105,13 +124,9 @@ local function hasValue(t, needle)
 	return nil
 end
 
---- Determines if filename exists and can be opened for reading.
--- From http://stackoverflow.com/a/4991602
--- @string filename The file to test.
--- @return True if the file exists and is readable, false otherwise.
-function fileExists(filename)
-   local f = io.open(filename, "r")
-   if f ~= nil then io.close(f) return true else return false end
+local function makeAnsiCode(key)
+	if not ANSI_COLORS[key] then return nil end
+	return ESCAPE_STR .. ANSI_COLORS[key] .. 'm'
 end
 
 
@@ -211,6 +226,13 @@ local function main()
 			break
 		end
 	end
+
+	-- TODO: add commandline option to enable this flag
+	if listAvailableFilterSets == true then
+		print("  Available filter sets in " .. DFL_FILTERSET_FILE .. ": " .. keysToString(configSets, ', '))
+		os.exit(0)
+	end
+
 
 	pcall(tailStream, tailin, filterSet) -- Note: protected call to suppress interrupt error thrown by lines iterator
 end

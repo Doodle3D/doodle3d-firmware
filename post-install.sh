@@ -36,7 +36,7 @@ addFirewallNet() {
 ### Replace the banner with a custom one
 if [ ! -f $IPKG_INSTROOT/etc/banner.default ]; then
 	mv $IPKG_INSTROOT/etc/banner $IPKG_INSTROOT/etc/banner.default
-	cat <<-'EOM' > $IPKG_INSTROOT/etc/banner
+	cat <<-\EOM > $IPKG_INSTROOT/etc/banner
 		........D o o d l e 3 D
 		.......________     _____  _____
 		....../  /  /  |__ /  __/ /  - /___ __
@@ -52,17 +52,23 @@ fi
 mkdir -p $IPKG_INSTROOT/root
 grep '^# DO NOT MODIFY.*wifibox package.$' $IPKG_INSTROOT/root/.profile >/dev/null 2>&1
 if [ $? -gt 0 ]; then
-		cat <<-EOM >> $IPKG_INSTROOT/root/.profile
-
+	cat <<-\EOM >> $IPKG_INSTROOT/root/.profile
 		# DO NOT MODIFY - this block of lines has been added by the wifibox package.
 		alias d='ls -la'
 		alias d3dapi='/usr/share/lua/wifibox/script/d3dapi'
 		alias encore='ulimit -c unlimited'
 		alias wopkg='opkg -f /usr/share/lua/wifibox/opkg.conf'
 
+		alias tailfw='loglite /tmp/wifibox.log firmware'
+		tailp3d() {
+		  logfile=/tmp/print3d-ttyACM0.log
+		  if [ $# -gt 0 ]; then logfile=$1; fi
+		  loglite "$logfile" print3d
+		}
+
 		loop() {
-			if [ \$# -lt 2 ]; then echo "Please supply a delay and a command."; return 1; fi
-			DELAY=\$1; shift; while true; do \$@; sleep \$DELAY; done
+		  if [ $# -lt 2 ]; then echo "Please supply a delay and a command."; return 1; fi
+		  DELAY=$1; shift; while true; do $@; sleep $DELAY; done
 		}
 EOM
 fi

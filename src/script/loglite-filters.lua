@@ -10,6 +10,21 @@ M.default = {
 	}
 }
 
+-- filter rules for firmware log (/tmp/wifibox.log)
+M.firmware = {
+	['options'] = { ['mode'] = 'keep', count = 'none' },
+	['patterns'] = {
+	}
+}
+
+-- filter rules for print3d log (/tmp/print3d-*.log)
+M.print3d = {
+	['options'] = { ['mode'] = 'keep', count = 'none' },
+	['patterns'] = {
+	}
+}
+
+
 M.test = {  -- TEST set
 	['options'] = { ['mode'] = 'keep', count = 'all' },
 	['patterns'] = {

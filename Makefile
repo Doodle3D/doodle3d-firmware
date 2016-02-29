@@ -89,6 +89,7 @@ define Package/wifibox/install
 	$(INSTALL_DIR) $(1)/etc/init.d
 	$(INSTALL_DIR) $(1)/etc/config
 	$(INSTALL_DIR) $(1)/root/
+	$(INSTALL_DIR) $(1)/root/sketches
 	#$(INSTALL_DIR) $(1)/www
 	$(INSTALL_DIR) $(1)/www/cgi-bin
 	

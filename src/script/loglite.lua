@@ -4,6 +4,12 @@
 -- * directives: either a color, a color prefixed by 'b' or one of: _delete, _nodelete, [_matchonly]
 -- * pattern rules are matched top to bottom, the last one encountered overriding any previous conflicting directive
 --
+-- EXAMPLE USAGE:
+-- to be able to run print3d and at the same time color the logging you can use the pipe (|) operator.
+-- use 2>&1 to redirect the stderr to stdout. 
+-- eg: 
+-- ./print3d -S -V -F -p marlin_generic 2>&1 | lua ./loglite.lua 
+-- 
 -- TODO:
 -- * pre-split keyword lists for efficiency?
 -- * keep formats separate and only concat in the end, so things like uppercasing can work properly

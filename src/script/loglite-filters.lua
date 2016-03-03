@@ -12,14 +12,14 @@ M.default = {
 
 -- filter rules for firmware log (/tmp/wifibox.log)
 M.firmware = {
-	['options'] = { ['mode'] = 'keep', count = 'none' },
+	['parent'] = 'default',
 	['patterns'] = {
 	}
 }
 
 -- filter rules for print3d log (/tmp/print3d-*.log)
 M.print3d = {
-	['options'] = { ['mode'] = 'keep', count = 'none' },
+	['parent'] = 'default',
 	['patterns'] = {
 	}
 }

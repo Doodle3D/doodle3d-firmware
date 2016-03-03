@@ -1,15 +1,14 @@
 #!/usr/bin/env lua
 
+-- EXAMPLE USAGE:
+-- To be able to run print3d and at the same time color the logging you can use
+-- the pipe (|) operator. Use 2>&1 to redirect the stderr to stdout, e.g.:
+-- ./print3d -S -V -F -p marlin_generic 2>&1 | ./loglite.lua 
+-- 
 -- Notes
 -- * directives: either a color, a color prefixed by 'b' or one of: _delete, _nodelete, [_matchonly]
 -- * pattern rules are matched top to bottom, the last one encountered overriding any previous conflicting directive
 --
--- EXAMPLE USAGE:
--- to be able to run print3d and at the same time color the logging you can use the pipe (|) operator.
--- use 2>&1 to redirect the stderr to stdout. 
--- eg: 
--- ./print3d -S -V -F -p marlin_generic 2>&1 | lua ./loglite.lua 
--- 
 -- TODO:
 -- * pre-split keyword lists for efficiency?
 -- * keep formats separate and only concat in the end, so things like uppercasing can work properly
@@ -53,6 +52,7 @@ local ESCAPE_STR = string.char(27) .. "["
 local RESET_CODE = ESCAPE_STR .. "m"
 
 local DFL_FILTERSET_FILE = "loglite-filters.lua"
+
 
 
 --[[========================================================================]]--
@@ -114,6 +114,26 @@ local function keysToString(tbl, sep, sort)
 	end
 	if sort then table.sort(keyset) end
 	return table.concat(keyset, sep)
+end
+
+--- Merge two tables recursively (i.e., subtables also get merged).
+-- from: http://stackoverflow.com/a/1283608
+-- @table t1 Table to merge into.
+-- @table t2 Table to merge into t1.
+-- @return The combined table (actually t1).
+function mergeTables(t1, t2)
+	for k,v in pairs(t2) do
+		if type(v) == "table" then
+			if type(t1[k] or false) == "table" then
+				mergeTables(t1[k] or {}, t2[k] or {})
+			else
+				t1[k] = v
+			end
+		else
+			t1[k] = v
+		end
+	end
+	return t1
 end
 
 local function hasValue(t, needle)
@@ -201,6 +221,24 @@ local function readConfigFile(filename, searchPath)
 	return dofile(fullPath)
 end
 
+--- Load filter set with given name from configSets, with inheritance as specified.
+local function readFilterSet(configSets, setName)
+	local result = {}
+	for k,_ in pairs(configSets) do
+		if k == setName then
+			parent = configSets[setName]['parent']
+			if parent ~= nil then
+				--print("[DEBUG] recursing for filter set '" .. parent .. "' from config")
+				result = mergeTables(result, readFilterSet(configSets, parent))
+			end
+			--print("[DEBUG] using/merging filter set '" .. setName .. "' from config")
+			result = mergeTables(result, configSets[setName])
+			break
+		end
+	end
+	return result
+end
+
 --NOTE: if command-line options get any more complex, switch to a lightweight
 --      getopt like this one? https://attractivechaos.wordpress.com/2011/04/07/getopt-for-lua/
 local function main()
@@ -214,15 +252,9 @@ local function main()
 	end
 
 	-- read filter set file if available
-	local filterSet = nil
-	configSets = readConfigFile(DFL_FILTERSET_FILE, os.getenv('HOME')) or {}
-	for k,_ in pairs(configSets) do
-		if k == filterSetName then
-			filterSet = configSets[filterSetName]
-				--print("[DEBUG] using filter set '" .. filterSetName .. "' from config")
-			break
-		end
-	end
+	local configSets = readConfigFile(DFL_FILTERSET_FILE, os.getenv('HOME')) or {}
+	local filterSet = readFilterSet(configSets, filterSetName)
+	--print("[DEBUG] final filter set for '" .. filterSetName .. "' from config: " .. dump(filterSet))
 
 	-- if requested, display help and exit
 	if showHelp and showHelp == true then

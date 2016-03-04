@@ -18,8 +18,10 @@ FIXME:
 
 --Note: overview of ANSI escape codes: http://ascii-table.com/ansi-escape-sequences.php (support varies per terminal/termtype)
 local ANSI_COLORS = {
-	['blink'] = 5, -- no dice on osx/iterm2
-	['underline'] = 24, -- no dice on osx/iterm2
+	['bold'] = 1,
+	['underscore'] = 4,
+	['blink'] = 5, -- on osx/iterm2, this has to be enabled in preferences
+	['reverse'] = 7,
 	['black'] = 30,
 	['red'] = 31,
 	['green'] = 32,

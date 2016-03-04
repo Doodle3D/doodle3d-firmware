@@ -54,7 +54,9 @@ The following directives can be associated with a pattern:
 
 * A foreground color, one of: black, red, green, yellow, blue, magenta, cyan or white.
 * A background color, like foreground colors but prefixed with 'b'.
+* `bold`, which usually has the effect of rendering a bright variant of the foreground color (note that `bold,black` renders as dark gray).
+* `reverse` will reverse fore- and background colors.
+* Also available are `blink` and `underscore` but they do currently not work in all terminal programs or might need to be enabled in the preferences.
 * `_delete` or `_nodelete` to override the active mode specified in the 'options' above.
-* Also available are `blink` and `underline` but they do currently not work in all terminal programs.
 
 Directives can be combined with ',' (e.g.: `'red,_nodelete'`). Finally, in any filter set, pattern rules are matched from top to bottom, the last one encountered overriding any previous conflicting directive.

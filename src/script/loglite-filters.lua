@@ -1,7 +1,7 @@
 local M = {}
 
 M.default = {
-	['options'] = { ['mode'] = 'keep', count = 'none' },
+	['options'] = { mode = 'keep', count = 'none' },
 	['patterns'] = {
 		['%(error%)'] = 'red',
 		['%(warning%)'] = 'yellow',
@@ -26,14 +26,14 @@ M.print3d = {
 
 
 M.test = {  -- TEST set
-	['options'] = { ['mode'] = 'keep', count = 'all' },
+	['options'] = { mode = 'keep', count = 'all' },
 	['patterns'] = {
 		['%(info%)'] = 'yellow'
 	}
 }
 
 M.printstart = {
-	['options'] = { ['mode'] = 'delete' },
+	['options'] = { mode = 'delete' },
 	['patterns'] = {
 		['print started'] = '_uppercase,bwhite'
 	}

@@ -1,32 +1,22 @@
 #!/usr/bin/env lua
 
--- EXAMPLE USAGE:
--- To be able to run print3d and at the same time color the logging you can use
--- the pipe (|) operator. Use 2>&1 to redirect the stderr to stdout, e.g.:
--- ./print3d -S -V -F -p marlin_generic 2>&1 | ./loglite.lua 
--- 
--- Notes
--- * directives: either a color, a color prefixed by 'b' or one of: _delete, _nodelete, [_matchonly]
--- * pattern rules are matched top to bottom, the last one encountered overriding any previous conflicting directive
---
--- TODO:
--- * pre-split keyword lists for efficiency?
--- * keep formats separate and only concat in the end, so things like uppercasing can work properly
--- * add more directives like uppercase, prefix/suffix?
--- * options: en/dis total count, en/dis match count (how to deal with multiple matches?), en/dis keep_mode / delete_mode/
--- * add specialized patterns for levels/modules?
---
--- FIXME:
--- * with deleteMode enabled, multiple matches and _nodelete in a later match, previous directives are ignored
-
 --[[
--- * https://stackoverflow.com/questions/17363973/how-can-i-tail-f-a-log-filetruncate-aware-in-lua
--- * http://pueblo.sourceforge.net/doc/manual/ansi_color_codes.html
+For documentation on this script, see README-loglite.md.
+
+Ideas for improvement:
+* add more directives like uppercase, prefix/suffix?
+* create separate package for this script: a) since it is useful for any log file, b) this file is getting somewhat long 
+* for broader terminal support: detect `tput` and use it if available (http://wiki.bash-hackers.org/scripting/terminalcodes)
+* pre-split keyword lists for efficiency instead of redoing this at every new line?
+
+FIXME:
+* with deleteMode enabled, multiple matches and _nodelete in a later match, previous directives are ignored
 ]]--
 
 
 --[[========================================================================]]--
 
+--Note: overview of ANSI escape codes: http://ascii-table.com/ansi-escape-sequences.php (support varies per terminal/termtype)
 local ANSI_COLORS = {
 	['blink'] = 5, -- no dice on osx/iterm2
 	['underline'] = 24, -- no dice on osx/iterm2
@@ -272,6 +262,7 @@ local function main()
 
 	--print("[DEBUG] following file: '" .. (followFile and followFile or "<stdin>") .. "', with filter set '" .. filterSetName .. "'.")
 
+	--Info on tailing a file: https://stackoverflow.com/questions/17363973/how-can-i-tail-f-a-log-filetruncate-aware-in-lua
 	--local tailin = io.popen('tail -F '..(...)..' 2>&1', 'r')
 	local tailin = followFile and io.popen('tail -f ' .. followFile, 'r') or io.stdin
 

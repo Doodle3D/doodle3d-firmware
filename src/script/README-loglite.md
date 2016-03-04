@@ -22,7 +22,7 @@ The script looks for filter sets in the file '$HOME/loglite-filters.lua'. It loo
 		['patterns'] = {
 			['%(error%)'] = 'red',
 			['%(warning%)'] = 'yellow',
-			['%(bulk%)'] = 'gray'
+			['%(bulk%)'] = 'bold,black'
 		}
 	}
 

@@ -42,7 +42,7 @@ function M.temperature(request, response)
 		response:addData('bed_target', temperatures.bed_target)
 	elseif temperatures == false then
 		response:addData('status', msg)
-		response:setFail()
+		response:setFail("could not get temperature information (" .. msg .. ")")
 	else
 		response:setError(msg)
 	end
@@ -66,7 +66,7 @@ function M.progress(request, response)
 		response:addData('max_buffer_size', maxBufferSize)
 	elseif progress == false then
 		response:addData('status', bufferedLines)
-		response:setFail()
+		response:setFail("could not get progress information (" .. bufferedLines .. ")")
 	else
 		response:setError(bufferedLines)
 	end
@@ -138,7 +138,7 @@ function M.heatup_POST(request, response)
 		response:setSuccess()
 	elseif rv == false then
 		response:addData('status', msg)
-		response:setFail()
+		response:setFail("could not start heatup (" .. msg .. ")")
 	else
 		response:setError(msg)
 	end
@@ -167,7 +167,7 @@ function M.stop_POST(request, response)
 		response:setSuccess()
 	elseif rv == false then
 		response:addData('status', msg)
-		response:setFail()
+		response:setFail("could not stop print (" .. msg .. ")")
 	else
 		response:setError(msg)
 	end
@@ -227,7 +227,7 @@ function M.print_POST(request, response)
 
 		if rv == false then
 			response:addData('status', msg)
-			response:setFail("could not clear gcode")
+			response:setFail("could not clear gcode (" .. msg .. ")")
 		elseif rv == nil then
 			response:setError(msg)
 			return
@@ -242,11 +242,11 @@ function M.print_POST(request, response)
 		response:addData('gcode_append',argGcode:len())
 	elseif rv == false then
 		response:addData('status', msg)
-		response:setFail("could not add gcode")
+		response:setFail("could not add gcode (" .. msg .. ")")
 		return
 	else
 		response:addData('msg', msg)
-		response:setError("could not add gcode")
+		response:setError("could not add gcode (" .. msg .. ")")
 		return
 	end
 
@@ -258,11 +258,11 @@ function M.print_POST(request, response)
 			response:addData('gcode_print',true)
 		elseif rv == false then
 			response:addData('status', msg)
-			response:setFail("could not send gcode")
+			response:setFail("could not send gcode (" .. msg .. ")")
 			return
 		else
 			response:addData('msg', msg)
-			response:setError("could not send gcode")
+			response:setError("could not send gcode (" .. msg .. ")")
 			return
 		end
 	else

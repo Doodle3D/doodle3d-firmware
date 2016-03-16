@@ -7,38 +7,42 @@ The loglite script allows coloring and filtering of log files by specifying cert
 
 The script can follow an existing log file (comparable to `tail -f`), or it can follow its standard input. A file to follow is always specified as the first argument and a filter set name as the second (use '-' as file name to read from standard input). Details on filter sets can be found below. If no filter set is mentioned on the command-line, the script will attempt to use one named 'default'.
 
-* Example following an existing log file using a filter set named 'example':   `./loglite.lua print3d.log example`.
+* Example following an existing log file using a filter set named 'example':   
+`./loglite.lua print3d.log example`.
 * Example using standard input, to filter/view a whole log file, with a filter set named 'serial' (note the '-' as file name):  
 `cat print3d-ttyACM0.log | ./loglite.lua - serial`
 * Example using standard input, to capture both output streams from `print3d`, with a filter set named 'example' (note the '-' as file name):  
 `./print3d -V 2>&1 | ./loglite.lua - example`.
 
+#### On WiFi-Box
+Loglite is already installed since version 0.10.10 as `loglite`.  
+Check `/root/.profile` for handy aliases like `tailfw` and `tailp3d`.
 
 ### Filter sets
 
 The script looks for filter sets in the file '$HOME/loglite-filters.lua'. It looks like this:
 
 ``` lua
-	local M = {}
+local M = {}
 
-	M.default = {
-		['options'] = { mode = 'keep', count = 'none' },
-		['patterns'] = {
-			['%(error%)'] = 'red',
-			['%(warning%)'] = 'yellow',
-			['%(bulk%)'] = 'bold,black'
-		}
+M.default = {
+	['options'] = { mode = 'keep', count = 'none' },
+	['patterns'] = {
+		['%(error%)'] = 'red',
+		['%(warning%)'] = 'yellow',
+		['%(bulk%)'] = 'bold,black'
 	}
+}
 
-	M.specialization = {
-		['parent'] = 'default',
-		['options'] = { mode = 'delete' }
-		['patterns'] = {
-			['setState%(%)'] = 'bblue,_nodelete'
-		}
+M.specialization = {
+	['parent'] = 'default',
+	['options'] = { mode = 'delete' }
+	['patterns'] = {
+		['setState%(%)'] = 'bblue,_nodelete'
 	}
+}
 
-	return M
+return M
 ```
 
 Here, the declaration and returning of `M` is required for the loglite script to be able to cleanly import the file. In `M.default`, 'default' is the name of a filter set being defined (similar for 'specialization'). Definitions can contain three so-called keys: 'parent' specifies a filter set to inherit from in order to reduce code duplication, 'options' and 'patterns' are described below.

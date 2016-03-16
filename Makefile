@@ -70,6 +70,7 @@ endef
 # sysupgrade to determine which files to keep (see `opkg list-changed-conffiles`).
 define Package/wifibox/conffiles
 /etc/config/wifibox
+/etc/logrotate.d/wifibox.conf
 endef
 
 # The $(1) variable represents the root directory on the router running 
@@ -94,6 +95,7 @@ define Package/wifibox/install
 	#$(INSTALL_DIR) $(1)/etc
 	$(INSTALL_DIR) $(1)/etc/init.d
 	$(INSTALL_DIR) $(1)/etc/config
+	$(INSTALL_DIR) $(1)/etc/logrotate.d
 	$(INSTALL_DIR) $(1)/root/
 	$(INSTALL_DIR) $(1)/root/sketches
 	#$(INSTALL_DIR) $(1)/www
@@ -117,6 +119,7 @@ define Package/wifibox/install
 	$(INSTALL_BIN) $(WIFIBOX_BASE_DIR)/script/dhcpcheck_init $(1)/etc/init.d/dhcpcheck
 	$(INSTALL_BIN) $(WIFIBOX_BASE_DIR)/script/d3dapi $(1)/$(TGT_LUA_DIR_SUFFIX)/script
 	$(INSTALL_BIN) $(WIFIBOX_BASE_DIR)/script/signin.sh $(1)/$(TGT_LUA_DIR_SUFFIX)/script
+	$(CP) $(WIFIBOX_BASE_DIR)/script/logrotate-wifibox.conf $(1)/etc/logrotate.d/wifibox.conf
 	
 	$(CP) $(WIFIBOX_BASE_DIR)/script/wifibox.uci.config $(1)/etc/config/wifibox  # copy base configuration to uci config dir
 	$(CP) $(WIFIBOX_BASE_DIR)/FIRMWARE-VERSION $(1)/etc/wifibox-version

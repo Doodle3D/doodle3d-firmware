@@ -65,3 +65,24 @@ The following directives can be associated with a pattern:
 * `_delete` or `_nodelete` to override the active mode specified in the 'options' above.
 
 Directives can be combined with ',' (e.g.: `'red,_nodelete'`). Finally, in any filter set, pattern rules are matched from top to bottom, the last one encountered overriding any previous conflicting directive.
+
+### Installation
+Note: Loglite is already installed on the WiFi-Box since version 0.10.10.
+
+Install Lua. See:  
+http://lua-users.org/wiki/LuaBinaries  
+It's tested in Lua 5.1 and Lua 5.2.
+
+Loglite will check for a `loglite-filters.lua` file in your home directory. It's recommended to create a symbolic link to the latest version.
+On OS X / Linux:
+```
+cd
+ln -s [absolute path to file]/loglite-filters.lua loglite-filters.lua
+```
+
+It's recommended to create a symbolic link in one of your PATH directories (`echo $PATH`) to the loglite.lua file. This allows you to run `loglite` from any directory.
+On OS X / Linux:
+```
+cd /usr/local/bin
+ln -s [absolute path to file]/loglite.lua loglite.lua
+```

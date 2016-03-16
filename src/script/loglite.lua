@@ -5,7 +5,7 @@ For documentation on this script, see README-loglite.md.
 
 Ideas for improvement:
 * add more directives like uppercase, prefix/suffix?
-* create separate package for this script: a) since it is useful for any log file, b) this file is getting somewhat long 
+* create separate package for this script: a) since it is useful for any log file, b) this file is getting somewhat long
 * for broader terminal support: detect `tput` and use it if available (http://wiki.bash-hackers.org/scripting/terminalcodes)
 * pre-split keyword lists for efficiency instead of redoing this at every new line?
 
@@ -158,7 +158,7 @@ local function tailStream(stream, filterSet)
 		-- look for a pattern matching this line
 		for p,c in pairs(patterns) do
 			if line:match(p) then
-				--print("[DEBUG] +matched rule '" .. p .. "'/'" .. c .. "' against '" .. line .. "'")
+				-- print("[DEBUG] +matched rule '" .. p .. "'/'" .. c .. "' against '" .. line .. "'")
 				local kws = c:split(',')
 
 				if hasValue(kws, '_delete') then keepLine = false; keepLineOverridden = true
@@ -193,7 +193,7 @@ local function tailStream(stream, filterSet)
 			if options.count == 'all' then print(c, embellished)
 			else print(embellished) end
 		else
-			--print("[DEBUG] -skipped '"..line.."'")
+			-- print("[DEBUG] -skipped '"..line.."'")
 		end
 
 		--c = line:match 'truncated' and 0 or c -- from tail on stderr apparently
@@ -207,9 +207,9 @@ local function readConfigFile(filename, searchPath)
 		--print("[DEBUG] config file '" .. fullPath .. "' not found")
 		return nil
 	end
-   
+
 	--print("[DEBUG] using config file '" .. fullPath .. "'")
-	-- require does not accept full paths? also, pcall does not help with dofile   
+	-- require does not accept full paths? also, pcall does not help with dofile
 	return dofile(fullPath)
 end
 
@@ -246,7 +246,7 @@ local function main()
 	-- read filter set file if available
 	local configSets = readConfigFile(DFL_FILTERSET_FILE, os.getenv('HOME')) or {}
 	local filterSet = readFilterSet(configSets, filterSetName)
-	--print("[DEBUG] final filter set for '" .. filterSetName .. "' from config: " .. dump(filterSet))
+	-- print("[DEBUG] final filter set for '" .. filterSetName .. "' from config: " .. dump(filterSet))
 
 	-- if requested, display help and exit
 	if showHelp and showHelp == true then

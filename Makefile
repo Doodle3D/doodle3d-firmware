@@ -66,6 +66,12 @@ define Build/Compile directives
 #	no compilation necessary (although possible with luac?)
 endef
 
+# This information is contained within the ipk file and (at least) used by
+# sysupgrade to determine which files to keep (see `opkg list-changed-conffiles`).
+define Package/wifibox/conffiles
+/etc/config/wifibox
+endef
+
 # The $(1) variable represents the root directory on the router running 
 # OpenWrt. The $(INSTALL_DIR) variable contains a command to prepare the install 
 # directory if it does not already exist.  Likewise $(INSTALL_BIN) contains the 

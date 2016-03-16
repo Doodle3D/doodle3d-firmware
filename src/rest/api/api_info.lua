@@ -23,6 +23,8 @@ local DEFAULT_WIFIBOX_LOG_FILENAME = 'wifibox.log'
 local DEFAULT_WIFIBOX_LOG_FILE = TMP_DIR .. '/' .. DEFAULT_WIFIBOX_LOG_FILENAME
 local WIFIBOX_STDOUT_LOG_FILENAME = 'wifibox.stdout.log'
 local WIFIBOX_STDOUT_LOG_FILE = TMP_DIR .. '/' .. WIFIBOX_STDOUT_LOG_FILENAME
+local ROTATED_LOGS_DIRNAME = 'wifibox-rotated'
+local ROTATED_LOGS_DIR = TMP_DIR .. '/' .. ROTATED_LOGS_DIRNAME
 local MOD_ABBR = "AINF"
 
 local SYSLOG_FILENAME = 'syslog'
@@ -72,11 +74,14 @@ function M.logfiles(request, response)
 
 	--[[ create temporary files ]]--
 
-	-- copy wifibox API-script log
+	-- copy wifibox API-script (firmware) log
 	rv,sig,code = redirectedExecute('cp ' .. wifiboxLogFilePath .. ' ' .. LOG_COLLECT_DIR)
 
-	-- copy d3dapi script stdout/stderr log
+	-- copy d3dapi script stdout/stderr (fallback) log
 	rv,sig,code = redirectedExecute('cp ' .. WIFIBOX_STDOUT_LOG_FILE .. ' ' .. LOG_COLLECT_DIR)
+
+	-- copy rotated firmware and print3d logs
+	rv,sig,code = redirectedExecute('cp -r ' .. ROTATED_LOGS_DIR .. ' ' .. LOG_COLLECT_DIR)
 
 	-- capture syslog
 	rv,sig,code = os.execute('logread > ' .. LOG_COLLECT_DIR .. '/' .. SYSLOG_FILENAME)
@@ -142,12 +147,17 @@ function M.logfiles(request, response)
 	rv,sig,code = redirectedExecute('rm ' .. LOG_COLLECT_DIR .. '/config/*')
 	rv,msg = lfs.rmdir(LOG_COLLECT_DIR .. '/config')
 
+	-- Note: this assumes the rotated logs directory does not contain subdirectories
+	rv,sig,code = redirectedExecute('rm ' .. LOG_COLLECT_DIR .. '/' .. ROTATED_LOGS_DIRNAME .. '/*')
+	rv,msg = lfs.rmdir(LOG_COLLECT_DIR .. '/' .. ROTATED_LOGS_DIRNAME)
+
 	rv,sig,code = redirectedExecute('rm ' .. LOG_COLLECT_DIR .. '/' .. USB_DIRTREE_FILENAME)
 	rv,sig,code = redirectedExecute('rm ' .. LOG_COLLECT_DIR .. '/' .. DISKFREE_FILENAME)
 	rv,sig,code = redirectedExecute('rm ' .. LOG_COLLECT_DIR .. '/' .. MOUNTS_FILENAME)
 	rv,sig,code = redirectedExecute('rm ' .. LOG_COLLECT_DIR .. '/' .. MEMINFO_FILENAME)
 	rv,sig,code = redirectedExecute('rm ' .. LOG_COLLECT_DIR .. '/' .. PROCESS_LIST_FILENAME)
 	rv,sig,code = redirectedExecute('rm ' .. LOG_COLLECT_DIR .. '/' .. SYSLOG_FILENAME)
+	rv,sig,code = redirectedExecute('rm ' .. LOG_COLLECT_DIR .. '/' .. WIFIBOX_STDOUT_LOG_FILENAME)
 	rv,sig,code = redirectedExecute('rm ' .. LOG_COLLECT_DIR .. '/' .. wifiboxLogFileName)
 
 	rv,msg = lfs.rmdir(LOG_COLLECT_DIR)

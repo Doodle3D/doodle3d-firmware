@@ -15,6 +15,7 @@ The script can follow an existing log file (comparable to `tail -f`), or it can 
 
 The script looks for filter sets in the file '$HOME/loglite-filters.lua'. It looks like this:
 
+``` lua
 	local M = {}
 
 	M.default = {
@@ -35,6 +36,7 @@ The script looks for filter sets in the file '$HOME/loglite-filters.lua'. It loo
 	}
 
 	return M
+```
 
 Here, the declaration and returning of `M` is required for the loglite script to be able to cleanly import the file. In `M.default`, 'default' is the name of a filter set being defined (similar for 'specialization'). Definitions can contain three so-called keys: 'parent' specifies a filter set to inherit from in order to reduce code duplication, 'options' and 'patterns' are described below.
 

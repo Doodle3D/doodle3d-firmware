@@ -76,11 +76,11 @@ fi
 #preserve saved sketches during firmware update
 echo "/root/sketches" >> $IPKG_INSTROOT/etc/sysupgrade.conf
 
+
+
 ### Finally make sure basic configuration is set correctly
 
-$IPKG_INSTROOT/etc/init.d/wifibox enable
-$IPKG_INSTROOT/etc/init.d/wifibox start
-$IPKG_INSTROOT/etc/init.d/dhcpcheck enable
+LOGROTATE_CRON_LINE="*/3 *   *   *   *   /usr/sbin/logrotate /etc/logrotate.conf"
 
 if [ -z "$IPKG_INSTROOT" ]; then
 	# No installation root, we are being installed on a live box so run uci commands directly.
@@ -105,6 +105,13 @@ if [ -z "$IPKG_INSTROOT" ]; then
 	uci -q delete wifibox.system.loglevel  # remove key used in older versions (<=0.10.8a) if it exists
 	uci commit wifibox
 
+	crontab -l 2> /dev/null | grep logrotate\.conf > /dev/null
+	if [ $? -ne 0 ]; then
+		# add line, method from http://askubuntu.com/a/58582
+		# Note: `crontab -l` will throw an error to stderr because the file does not exist, but that does not matter
+		(crontab -l 2> /dev/null; echo "$LOGROTATE_CRON_LINE" ) | crontab -
+	fi
+
 else
 	# Create a script to setup the system as wifibox, it will be deleted after it has been run, except if it returns > 0.
 
@@ -127,10 +134,23 @@ else
 	uci set wifibox.general.system_log_level='info'
 	uci -q delete wifibox.system.loglevel  # remove key used in older versions (<=0.10.8a) if it exists
 
+	crontab -l 2> /dev/null | grep logrotate\.conf > /dev/null
+	if [ $? -ne 0 ]; then
+		# add line, method from http://askubuntu.com/a/58582
+		# Note: `crontab -l` will throw an error to stderr because the file does not exist, but that does not matter
+		(crontab -l 2> /dev/null; echo "$LOGROTATE_CRON_LINE" ) | crontab -
+	fi
+
 	exit 0
 EOM
 
 	echo "WARNING: WiFiBox network configuration can only be fully prepared when installing on real device"
 fi
+
+$IPKG_INSTROOT/etc/init.d/wifibox enable
+$IPKG_INSTROOT/etc/init.d/wifibox start
+$IPKG_INSTROOT/etc/init.d/dhcpcheck enable
+$IPKG_INSTROOT/etc/init.d/cron enable
+$IPKG_INSTROOT/etc/init.d/cron start
 
 exit 0

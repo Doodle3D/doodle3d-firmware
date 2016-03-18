@@ -120,7 +120,6 @@ end
 
 
 function M.heatup_POST(request, response)
-
 	if not accessManager.hasControl(request.remoteAddress) then
 		response:setFail("No control access")
 		return
@@ -145,8 +144,6 @@ function M.heatup_POST(request, response)
 end
 
 function M.stop_POST(request, response)
-	log:info(MOD_ABBR, "API:printer/stop")
-
 	if not accessManager.hasControl(request.remoteAddress) then
 		response:setFail("No control access")
 		return
@@ -183,8 +180,6 @@ end
 --accepts: seq_total(int) (total number of gcode chunks to be appended, must be given until clear() after given once, and stay the same)
 --returns: when the gcode buffer cannot accept the gcode, or the IPC transaction fails, a fail with a (formal, i.e., parseable) status argument will be returned
 function M.print_POST(request, response)
-	log:info(MOD_ABBR, "API:printer/print")
-
 	local controllerIP = accessManager.getController()
 	local hasControl = false
 	if controllerIP == "" then
@@ -194,7 +189,6 @@ function M.print_POST(request, response)
 		hasControl = true
 	end
 
-	log:info(MOD_ABBR, "  hasControl: "..utils.dump(hasControl))
 	if not hasControl then
 		response:setFail("No control access")
 		return
@@ -209,6 +203,8 @@ function M.print_POST(request, response)
 	local argSeqNumber = request:get("seq_number") or -1
 	local argSeqTotal = request:get("seq_total") or -1
 	local remoteHost = request:getRemoteHost()
+	
+	log:info(MOD_ABBR, "print chunk metadata: total_lines=" .. argTotalLines .. ", seq_number=" .. argSeqNumber .. ", seq_total=" .. argSeqTotal)
 
 	local printer,msg = printerUtils.createPrinterOrFail(argId, response)
 	if not printer or not printer:hasSocket() then return end

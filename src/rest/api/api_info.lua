@@ -75,13 +75,27 @@ function M.logfiles(request, response)
 	--[[ create temporary files ]]--
 
 	-- copy wifibox API-script (firmware) log
-	rv,sig,code = redirectedExecute('cp ' .. wifiboxLogFilePath .. ' ' .. LOG_COLLECT_DIR)
+	lfs.link(wifiboxLogFilePath, LOG_COLLECT_DIR .. '/' .. wifiboxLogFileName)
 
 	-- copy d3dapi script stdout/stderr (fallback) log
-	rv,sig,code = redirectedExecute('cp ' .. WIFIBOX_STDOUT_LOG_FILE .. ' ' .. LOG_COLLECT_DIR)
+	lfs.link(WIFIBOX_STDOUT_LOG_FILE, LOG_COLLECT_DIR .. '/' .. WIFIBOX_STDOUT_LOG_FILENAME)
+
+	-- collect and copy print3d server logs
+	for file in lfs.dir(PRINT3D_BASEPATH) do
+		if file:find(PRINT3D_LOG_FILENAME_PREFIX) == 1 and file:find(PRINT3D_LOG_FILENAME_SUFFIX) ~= nil then
+			local srcLogFile = PRINT3D_BASEPATH .. '/' .. file
+			local tgtLogFile = LOG_COLLECT_DIR .. '/' .. file
+			lfs.link(srcLogFile, tgtLogFile)
+		end
+	end
 
 	-- copy rotated firmware and print3d logs
-	rv,sig,code = redirectedExecute('cp -r ' .. ROTATED_LOGS_DIR .. ' ' .. LOG_COLLECT_DIR)
+	rv,msg = lfs.mkdir(LOG_COLLECT_DIR .. '/' .. ROTATED_LOGS_DIRNAME)
+	for file in lfs.dir(ROTATED_LOGS_DIR) do
+		local srcLogFile = ROTATED_LOGS_DIR .. '/' .. file
+		local tgtLogFile = LOG_COLLECT_DIR .. '/' .. ROTATED_LOGS_DIRNAME .. '/' .. file
+		lfs.link(srcLogFile, tgtLogFile)
+	end
 
 	-- capture syslog
 	rv,sig,code = os.execute('logread > ' .. LOG_COLLECT_DIR .. '/' .. SYSLOG_FILENAME)
@@ -102,6 +116,7 @@ function M.logfiles(request, response)
 	rv,sig,code = os.execute(USB_DIRTREE_COMMAND .. ' > ' .. LOG_COLLECT_DIR .. '/' .. USB_DIRTREE_FILENAME)
 
 	-- copy relevant openwrt configuration files
+	-- Note: we cannot link them because that would require the link to span over filesystems
 	rv,msg = lfs.mkdir(LOG_COLLECT_DIR .. '/config')
 	for _,v in pairs(UCI_CONFIG_FILES_TO_SAVE) do
 		local srcFile = '/etc/config/' .. v
@@ -109,19 +124,12 @@ function M.logfiles(request, response)
 		if v ~= 'wireless' then
 			rv,sig,code = redirectedExecute('cp ' .. srcFile .. ' ' .. tgtFile)
 		else
+			-- replace WiFi passwords with '...'
 			rv,sig,code = os.execute("sed \"s/option key '.*'/option key '...'/g\" " .. srcFile .. " > " .. tgtFile)
 		end
 	end
 
-	-- collect and copy print3d server logs
-	for file in lfs.dir(PRINT3D_BASEPATH) do
-		if file:find(PRINT3D_LOG_FILENAME_PREFIX) == 1 and file:find(PRINT3D_LOG_FILENAME_SUFFIX) ~= nil then
-			local srcLogFile = PRINT3D_BASEPATH .. '/' .. file
-			local tgtLogFile = LOG_COLLECT_DIR .. '/' .. file
-			rv,sig,code = redirectedExecute('cp ' .. srcLogFile .. ' ' .. tgtLogFile)
-			end
-		end
-
+	-- create tar.gz archive of the files/data we collected
 	rv,sig,code = redirectedExecute('tar czf ' .. LOG_COLLECT_ARCHIVE_FILE .. ' ' .. LOG_COLLECT_DIRNAME) --returns 0 success, 1 error
 
 

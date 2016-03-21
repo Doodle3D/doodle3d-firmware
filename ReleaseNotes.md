@@ -1,4 +1,10 @@
 Changelog
+# 0.10.10-b (21 mrt 2016)
+- Logrotation (making sure older logs are removed)
+- Improved logging.
+- Always log initial printer communication
+- loglite improvements, added readme
+
 # 0.10.10-a (24 feb 2016)
 - Max buffer size check: the WiFi-Box can now indicate through the API that its buffer is full and it won't accept new gcode.
 - Buffer information is communicated through the API so all clients can handle this properly. The Doodle3D client will stop sending and waits until it drops below 75%. It will check this every 30 seconds.

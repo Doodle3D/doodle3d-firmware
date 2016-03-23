@@ -44,7 +44,7 @@ end
 
 local function log(level, module, msg, verboseFmt)
 	if level <= logLevel then
-		local now = os.date('%m-%d %H:%M:%S')
+		local now = os.date('%d-%m %H:%M:%S')
 		local i = debug.getinfo(3) --the stack frame just above the logger call
 		local v = verboseFmt
 		if v == nil then v = logVerboseFmt end

@@ -177,11 +177,16 @@ end
 function M.removeConfig(ssid)
 	local rv = false
 	uci:foreach('wireless', 'wifi-iface', function(s)
+		log:info(MOD_ABBR, utils.dump(s.ssid).."\n "..utils.dump(s))
 		if s.ssid == ssid then
-			uci:delete('wireless', s['.name'])
-			rv = true
+			log:info(MOD_ABBR, "deleting faulty ssid: "..utils.dump(s['.name']))
+			rv = uci:delete('wireless', s['.name'])
+		end
+		if s.disabled == 1 then
+			M.activateConfig(s.ssid)
 		end
 	end)
+	uci:save('wireless')
 	uci:commit('wireless')
 	return rv
 end

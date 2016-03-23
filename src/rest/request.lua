@@ -172,6 +172,7 @@ setmetatable(M, {
 function M.new(environment, postData, debugEnabled)
 	local self = setmetatable({}, M)
 
+	self.requestEnvironment = environment
 	--NOTE: is it correct to assume that absence of REQUEST_METHOD indicates command line invocation?
 	self.requestMethod = environment['REQUEST_METHOD']
 	if type(self.requestMethod) == 'string' and self.requestMethod:len() > 0 then
@@ -241,6 +242,7 @@ function M.new(environment, postData, debugEnabled)
 	return self
 end
 
+function M:getEnvironment() return self.requestEnvironment end --returns the environment as passed to the ctor
 function M:getRequestMethod() return self.requestMethod end --returns either GET or POST or CMDLINE
 function M:getRequestedApiModule() return self.requestedApiModule end
 function M:getRequestedApiFunction() return self.requestedApiFunction end

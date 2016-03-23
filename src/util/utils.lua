@@ -57,15 +57,34 @@ end
 --- Stringifies the given object.
 -- Note that self-referencing objects will cause an endless loop with the current implementation.
 -- @param o The object to convert.
+-- @param withNewlines include newlines and indent subtables if true (false by default).
+-- @param level For internal use, do not pass this along.
 -- @treturn string Stringified version of o.
-function M.dump(o)
+function M.dump(o, withNewlines, level)
+	withNewlines = withNewlines or false
+	level = level or 0
+
 	if type(o) == 'table' then
-		local s = '{ '
+		local s = withNewlines and '' or '{ '
+		local firstPair = true
+		
+		if withNewlines and level > 0 then s = s .. "\n" end
 		for k,v in pairs(o) do
-			if type(k) ~= 'number' then k = '"'..k..'"' end
-			s = s .. '['..k..'] = ' .. M.dump(v) .. ','
+			if withNewlines then
+				local indentation = string.rep(' ', level * 2)
+				if type(v) == 'string' or type(v) == 'number' then v = '"'..v..'"' end
+				if not firstPair then s = s .. "\n" end
+				s = s .. indentation .. k .. ': ' .. M.dump(v, withNewlines, level + 1)
+			else
+				if type(k) ~= 'number' then k = '"'..k..'"' end
+				s = s .. '['..k..'] = ' .. M.dump(v, withNewlines, level + 1) .. ', '
+			end
+			firstPair = false
 		end
-		return s .. '} '
+
+		if withNewlines then return s
+		else return s .. '} '
+		end
 	else
 		return tostring(o)
 	end

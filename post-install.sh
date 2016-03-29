@@ -80,7 +80,7 @@ echo "/root/sketches" >> $IPKG_INSTROOT/etc/sysupgrade.conf
 
 ### Finally make sure basic configuration is set correctly
 
-LOGROTATE_CRON_LINE="*/3 *   *   *   *   /usr/sbin/logrotate /etc/logrotate.conf"
+LOGROTATE_CRON_LINE="*/2 *   *   *   *   /usr/sbin/logrotate /etc/logrotate.conf"
 
 if [ -z "$IPKG_INSTROOT" ]; then
 	# No installation root, we are being installed on a live box so run uci commands directly.

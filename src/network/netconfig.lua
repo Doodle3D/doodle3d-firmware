@@ -386,11 +386,7 @@ function M.associateSsid(ssid, passphrase, recreate)
 				if attempt >= maxAttempts then
 					-- still no correct ssid; fail
 					local msg = "Could not associate with network (incorrect password?)"
-					wifi.removeConfig(ssid)
 					M.setStatus(M.CONNECTING_FAILED,msg);
-					local backupssid = wifi.getSubstitutedSsid(settings.get('network.ap.ssid'))
-					M.setupAccessPoint(backupssid)
-					M.enableAccessPoint(backupssid)
 					return false, msg
 				else
 					nextAttemptTime = os.time() + attemptInterval

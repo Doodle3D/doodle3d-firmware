@@ -182,9 +182,6 @@ function M.removeConfig(ssid)
 			log:info(MOD_ABBR, "deleting faulty ssid: "..utils.dump(s['.name']))
 			rv = uci:delete('wireless', s['.name'])
 		end
-		if s.disabled == 1 then
-			M.activateConfig(s.ssid)
-		end
 	end)
 	uci:save('wireless')
 	uci:commit('wireless')

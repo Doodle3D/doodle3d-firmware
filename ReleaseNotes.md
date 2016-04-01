@@ -1,4 +1,7 @@
 Changelog
+# 0.10.10-c (1 api 2016)
+- Quicker log rotation
+
 # 0.10.10-b (21 mrt 2016)
 - Logrotation (making sure older logs are removed)
 - Improved logging.

@@ -101,6 +101,10 @@ define Package/wifibox/install
 	#$(INSTALL_DIR) $(1)/www
 	$(INSTALL_DIR) $(1)/www/cgi-bin
 	
+	#copy wps button script to procd folder
+	$(INSTALL_DIR) $(1)/etc/rc.button/
+	$(INSTALL_BIN) $(WIFIBOX_BASE_DIR)/script/wifi-switch-netconfig.sh $(1)/etc/rc.button/wps
+	
 ### create all files in /usr/share/lua/autowifi (autowifi)
 	
 	$(CP) $(WIFIBOX_BASE_DIR)/opkg.conf $(1)/$(TGT_LUA_DIR_SUFFIX)/

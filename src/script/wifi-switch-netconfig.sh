@@ -8,7 +8,7 @@ logger "$BUTTON pressed for $SEEN seconds"
 if [ "$SEEN" -lt 1 ]
 then
 	#see https://github.com/Doodle3D/doodle3d-firmware/blob/master/src/network/wlanconfig.lua#L188 for reference
-	#check if network on top is enabled
+	#check if network on top is in STA mode
 	if [ $(uci get wireless.@wifi-iface[0].mode) == "sta" ];
 	then
 		logger "switching to AP"
@@ -30,6 +30,7 @@ then
 		uci reorder wireless.@wifi-iface[0]=2 #reorder networks so last used config goes to the top again
 		uci commit #commit changes
 		/etc/init.d/network reload #reload network module so changes become effective
+		echo "4|" > /tmp/networkstatus.txt
 	else
 		logger "switching to STA $(uci get wireless.@wifi-iface[0].mode)"
 		uci set wireless.@wifi-iface[0].disabled=1 #disable current config
@@ -42,5 +43,6 @@ then
 		uci delete dhcp.wlan
 		uci commit #commit changes
 		/etc/init.d/network reload #reload network module so changes become effective
+		echo "2|" > /tmp/networkstatus.txt
 	fi
 fi

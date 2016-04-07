@@ -9,9 +9,13 @@ if [ "$SEEN" -lt 1 ]
 then
 	#see https://github.com/Doodle3D/doodle3d-firmware/blob/master/src/network/wlanconfig.lua#L188 for reference
 	#check if network on top is in STA mode
-	if [ $(uci get wireless.@wifi-iface[0].mode) == "sta" ];
+	if [ $(uci get wireless.@wifi-iface[1].mode) == "ap" ]
 	then
 		logger "switching to AP"
+		if [ $(uci get wireless.@wifi-iface[1].network) != "wlan" ] #edge case when only the factory default openwrt network is available
+		then
+			uci set wireless.@wifi-iface[1].network=wlan
+		fi
 		#configure dhcp
 		uci delete network.wlan
 		uci set network.wlan=interface

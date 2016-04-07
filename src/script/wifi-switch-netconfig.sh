@@ -4,6 +4,13 @@
 
 . /lib/functions.sh
 
+handle_interface() {
+    local config="$1"
+		logger $config
+		count=$((count + 1))
+    # run commands for every interface section
+}
+
 logger "$BUTTON pressed for $SEEN seconds"
 if [ "$SEEN" -lt 1 ]
 then
@@ -11,7 +18,7 @@ then
 	#check if network on top is in STA mode
 	if [ $(uci get wireless.@wifi-iface[1].mode) == "ap" ]
 	then
-		logger "switching to AP"
+		logger "switching to AP $(uci get wireless.@wifi-iface[1].ssid)"
 		if [ $(uci get wireless.@wifi-iface[1].network) != "wlan" ] #edge case when only the factory default openwrt network is available
 		then
 			uci set wireless.@wifi-iface[1].network=wlan
@@ -31,15 +38,26 @@ then
 
 		uci set wireless.@wifi-iface[0].disabled=1 #disable current config
 		uci set wireless.@wifi-iface[1].disabled=0 #enable last used network
-		uci reorder wireless.@wifi-iface[0]=2 #reorder networks so last used config goes to the top again
+
+		config_load wireless
+		config_foreach handle_interface wifi-iface
+		logger $count
+
+		uci reorder wireless.@wifi-iface[0]=$count #reorder networks so last used config goes to the top again
 		uci commit #commit changes
 		/etc/init.d/network reload #reload network module so changes become effective
+		logger "setting status flag in /tmp/networkstatus.txt"
 		echo "4|" > /tmp/networkstatus.txt
 	else
-		logger "switching to STA $(uci get wireless.@wifi-iface[0].mode)"
+		logger "switching to STA $(uci get wireless.@wifi-iface[1].ssid)"
 		uci set wireless.@wifi-iface[0].disabled=1 #disable current config
 		uci set wireless.@wifi-iface[1].disabled=0 #enable last used network
-		uci reorder wireless.@wifi-iface[0]=2 #reorder networks so last used config goes to the top again
+
+		config_load wireless
+		config_foreach handle_interface wifi-iface
+		logger $count
+
+		uci reorder wireless.@wifi-iface[0]=$count  #reorder networks so last used config goes to the top again
 
 		uci delete network.wlan
 		uci set network.wlan=interface

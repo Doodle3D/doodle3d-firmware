@@ -4,24 +4,43 @@
 
 . /lib/functions.sh
 
-handle_interface() {
+count_networks() {
     local config="$1"
-		logger $config
-		count=$((count + 1))
-    # run commands for every interface section
+	logger $config
+	count=$((count + 1))
+	# run commands for every interface section
+}
+find_network() {
+    local config="$1"
+	succes=false
+	#logger $(uci get wireless.$config.ssid)
+	network_name=$(uci get wireless.$config.ssid)
+	if [ ${network_name:0:8} != "Doodle3D" ]
+	then
+		logger "deleting network $network_name"
+		uci delete wireless.$config
+	else
+		$succes=true
+		logger "enabled $network_name"
+		uci set wireless.$config.disabled=0
+	fi
 }
 
 logger "$BUTTON pressed for $SEEN seconds"
-if [ "$SEEN" -lt 1 ]
+if [ "$SEEN" -gt 4 ]
 then
-	#see https://github.com/Doodle3D/doodle3d-firmware/blob/master/src/network/wlanconfig.lua#L188 for reference
-	#check if network on top is in STA mode
-	if [ $(uci get wireless.@wifi-iface[1].mode) == "ap" ]
+	#count number of networks
+	config_load wireless
+	config_foreach count_networks wifi-iface
+	logger $count
+	#if number of networks is less than 1 (or 1) do nothing
+	if [ $count -gt 1 ]
 	then
-		logger "switching to AP $(uci get wireless.@wifi-iface[1].ssid)"
-		if [ $(uci get wireless.@wifi-iface[1].network) != "wlan" ] #edge case when only the factory default openwrt network is available
+		logger "switching to AP"
+		config_foreach find_network wifi-iface
+		if [ $succes != false ]
 		then
-			uci set wireless.@wifi-iface[1].network=wlan
+			logger "wireless somehow not found"
 		fi
 		#configure dhcp
 		uci delete network.wlan
@@ -36,35 +55,9 @@ then
 		uci set dhcp.wlan.limit=150
 		uci set dhcp.wlan.interface=wlan
 
-		uci set wireless.@wifi-iface[0].disabled=1 #disable current config
-		uci set wireless.@wifi-iface[1].disabled=0 #enable last used network
-
-		config_load wireless
-		config_foreach handle_interface wifi-iface
-		logger $count
-
-		uci reorder wireless.@wifi-iface[0]=$count #reorder networks so last used config goes to the top again
 		uci commit #commit changes
 		/etc/init.d/network reload #reload network module so changes become effective
 		logger "setting status flag in /tmp/networkstatus.txt"
 		echo "4|" > /tmp/networkstatus.txt
-	else
-		logger "switching to STA $(uci get wireless.@wifi-iface[1].ssid)"
-		uci set wireless.@wifi-iface[0].disabled=1 #disable current config
-		uci set wireless.@wifi-iface[1].disabled=0 #enable last used network
-
-		config_load wireless
-		config_foreach handle_interface wifi-iface
-		logger $count
-
-		uci reorder wireless.@wifi-iface[0]=$count  #reorder networks so last used config goes to the top again
-
-		uci delete network.wlan
-		uci set network.wlan=interface
-		uci set network.wlan.proto=dhcp
-		uci delete dhcp.wlan
-		uci commit #commit changes
-		/etc/init.d/network reload #reload network module so changes become effective
-		echo "2|" > /tmp/networkstatus.txt
 	fi
 fi

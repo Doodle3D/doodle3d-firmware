@@ -218,12 +218,11 @@ function M.alive(request, response)
 	response:setSuccess("alive")
 end
 
-function M.reset(request, response)
+function M.reset_POST(request, response)
 	response:setSuccess("Resetting networks")
 
 	log:info(MOD_ABBR, "Resetting networks")
 	for _, net in ipairs(wifi.getConfigs()) do
-		print(net.ssid)
 		wifi.removeConfig(net.ssid)
 	end
 

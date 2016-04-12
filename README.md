@@ -15,8 +15,8 @@ On OSX, this can be accomplished by installing it through luarocks (run `sudo lu
 Command line interface
 ----------------------
 The Doodle3D API can be called using a terminal: 
-``d3dapi p=/network/scan r=GET``
+```d3dapi p=/network/scan r=GET```
 Where the p parameter is the module you want to call and r is the method.
 Post request can be send using the same method:
-``d3dapi p=/printer/print r=POST``
+```d3dapi p=/printer/print r=POST```
 Parameters: TODO

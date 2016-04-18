@@ -54,7 +54,7 @@ function M.progress(request, response)
 	if not printer or not printer:hasSocket() then return end
 
 	-- NOTE: despite their names, `currentLine` is still the error indicator and `bufferedLines` the message in such case.
-	local currentLine,bufferedLines,totalLines,bufferSize,maxBufferSize = printer:getProgress()
+	local currentLine,bufferedLines,totalLines,bufferSize,maxBufferSize,seqNumber,seqTotal = printer:getProgress()
 
 	response:addData('id', argId)
 	if currentLine then
@@ -64,6 +64,8 @@ function M.progress(request, response)
 		response:addData('total_lines', totalLines)
 		response:addData('buffer_size', bufferSize)
 		response:addData('max_buffer_size', maxBufferSize)
+		response:addData('sequence_number', seqNumber)
+		response:addData('sequence_total', seqTotal)
 	elseif progress == false then
 		response:addData('status', bufferedLines)
 		response:setFail("could not get progress information (" .. bufferedLines .. ")")
@@ -170,6 +172,19 @@ function M.stop_POST(request, response)
 	end
 end
 
+-- Used only in print_POST(); not nested for performance reasons
+local function addSequenceNumbering(printer, response)
+	-- NOTE: despite their names, `currentLine` is still the error indicator and `bufferedLines` the message in such case.
+	local currentLine,bufferedLines,totalLines,bufferSize,maxBufferSize,seqNumber,seqTotal = printer:getProgress()
+	if currentLine then
+		response:addData('sequence_number', seqNumber)
+		response:addData('sequence_total', seqTotal)
+	--else
+		--Note: getProgress failure is ignored (unlikely to happen if the other calls work, and also not really fatal here).
+		--      Alternatively, we could still add the fields with a special value (NaN is not supported by json, so perhaps -2?)
+	end
+end
+
 --requires: gcode(string) (the gcode to be appended)
 --accepts: id(string) (the printer ID to append to)
 --accepts: clear(bool) (chunks will be concatenated but output file will be cleared first if this argument is true)
@@ -178,7 +193,9 @@ end
 --accepts: total_lines(int) (the total number of lines that is going to be sent, will be used only for reporting progress)
 --accepts: seq_number(int) (sequence number of the chunk, must be given until clear() after given once, and incremented each time)
 --accepts: seq_total(int) (total number of gcode chunks to be appended, must be given until clear() after given once, and stay the same)
---returns: when the gcode buffer cannot accept the gcode, or the IPC transaction fails, a fail with a (formal, i.e., parseable) status argument will be returned
+--returns: when the gcode buffer cannot accept the gcode, or the IPC transaction fails,
+--         a fail with a (formal, i.e., parseable) status argument will be returned;
+--         additionally, current sequence number and total will be returned (both are -1 if they have not been set)
 function M.print_POST(request, response)
 	local controllerIP = accessManager.getController()
 	local hasControl = false
@@ -234,13 +251,16 @@ function M.print_POST(request, response)
 
 	rv,msg = printer:appendGcode(argGcode, argTotalLines, { seq_number = argSeqNumber, seq_total = argSeqTotal, source = remoteHost })
 	if rv then
+		addSequenceNumbering(printer, response)
 		--NOTE: this does not report the number of lines, but only the block which has just been added
 		response:addData('gcode_append',argGcode:len())
 	elseif rv == false then
+		addSequenceNumbering(printer, response)
 		response:addData('status', msg)
 		response:setFail("could not add gcode (" .. msg .. ")")
 		return
 	else
+		addSequenceNumbering(printer, response)
 		response:addData('msg', msg)
 		response:setError("could not add gcode (" .. msg .. ")")
 		return

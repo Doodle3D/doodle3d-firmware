@@ -64,8 +64,8 @@ function M.progress(request, response)
 		response:addData('total_lines', totalLines)
 		response:addData('buffer_size', bufferSize)
 		response:addData('max_buffer_size', maxBufferSize)
-		response:addData('sequence_number', seqNumber)
-		response:addData('sequence_total', seqTotal)
+		response:addData('seq_number', seqNumber)
+		response:addData('seq_total', seqTotal)
 	elseif progress == false then
 		response:addData('status', bufferedLines)
 		response:setFail("could not get progress information (" .. bufferedLines .. ")")
@@ -177,8 +177,8 @@ local function addSequenceNumbering(printer, response)
 	-- NOTE: despite their names, `currentLine` is still the error indicator and `bufferedLines` the message in such case.
 	local currentLine,bufferedLines,totalLines,bufferSize,maxBufferSize,seqNumber,seqTotal = printer:getProgress()
 	if currentLine then
-		response:addData('sequence_number', seqNumber)
-		response:addData('sequence_total', seqTotal)
+		response:addData('seq_number', seqNumber)
+		response:addData('seq_total', seqTotal)
 	--else
 		--Note: getProgress failure is ignored (unlikely to happen if the other calls work, and also not really fatal here).
 		--      Alternatively, we could still add the fields with a special value (NaN is not supported by json, so perhaps -2?)

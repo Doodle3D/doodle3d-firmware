@@ -1,4 +1,9 @@
 Changelog
+# 0.10.10-d (20 api 2016)
+- Allow print part sequence numbers to be retrieved
+- Sequence numbers are send back when sending print parts
+- When WiFi-Box responds that print part was already received the client will send the next part.
+
 # 0.10.10-c (1 api 2016)
 - Quicker log rotation
 

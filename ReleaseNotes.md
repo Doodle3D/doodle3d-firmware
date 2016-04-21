@@ -1,4 +1,7 @@
 Changelog
+# 0.10.10-e (21 api 2016)
+- Fixed Makerbot end gcode that prevented prints or stopping prints to finish.
+
 # 0.10.10-d (20 api 2016)
 - Allow print part sequence numbers to be retrieved
 - Sequence numbers are send back when sending print parts

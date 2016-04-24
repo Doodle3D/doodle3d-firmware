@@ -16,6 +16,8 @@ local printerAPI = require('rest.api.api_printer')
 local wifi = require('network.wlanconfig')
 local settings = require('util.settings')
 
+local MOD_ABBR = "AINF"
+
 local TMP_DIR = '/tmp'
 local LOG_COLLECT_DIRNAME = 'wifibox-logs'
 local LOG_COLLECT_DIR = TMP_DIR .. '/' .. LOG_COLLECT_DIRNAME
@@ -23,9 +25,10 @@ local DEFAULT_WIFIBOX_LOG_FILENAME = 'wifibox.log'
 local DEFAULT_WIFIBOX_LOG_FILE = TMP_DIR .. '/' .. DEFAULT_WIFIBOX_LOG_FILENAME
 local WIFIBOX_STDOUT_LOG_FILENAME = 'wifibox.stdout.log'
 local WIFIBOX_STDOUT_LOG_FILE = TMP_DIR .. '/' .. WIFIBOX_STDOUT_LOG_FILENAME
+local WIFIBOX_VERSION_FILENAME = 'wifibox-version'
+local WIFIBOX_VERSION_FILE = '/etc/' .. WIFIBOX_VERSION_FILENAME
 local ROTATED_LOGS_DIRNAME = 'wifibox-rotated'
 local ROTATED_LOGS_DIR = TMP_DIR .. '/' .. ROTATED_LOGS_DIRNAME
-local MOD_ABBR = "AINF"
 
 local SYSLOG_FILENAME = 'syslog'
 local PROCESS_LIST_FILENAME = 'processes'
@@ -115,6 +118,8 @@ function M.logfiles(request, response)
 	-- list directory structure for primary USB controller
 	rv,sig,code = os.execute(USB_DIRTREE_COMMAND .. ' > ' .. LOG_COLLECT_DIR .. '/' .. USB_DIRTREE_FILENAME)
 
+	rv,sig,code = redirectedExecute('cp ' .. WIFIBOX_VERSION_FILE .. ' ' .. LOG_COLLECT_DIR)
+
 	-- copy relevant openwrt configuration files
 	-- Note: we cannot link them because that would require the link to span over filesystems
 	rv,msg = lfs.mkdir(LOG_COLLECT_DIR .. '/config')
@@ -159,6 +164,7 @@ function M.logfiles(request, response)
 	rv,sig,code = redirectedExecute('rm ' .. LOG_COLLECT_DIR .. '/' .. ROTATED_LOGS_DIRNAME .. '/*')
 	rv,msg = lfs.rmdir(LOG_COLLECT_DIR .. '/' .. ROTATED_LOGS_DIRNAME)
 
+	rv,sig,code = redirectedExecute('rm ' .. LOG_COLLECT_DIR .. '/' .. WIFIBOX_VERSION_FILENAME)
 	rv,sig,code = redirectedExecute('rm ' .. LOG_COLLECT_DIR .. '/' .. USB_DIRTREE_FILENAME)
 	rv,sig,code = redirectedExecute('rm ' .. LOG_COLLECT_DIR .. '/' .. DISKFREE_FILENAME)
 	rv,sig,code = redirectedExecute('rm ' .. LOG_COLLECT_DIR .. '/' .. MOUNTS_FILENAME)

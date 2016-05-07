@@ -14,6 +14,8 @@ M.default = {
 M.firmware = {
 	['parent'] = 'default',
 	['patterns'] = {
+		['START%-RQ'] = 'bblue',
+		['END%-RQ'] = 'blue'
 	}
 }
 

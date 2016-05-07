@@ -22,6 +22,8 @@ local netconf = require('network.netconfig')
 local RequestClass = require('rest.request')
 local ResponseClass = require('rest.response')
 local Signin = require('network.signin')
+local osUtils = require('os_utils')
+
 
 -- NOTE: the updater module 'detects' command-line invocation by existence of 'arg', so we have to make sure it is not defined.
 argStash = arg
@@ -206,17 +208,6 @@ end
 -- The logger is set up, any POST data is read and several other subsystems are initialized.
 -- @tparam table environment The 'shell' environment containing all CGI variables. Note that @{cmdmain} simulates this.
 local function init(environment)
-	setupLogger()
-
-	local dbgText = ""
-	if confDefaults.DEBUG_API and confDefaults.DEBUG_PCALLS then dbgText = "pcall+api"
-	elseif confDefaults.DEBUG_API then dbgText = "api"
-	elseif confDefaults.DEBUG_PCALL then dbgText = "pcall"
-	end
-
-	if dbgText ~= "" then dbgText = " (" .. dbgText .. " debugging)" end
-	log:verbose(MOD_ABBR, "=======rest api" .. dbgText .. "=======")
-
 	if (environment['REQUEST_METHOD'] == 'POST') then
 		local n = tonumber(environment['CONTENT_LENGTH'])
 		postData = io.read(n)
@@ -292,6 +283,22 @@ end
 -- @tparam table env The CGI environment table.
 -- @treturn number A Z+ return value suitable to return from wrapper script. Note that this value is ignored by uhttpd-mod-lua.
 function handle_request(env)
+	local function constructDebugText()
+		local dbgText = ""
+		if confDefaults.DEBUG_API and confDefaults.DEBUG_PCALLS then dbgText = "pcall+api"
+		elseif confDefaults.DEBUG_API then dbgText = "api"
+		elseif confDefaults.DEBUG_PCALL then dbgText = "pcall"
+		end
+		if dbgText ~= "" then dbgText = " (" .. dbgText .. " debugging)" end
+		return dbgText
+	end
+
+	setupLogger()
+
+	local pid = osUtils.getPID()
+	local beginSecs, beginUSecs = osUtils.getTime()
+
+	log:verbose(MOD_ABBR, "START-RQ with PID=" .. pid .. constructDebugText())
 	local s, msg = init(env)
 
 	if s == false then
@@ -300,11 +307,13 @@ function handle_request(env)
 
 		resp:setError("initialization failed" .. errSuffix)
 		resp:send()
-		log:error(MOD_ABBR, "Initialization failed" .. errSuffix) --NOTE: this assumes the logger has been initialized properly, despite init() having failed
+		log:error(MOD_ABBR, "Initialization failed" .. errSuffix)
 
 		return 1
 	else
 		main(env)
+		local elapsed,msg = osUtils.getElapsedTime(beginSecs, beginUSecs)
+		log:bulk(MOD_ABBR, "END-RQ with PID=" .. pid .. " completed in " .. elapsed .. " msec")
 		return 0
 	end
 end

@@ -53,7 +53,7 @@ Inheritance can be used to set new keys or to override keys from the parent set.
 
 Two options are currently available:
 
-* `mode`, which specifies whether to keep log lines (`keep`, the default) or to drop them (`delete`). For specific lines this can then be overriden, see 'Patterns' below.
+* `mode`, which specifies whether to keep log lines (`keep`, the default) or to drop them (`delete`). For specific lines this can then be overridden, see 'Patterns' below.
 * `count`, which can be set to `all` to prefix log lines with a counter, or `none` (default) to leave them as is.
 
 #### Patterns

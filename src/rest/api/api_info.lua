@@ -16,11 +16,19 @@ local printerAPI = require('rest.api.api_printer')
 local wifi = require('network.wlanconfig')
 local settings = require('util.settings')
 
+local MOD_ABBR = "AINF"
+
 local TMP_DIR = '/tmp'
 local LOG_COLLECT_DIRNAME = 'wifibox-logs'
 local LOG_COLLECT_DIR = TMP_DIR .. '/' .. LOG_COLLECT_DIRNAME
-local WIFIBOX_LOG_FILENAME = 'wifibox.log'
-local WIFIBOX_LOG_FILE = TMP_DIR .. '/' .. WIFIBOX_LOG_FILENAME
+local DEFAULT_WIFIBOX_LOG_FILENAME = 'wifibox.log'
+local DEFAULT_WIFIBOX_LOG_FILE = TMP_DIR .. '/' .. DEFAULT_WIFIBOX_LOG_FILENAME
+local WIFIBOX_STDOUT_LOG_FILENAME = 'wifibox.stdout.log'
+local WIFIBOX_STDOUT_LOG_FILE = TMP_DIR .. '/' .. WIFIBOX_STDOUT_LOG_FILENAME
+local WIFIBOX_VERSION_FILENAME = 'wifibox-version'
+local WIFIBOX_VERSION_FILE = '/etc/' .. WIFIBOX_VERSION_FILENAME
+local ROTATED_LOGS_DIRNAME = 'wifibox-rotated'
+local ROTATED_LOGS_DIR = TMP_DIR .. '/' .. ROTATED_LOGS_DIRNAME
 
 local SYSLOG_FILENAME = 'syslog'
 local PROCESS_LIST_FILENAME = 'processes'
@@ -34,7 +42,7 @@ local USB_DIRTREE_COMMAND = "ls -R /sys/devices/platform/ehci-platform/usb1 | gr
 local USB_DIRTREE_FILENAME = 'sys_devices_platform_ehci-platform_usb1.tree'
 
 local PRINT3D_BASEPATH = '/tmp'
-local PRINT3D_LOG_FILENAME_PREFIX = 'print3d-'
+local PRINT3D_LOG_FILENAME_PREFIX = 'print3d.'
 local PRINT3D_LOG_FILENAME_SUFFIX = '.log'
 local LOG_COLLECT_ARCHIVE_FILENAME = LOG_COLLECT_DIRNAME .. '.tgz'
 local LOG_COLLECT_ARCHIVE_FILE = TMP_DIR .. '/' .. LOG_COLLECT_ARCHIVE_FILENAME
@@ -50,10 +58,10 @@ local M = {
 -- returns wifiboxid (since version 0.10.2)
 function M._global(request, response)
 	response:setSuccess()
-	
+
 	local wifiboxid = wifi.getSubstitutedSsid(settings.get('network.cl.wifiboxid'))
 	response:addData('wifiboxid', wifiboxid)
-	
+
 end
 
 -- TODO: redirect stdout+stderr; handle errors
@@ -63,11 +71,34 @@ function M.logfiles(request, response)
 	rv,msg = lfs.mkdir(LOG_COLLECT_DIR)
 	rv,msg = lfs.chdir(TMP_DIR)
 
+	local wifiboxLogFilePath = log:getLogFilePath()
+	local wifiboxLogFileName = wifiboxLogFilePath and wifiboxLogFilePath:match('.*/(.*)')
+
 
 	--[[ create temporary files ]]--
 
-	-- copy wifibox API-script log
-	rv,sig,code = redirectedExecute('cp ' .. WIFIBOX_LOG_FILE .. ' ' .. LOG_COLLECT_DIR)
+	-- copy wifibox API-script (firmware) log
+	lfs.link(wifiboxLogFilePath, LOG_COLLECT_DIR .. '/' .. wifiboxLogFileName)
+
+	-- copy d3dapi script stdout/stderr (fallback) log
+	lfs.link(WIFIBOX_STDOUT_LOG_FILE, LOG_COLLECT_DIR .. '/' .. WIFIBOX_STDOUT_LOG_FILENAME)
+
+	-- collect and copy print3d server logs
+	for file in lfs.dir(PRINT3D_BASEPATH) do
+		if file:find(PRINT3D_LOG_FILENAME_PREFIX) == 1 and file:find(PRINT3D_LOG_FILENAME_SUFFIX) ~= nil then
+			local srcLogFile = PRINT3D_BASEPATH .. '/' .. file
+			local tgtLogFile = LOG_COLLECT_DIR .. '/' .. file
+			lfs.link(srcLogFile, tgtLogFile)
+		end
+	end
+
+	-- copy rotated firmware and print3d logs
+	rv,msg = lfs.mkdir(LOG_COLLECT_DIR .. '/' .. ROTATED_LOGS_DIRNAME)
+	for file in lfs.dir(ROTATED_LOGS_DIR) do
+		local srcLogFile = ROTATED_LOGS_DIR .. '/' .. file
+		local tgtLogFile = LOG_COLLECT_DIR .. '/' .. ROTATED_LOGS_DIRNAME .. '/' .. file
+		lfs.link(srcLogFile, tgtLogFile)
+	end
 
 	-- capture syslog
 	rv,sig,code = os.execute('logread > ' .. LOG_COLLECT_DIR .. '/' .. SYSLOG_FILENAME)
@@ -87,7 +118,10 @@ function M.logfiles(request, response)
 	-- list directory structure for primary USB controller
 	rv,sig,code = os.execute(USB_DIRTREE_COMMAND .. ' > ' .. LOG_COLLECT_DIR .. '/' .. USB_DIRTREE_FILENAME)
 
+	rv,sig,code = redirectedExecute('cp ' .. WIFIBOX_VERSION_FILE .. ' ' .. LOG_COLLECT_DIR)
+
 	-- copy relevant openwrt configuration files
+	-- Note: we cannot link them because that would require the link to span over filesystems
 	rv,msg = lfs.mkdir(LOG_COLLECT_DIR .. '/config')
 	for _,v in pairs(UCI_CONFIG_FILES_TO_SAVE) do
 		local srcFile = '/etc/config/' .. v
@@ -95,19 +129,12 @@ function M.logfiles(request, response)
 		if v ~= 'wireless' then
 			rv,sig,code = redirectedExecute('cp ' .. srcFile .. ' ' .. tgtFile)
 		else
+			-- replace WiFi passwords with '...'
 			rv,sig,code = os.execute("sed \"s/option key '.*'/option key '...'/g\" " .. srcFile .. " > " .. tgtFile)
 		end
 	end
 
-	-- collect and copy print3d server logs
-	for file in lfs.dir(PRINT3D_BASEPATH) do
-		if file:find(PRINT3D_LOG_FILENAME_PREFIX) == 1 and file:find(PRINT3D_LOG_FILENAME_SUFFIX) ~= nil then
-			local srcLogFile = PRINT3D_BASEPATH .. '/' .. file
-			local tgtLogFile = LOG_COLLECT_DIR .. '/' .. file
-			rv,sig,code = redirectedExecute('cp ' .. srcLogFile .. ' ' .. tgtLogFile)
-			end
-		end
-
+	-- create tar.gz archive of the files/data we collected
 	rv,sig,code = redirectedExecute('tar czf ' .. LOG_COLLECT_ARCHIVE_FILE .. ' ' .. LOG_COLLECT_DIRNAME) --returns 0 success, 1 error
 
 
@@ -133,13 +160,19 @@ function M.logfiles(request, response)
 	rv,sig,code = redirectedExecute('rm ' .. LOG_COLLECT_DIR .. '/config/*')
 	rv,msg = lfs.rmdir(LOG_COLLECT_DIR .. '/config')
 
+	-- Note: this assumes the rotated logs directory does not contain subdirectories
+	rv,sig,code = redirectedExecute('rm ' .. LOG_COLLECT_DIR .. '/' .. ROTATED_LOGS_DIRNAME .. '/*')
+	rv,msg = lfs.rmdir(LOG_COLLECT_DIR .. '/' .. ROTATED_LOGS_DIRNAME)
+
+	rv,sig,code = redirectedExecute('rm ' .. LOG_COLLECT_DIR .. '/' .. WIFIBOX_VERSION_FILENAME)
 	rv,sig,code = redirectedExecute('rm ' .. LOG_COLLECT_DIR .. '/' .. USB_DIRTREE_FILENAME)
 	rv,sig,code = redirectedExecute('rm ' .. LOG_COLLECT_DIR .. '/' .. DISKFREE_FILENAME)
 	rv,sig,code = redirectedExecute('rm ' .. LOG_COLLECT_DIR .. '/' .. MOUNTS_FILENAME)
 	rv,sig,code = redirectedExecute('rm ' .. LOG_COLLECT_DIR .. '/' .. MEMINFO_FILENAME)
 	rv,sig,code = redirectedExecute('rm ' .. LOG_COLLECT_DIR .. '/' .. PROCESS_LIST_FILENAME)
 	rv,sig,code = redirectedExecute('rm ' .. LOG_COLLECT_DIR .. '/' .. SYSLOG_FILENAME)
-	rv,sig,code = redirectedExecute('rm ' .. LOG_COLLECT_DIR .. '/' .. WIFIBOX_LOG_FILENAME)
+	rv,sig,code = redirectedExecute('rm ' .. LOG_COLLECT_DIR .. '/' .. WIFIBOX_STDOUT_LOG_FILENAME)
+	rv,sig,code = redirectedExecute('rm ' .. LOG_COLLECT_DIR .. '/' .. wifiboxLogFileName)
 
 	rv,msg = lfs.rmdir(LOG_COLLECT_DIR)
 
@@ -147,16 +180,16 @@ function M.logfiles(request, response)
 end
 
 function M.access(request, response)
-	--log:info("  remoteAddress: |"..utils.dump(request.remoteAddress).."|");
-	--log:info("  controller: |"..utils.dump(accessManager.getController()).."|");
+	--log:info(MOD_ABBR, "  remoteAddress: |"..utils.dump(request.remoteAddress).."|");
+	--log:info(MOD_ABBR, "  controller: |"..utils.dump(accessManager.getController()).."|");
 
 	local hasControl = accessManager.hasControl(request.remoteAddress)
-	-- if hasControl then log:info("  hasControl: true")
-	-- else log:info("  hasControl: false") end
+	-- if hasControl then log:info(MOD_ABBR, "  hasControl: true")
+	-- else log:info(MOD_ABBR, "  hasControl: false") end
 	response:setSuccess()
 	response:addData('has_control', hasControl)
 
-	return true
+	return
 end
 
 function M.status(request, response)

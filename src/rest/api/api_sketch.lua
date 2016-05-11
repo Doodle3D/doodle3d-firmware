@@ -16,6 +16,8 @@ local lfs = require('lfs')
 local log = require('util.logger')
 local utils = require('util.utils')
 
+local MOD_ABBR = "ASKE"
+
 local M = {
 	isApi = true,
 	SKETCH_DIR = '/root/sketches',
@@ -29,7 +31,7 @@ local SKETCH_FILE_EXTENSION = 'svg'
 -- creates sketch directory, and sets response to error state on failure
 local function createSketchDirectory()
 	if os.execute('mkdir -p ' .. M.SKETCH_DIR) ~= 0 then
-		log:error("Error: could not create sketch directory '" .. M.SKETCH_DIR .. "'")
+		log:error(MOD_ABBR, "could not create sketch directory '" .. M.SKETCH_DIR .. "'")
 		response:setError("could not create sketch directory")
 		return false
 	end
@@ -133,7 +135,7 @@ function M._global_POST(request, response)
 	local sketchIdx = listSize > 0 and sketches[listSize] + 1 or 1
 	local sketchFile = M.SKETCH_DIR .. '/' .. constructSketchFilename(sketchIdx)
 
-	log:debug("saving sketch #" .. sketchIdx .. " (" .. argData:len() .. " bytes)")
+	log:verbose(MOD_ABBR, "saving sketch #" .. sketchIdx .. " (" .. argData:len() .. " bytes)")
 	local saveFile,msg = io.open(sketchFile, 'w')
 
 	if not saveFile then

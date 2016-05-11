@@ -9,13 +9,15 @@
 local log = require('util.logger')
 local utils = require('util.utils')
 
+local MOD_ABBR = "USTS"
+
 local M = {}
 
 local FOLDER = "/tmp/"
 local FILE_PREFIX = "d3d-"
 local FILE_EXTENSION = ".txt"
 
-function getPath(fileName) 
+function getPath(fileName)
 	return FOLDER..FILE_PREFIX..fileName..FILE_EXTENSION
 end
 
@@ -23,7 +25,7 @@ function M.get(fileName)
 	local path = getPath(fileName)
 	local file, error = io.open(path,'r')
 	if file == nil then
-		--log:error("Util:Access:Can't read controller file. Error: "..error)
+		--log:warning(MOD_ABBR, "Util:Access:Can't read controller file. Error: "..error)
 		return "",""
 	else
 		local status = file:read('*a')
@@ -35,7 +37,7 @@ function M.get(fileName)
 end
 
 function M.set(fileName,code,msg)
-	--log:info("setStatus: "..code.." | "..msg)
+	--log:info(MOD_ABBR, "setStatus: "..code.." | "..msg)
 	local path = getPath(fileName)
 	local file = io.open(path,'w')
 	file:write(code.."|"..msg)

@@ -10,6 +10,8 @@ local log = require('util.logger')
 local utils = require('util.utils')
 local printDriver = require('print3d')
 
+local MOD_ABBR = "UPRN"
+
 local SUPPORTED_PRINTERS = {
 	rigidbot = "Rigidbot",
 	ultimaker = "Ultimaker",
@@ -59,7 +61,8 @@ local SUPPORTED_PRINTERS = {
 	colido_m2020 = "ColiDo M2020",
 	colido_x3045 = "ColiDo X3045",
 	colido_compact = "ColiDo Compact",
-	colido_diy = "ColiDo DIY"
+	colido_diy = "ColiDo DIY",
+	craftbot_plus = "CraftBot PLUS"
 }
 local SUPPORTED_BAUDRATES = {
 	["115200"] = "115200 bps",
@@ -81,8 +84,8 @@ end
 --returns a printer instance or nil (and sets error state on response in the latter case)
 function M.createPrinterOrFail(deviceId, response)
 
-	--log:debug("API:printer:createPrinterOrFail: "..utils.dump(deviceId))
-	local msg,printer = nil, nil
+	--log:info(MOD_ABBR, "API:printer:createPrinterOrFail: "..utils.dump(deviceId))
+	local rv,msg,printer = nil, nil, nil
 
 	if deviceId == nil or deviceId == "" then
 		printer,msg = printDriver.getPrinter()
@@ -96,6 +99,18 @@ function M.createPrinterOrFail(deviceId, response)
 			response:addData('id', deviceId)
 		end
 		return nil
+	end
+
+	-- only log these log setup errors, do not let them prevent further request handling
+
+	rv,msg = printer:setLocalLogStream(log:getStream())
+	if not rv then
+		log:error(MOD_ABBR, "could not set log stream in Lua binding (" .. msg .. ")")
+	end
+
+	rv,msg = printer:setLocalLogLevel(log:getLevel())
+	if not rv then
+		log:error(MOD_ABBR, "could not set log level '" .. log:getLevel() .. "' in Lua binding (" .. msg .. ")")
 	end
 
 	return printer

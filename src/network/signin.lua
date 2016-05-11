@@ -20,6 +20,7 @@ local status = require('util.status')
 local M = {}
 
 local STATUS_FILE = "signinstatus"
+local MOD_ABBR = "NTSI"
 
 local IDLE_STATUS 			= 1
 local SIGNING_IN_STATUS 	= 2
@@ -27,55 +28,61 @@ local SIGNING_IN_STATUS 	= 2
 --- Signin to connect.doodle3d.com server
 --
 function M.signin()
-
-	--log:debug("signin:signin");
+	log:verbose(MOD_ABBR, "signin:signin");
 
 	local code, msg = M.getStatus()
-	--log:debug("  status: "..utils.dump(code).." "..utils.dump(msg));
+	--log:verbose(MOD_ABBR, "  status: "..utils.dump(code).." "..utils.dump(msg));
 
 	-- if we are already signin in, skip
 	if(code == SIGNING_IN_STATUS) then
-		log:debug("  skipping signin")
+		log:verbose(MOD_ABBR, "  already signing in, skipping")
+		return
+	end
+
+	local ds = wifi.getDeviceState()
+	log:verbose(MOD_ABBR, "  wifi deviceState.mode: "..utils.dump(ds.mode))
+	if ds.mode ~= "sta" then
+		log:verbose(MOD_ABBR, "  wifi not in station mode, skipping signin")
 		return
 	end
 
 	M.setStatus(SIGNING_IN_STATUS,"signing in")
 
 	local baseurl = "http://connect.doodle3d.com/api/signin.php"
-	
+
 	local attemptInterval = 1
 	local maxAttempts = 20
 	local attempt = 0
-	
+
 	local nextAttemptTime = os.time()
-	
+
 	local localip = ""
 	local signinResponse = ""
 	while true do
 		if os.time() > nextAttemptTime then
-			log:debug("signin attempt "..utils.dump(attempt).."/"..utils.dump(maxAttempts))
+			log:verbose(MOD_ABBR, "  signin attempt "..utils.dump(attempt).."/"..utils.dump(maxAttempts))
 			local signedin = false
 			local localip = wifi.getLocalIP();
-			--log:debug("  localip: "..utils.dump(localip))
+			--log:verbose(MOD_ABBR, "  localip: "..utils.dump(localip))
 			if localip ~= nil then
-				
+
 				local wifiboxid = wifi.getSubstitutedSsid(settings.get('network.cl.wifiboxid'))
 				wifiboxid = urlcode.escape(wifiboxid)
-			
+
 				local cmd = "wget -q -T 2 -t 1 -O - "..baseurl.."?wifiboxid="..wifiboxid.."\\&localip="..localip;
 				signinResponse = utils.captureCommandOutput(cmd);
-				log:debug("  signin response: \n"..utils.dump(signinResponse))
+				log:verbose(MOD_ABBR, "  signin response: \n"..utils.dump(signinResponse))
 				local success = signinResponse:match('"status":"success"')
-				log:debug("  success: "..utils.dump(success))
+				log:verbose(MOD_ABBR, "  success: "..utils.dump(success))
 				if success ~= nil then
 					signedin = true
 				else
-					log:warn("signin failed request failed (response: "..utils.dump(signinResponse)..")")
+					log:warning(MOD_ABBR, "signin failed, request failed (response: "..utils.dump(signinResponse)..")")
 				end
-			else 
-				log:warn("signin failed no local ip found (attempt: "..utils.dump(attempt).."/"..utils.dump(maxAttempts)..")")
+			else
+				log:warning(MOD_ABBR, "signin failed, no local ip found (attempt: "..utils.dump(attempt).."/"..utils.dump(maxAttempts)..")")
 			end
-			
+
 			if signedin then
 				break
 			else
@@ -90,7 +97,7 @@ function M.signin()
 			end
 		end
 	end
-	
+
 	M.setStatus(IDLE_STATUS,"idle")
 	return string.len(signinResponse) > 0, signinResponse
 end
@@ -100,7 +107,7 @@ function M.getStatus()
 end
 
 function M.setStatus(code,msg)
-	log:info("signin:setStatus: "..code.." | "..msg)
+	log:verbose(MOD_ABBR, "signin:setStatus: " .. code .. " (" .. msg .. ")")
 	status.set(STATUS_FILE,code,msg);
 end
 

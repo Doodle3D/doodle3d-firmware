@@ -10,38 +10,40 @@ local log = require('util.logger')
 local utils = require('util.utils')
 local printerUtils = require('util.printer')
 
+local MOD_ABBR = "UACS"
+
 local M = {}
 
 function M.hasControl(ip)
 	local controllerIP = M.getController()
-	
+
 	-- no controller stored? we have control
 	if controllerIP == "" then return true end;
-	
+
 	-- controller stored is same as our (requesting) ip? we have control
 	if(controllerIP == ip) then return true end;
-	
+
 	-- no printer connected? we have control
 	local printer,msg = printerUtils.createPrinterOrFail()
-	if not printer or not printer:hasSocket() then 
+	if not printer or not printer:hasSocket() then
 		M.setController("") -- clear the controller
 		return true
 	end
-	
+
 	-- printer is idle (done printing)? we have control
 	local state = printer:getState()
 	if state == "idle" then -- TODO: define in constants somewhere
 		M.setController("") -- clear controller
 		return true
 	end
-	
+
 	return false
 end
 
 function M.getController()
 	local file, error = io.open('/tmp/controller.txt','r')
 	if file == nil then
-		--log:error("Util:Access:Can't read controller file. Error: "..error)
+		--log:error(MOD_ABBR, "Util:Access: Can't read controller file. Error: "..error)
 		return ""
 	else
 		controllerIP = file:read('*a')

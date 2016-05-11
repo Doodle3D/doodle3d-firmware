@@ -13,6 +13,8 @@ local iwinfo = require('iwinfo')
 
 local M = {}
 
+local MOD_ABBR = "NTWL"
+
 -- NOTE: fallback device 'radio0' is required because sometimes the wlan0 device disappears
 M.DFL_DEVICE = 'wlan0'
 M.DFL_DEVICE_FALLBACK = 'radio0'
@@ -25,12 +27,12 @@ local deviceName, deviceApi
 local cachedApSsid, baseApSsid = nil, nil
 
 function M.getSubstitutedSsid(unformattedSsid)
-	log:debug("getSubstitutedSsid unformattedSsid:'" .. (unformattedSsid or "nil") .. "' baseApSsid:'" .. (baseApSsid or "nil") .. "' cachedApSsid:'" .. (cachedApSsid or "nil"))
+	log:verbose(MOD_ABBR, "getSubstitutedSsid unformattedSsid:'" .. (unformattedSsid or "nil") .. "' baseApSsid:'" .. (baseApSsid or "nil") .. "' cachedApSsid:'" .. (cachedApSsid or "nil"))
 	if unformattedSsid == baseApSsid and cachedApSsid ~= nil then return cachedApSsid end
 	if not unformattedSsid or type(unformattedSsid) ~= 'string' then return nil end
 
 	local macTail = M.getMacAddress():sub(7)
-	log:debug("  macTail:'" .. macTail)
+	log:verbose(MOD_ABBR, "  macTail:'" .. macTail)
 	baseApSsid = unformattedSsid
 	cachedApSsid = unformattedSsid:gsub('%%%%MAC_ADDR_TAIL%%%%', macTail)
 	return cachedApSsid
@@ -75,7 +77,7 @@ function M.init(device)
 		deviceName = M.DFL_DEVICE_FALLBACK
 		deviceApi = iwinfo.type(deviceName)
 
-		log:info("wireless device '" .. devInitial .. "' not found, trying fallback '" .. deviceName .. "'")
+		log:info(MOD_ABBR, "wireless device '" .. devInitial .. "' not found, trying fallback '" .. deviceName .. "'")
 
 		if not deviceApi then
 			return false, "No such wireless device: '" .. devInitial .. "' (and fallback '" .. deviceName .. "' does not exist either)"
@@ -107,9 +109,9 @@ end
 --returns the wireless device's MAC address (as string, without colons)
 --(lua numbers on openWrt seem to be 32bit so they cannot represent a MAC address as one number)
 function M.getMacAddress()
-	log:debug("getMacAddress")
+	log:verbose(MOD_ABBR, "getMacAddress")
 	local macText = utils.readFile('/sys/class/net/' .. deviceName .. '/address')
-	log:debug("  macText: '" .. (macText or "nil") .. "'")
+	log:verbose(MOD_ABBR, "  macText: '" .. (macText or "nil") .. "'")
 	local out = ''
 
 	-- Hack to prevent failure in case the MAC address could not be obtained.
@@ -126,9 +128,10 @@ end
 --returns the wireless local ip address
 function M.getLocalIP()
 	local ifconfig, rv = utils.captureCommandOutput("ifconfig wlan0");
-	--log:debug("  ifconfig: \n"..utils.dump(ifconfig));
-	local localip = ifconfig:match('inet addr:([%d\.]+)')
-	return localip;
+	log:bulk(MOD_ABBR, "  ifconfig: \n"..utils.dump(ifconfig));
+
+	local localip = ifconfig:match('inet addr:([%d%.]+)')
+	return localip
 end
 
 function M.getDeviceName()
@@ -140,9 +143,9 @@ end
 -- @return data for all or requested network; false+error on failure or nil when requested network not found
 function M.getScanInfo(ssid)
 	local iw = iwinfo[deviceApi]
-	log:info("start wifi scan")
+	log:info(MOD_ABBR, "start wifi scan")
 	local sr = iw.scanlist(deviceName)
-	log:info("wifi scan done")
+	log:info(MOD_ABBR, "wifi scan done")
 	local si, se
 
 	if ssid == nil then
@@ -186,12 +189,12 @@ end
 --- Activate wireless section for given SSID and disable all others
 -- @param ssid	SSID of config to enable, or nil to disable all network configs
 function M.activateConfig(ssid)
-	--log:info("wlanconfig.activateConfig: "..ssid);
+	log:verbose(MOD_ABBR, "wlanconfig.activateConfig: "..ssid);
 
 	-- make sure only one is enabled
 	uci:foreach('wireless', 'wifi-iface', function(s)
 		local disabled = s.ssid ~= ssid and '1' or '0'
-		--log:info("    "..utils.dump(s.ssid).." disable: "..utils.dump(disabled))
+		log:verbose(MOD_ABBR, "  ssid: "..utils.dump(s.ssid).." disabled: "..utils.dump(disabled))
 		uci:set('wireless', s['.name'], 'disabled', disabled)
 	end)
 
@@ -209,11 +212,14 @@ function M.activateConfig(ssid)
 			return false
 		end
 	end)
-	--[[log:info("  result:");
+
+	--[[
+	log:verbose(MOD_ABBR, "  wifi reorder result:");
 	uci:foreach('wireless', 'wifi-iface', function(s)
 		local disabled = s.ssid ~= ssid and '1' or '0'
-		log:info("    "..utils.dump(s.ssid).." disable: "..utils.dump(disabled))
-	end)]]--
+		log:verbose(MOD_ABBR, "    ssid: "..utils.dump(s.ssid).." disabled: "..utils.dump(disabled))
+	end)
+	--]]
 
 	uci:commit('wireless')
 end
@@ -241,7 +247,7 @@ function M.createConfigFromScanInfo(info, passphrase, disabled)
 	uci:foreach('wireless', 'wifi-iface', function(s)
 		--if s.bssid == info.bssid then
 		if s.ssid == info.ssid then
-			log:debug("removing old wireless config for net '" .. s.ssid .. "'")
+			log:verbose(MOD_ABBR, "removing old wireless config for net '" .. s.ssid .. "'")
 			uci:delete('wireless', s['.name'])
 --			return false --keep looking, just in case multiple entries with this bssid exist
 		end

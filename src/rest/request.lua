@@ -167,7 +167,8 @@ setmetatable(M, {
 })
 
 --This function initializes itself using various environment variables, the arg array and the given postData
---NOTE: if debugging is enabled, commandline arguments 'm' and 'f' override requested module and function
+--NOTE: if debugging is enabled, commandline argument 'p' (path) overrides requested module and function and
+--      'r' (rqType) overrides request method
 function M.new(environment, postData, debugEnabled)
 	local self = setmetatable({}, M)
 
@@ -180,6 +181,10 @@ function M.new(environment, postData, debugEnabled)
 		self.remoteAddress = environment['REMOTE_ADDR']
 	else
 		self.requestMethod = 'CMDLINE'
+		self.remoteHost = "cmdline"
+		self.remotePort = "0"
+		self.userAgent = "shell"
+		self.remoteAddress = "0.0.0.0"
 	end
 
 	self.cmdLineArgs = kvTableFromArray(arg)

@@ -15,11 +15,12 @@ local settings = require('util.settings')
 local defaults = require('conf_defaults')
 local utils = require('util.utils')
 local log = require('util.logger')
-  
+
 local M = {}
 M.__index = M
 
 local REQUEST_ID_ARGUMENT = 'rq_id'
+local MOD_ABBR = "HRSP"
 
 M.httpStatusCode, M.httpStatusText, M.contentType = nil, nil, nil
 M.binaryData, M.binarySavename = nil, nil
@@ -129,11 +130,11 @@ function M:addPostResponseFunction(fn)
   table.insert(self.postResponseQueue, fn)
 end
 
---- Call all function on the post-response queue, see @{M:addPostResponseFunction} for details and a side-note.
+--- Call all functions on the post-response queue, see @{M:addPostResponseFunction} for details and a side-note.
 function M:executePostResponseQueue()
-  --log:info("Response:executePostResponseQueue: " .. utils.dump(self.postResponseQueue))
+	if #self.postResponseQueue > 0 then log:verbose(MOD_ABBR, "Response:executePostResponseQueue: " .. utils.dump(self.postResponseQueue)) end
 
-  for i,fn in ipairs(self.postResponseQueue) do fn() end
+	for i,fn in ipairs(self.postResponseQueue) do fn() end
 end
 
 --- Returns an API url pointing to @{conf_defaults.API_BASE_URL_PATH}, which is quite useless.
@@ -152,7 +153,7 @@ function M:serializeAsJson()
 	return JSON:encode(self.body)
 end
 
---- Writes HTTP headers, followed by an HTTP body containing JSON data to stdout.
+--- Writes HTTP headers to stdout, followed by an HTTP body containing either JSON data or a file attachment.
 function M:send()
 	printHeaderLine("Status", self.httpStatusCode .. " " .. self.httpStatusText)
 	printHeaderLine("Content-Type", self.contentType)
@@ -167,10 +168,10 @@ function M:send()
 		io.write("\r\n")
 		io.write(self.binaryData)
 	end
-	
-	if self.body.status ~= "success" then 
-		log:debug("Response:"..utils.dump(self.body.status).." ("..utils.dump(self.body.msg)..")")
-	end 
+
+	if self.body.status ~= "success" then
+		log:warning(MOD_ABBR, "Response status: "..utils.dump(self.body.status).." ("..utils.dump(self.body.msg)..")")
+	end
 end
 
 --- Sets the response object to return binary data instead of JSON as its body.

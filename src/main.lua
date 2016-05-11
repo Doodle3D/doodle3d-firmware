@@ -22,6 +22,8 @@ local netconf = require('network.netconfig')
 local RequestClass = require('rest.request')
 local ResponseClass = require('rest.response')
 local Signin = require('network.signin')
+local osUtils = require('os_utils')
+
 
 -- NOTE: the updater module 'detects' command-line invocation by existence of 'arg', so we have to make sure it is not defined.
 argStash = arg
@@ -30,6 +32,7 @@ local updater = require('script.d3d-updater')
 arg = argStash
 
 local postData = nil
+local MOD_ABBR = "ENTR"
 
 
 --- Switches to wifi client mode or to access point mode based on availability of known wifi networks.
@@ -48,11 +51,11 @@ local function setupAutoWifiMode()
 
 	local wifiState = wifi.getDeviceState()
 	local netName, netMode = wifiState.ssid, wifiState.mode
-	log:info("current wifi name: " .. (netName or "<nil>") .. ", mode: " .. netMode)
+	log:info(MOD_ABBR, "current wifi name: " .. (netName or "<nil>") .. ", mode: " .. netMode)
 
 	local apSsid = wifi.getSubstitutedSsid(settings.get('network.ap.ssid'))
 	local apMode = (apSsid == netName) and (netMode == 'ap')
-	log:info("ssid of self: " .. apSsid)
+	log:info(MOD_ABBR, "ssid of self: " .. apSsid)
 
 	local scanList,msg = wifi.getScanInfo()
 	if not scanList then
@@ -60,7 +63,7 @@ local function setupAutoWifiMode()
 	end
 
 	local knownSsids = wifi.getConfigs()
-	-- log:info("current wifi name: " .. (netName or "<nil>") .. ", mode: " .. netMode .. ", ssid of self: " .. apSsid)
+	-- log:info(MOD_ABBR, "current wifi name: " .. (netName or "<nil>") .. ", mode: " .. netMode .. ", ssid of self: " .. apSsid)
 	local visNet, knownNet = {}, {}
 	for _,sn in ipairs(scanList) do
 		table.insert(visNet, sn.ssid)
@@ -68,17 +71,17 @@ local function setupAutoWifiMode()
 	for _,kn in ipairs(knownSsids) do
 		table.insert(knownNet, kn.ssid .. "/" .. kn.mode)
 	end
-	log:info("visible networks: " .. table.concat(visNet, ", "))
-	log:info("known networks: " .. table.concat(knownNet, ", "))
+	log:info(MOD_ABBR, "visible networks: " .. table.concat(visNet, ", "))
+	log:info(MOD_ABBR, "known networks: " .. table.concat(knownNet, ", "))
 
 	-- if the currently active network is client mode and is also visible, do nothing since it will connect automatically further along the boot process
 	if netMode == 'sta' and netName ~= nil and netName ~= "" and findSsidInList(scanList, netName) then
 		-- signin to connect.doodle3d.com
 		local success, output = Signin.signin()
 		if success then
-				log:info("Signed in")
+				log:info(MOD_ABBR, "Signed in")
 		else 
-			log:info("Signing in failed")
+			log:info(MOD_ABBR, "Signing in failed")
 		end
 		-- report we are connected after signin attempt
 		netconf.setStatus(netconf.CONNECTED,"Connected");
@@ -119,41 +122,57 @@ local function setupAutoWifiMode()
 end
 
 --- Initializes the logging system to use the file and level defined in the system settings.
--- The settings used are `logfile` and `loglevel`. The former may either be a
--- reular file path, or `<stdout>` or `<stderr>`.
+-- The settings used are `log_path`, `api_log_filename` from the system section and
+-- `system_log_level` from the general section. The filename may either be a regular filename
+-- (with an absolute log_path), or `<stdout>` or `<stderr>`.
+-- TODO: also support backticks (see Logger.cpp in print3d)--
 -- @see util.settings.getSystemKey
 -- @treturn bool True on success, false on error.
 local function setupLogger()
 	local logStream = io.stderr -- use stderr as hard-coded default target
-	local logLevel = log.LEVEL.debug -- use debug logging as hard-coded default level
+	local logLevel = log.LEVEL.verbose -- use verbose logging as hard-coded default level
 
-	local logTargetSetting = settings.getSystemKey('logfile')
-	local logLevelSetting = settings.get('system.log.level')
+	local logPathSetting = settings.getSystemKey('log_path')
+	local logTargetSetting = settings.getSystemKey('api_log_filename')
+	local logLevelSetting = settings.get('system_log_level')
 	local logTargetError, logLevelError = nil, nil
-	
-	-- TEMP: for now, translate print3d log level to firmware level, these will be unfiied in the future
-	-- we get (print3d): quiet,error,warning,info,verbose,bulk -- and we need (firmware): debug,info,warn,error,fatal
-	logLevelMapping = { quiet='fatal', error='error', warning='warn', info='warn', verbose='info', bulk='debug' }
-	logLevelSetting = logLevelMapping[logLevelSetting]
 
 	if type(logTargetSetting) == 'string' then
-		local specialTarget = logTargetSetting:match('^<(.*)>$')
-		if specialTarget then
-			if specialTarget == 'stdout' then logStream = io.stdout
-			elseif specialTarget == 'stderr' then logStream = io.stderr
+		local streamTarget = logTargetSetting:match('^<(.*)>$')
+		local popenTarget = logTargetSetting:match('^`(.*)`$')
+		if streamTarget then
+			if streamTarget:lower() == 'stdout' then logStream = io.stdout
+			elseif streamTarget:lower() == 'stderr' then logStream = io.stderr
 			end
-		elseif logTargetSetting:sub(1, 1) == '/' then
-			local f,msg = io.open(logTargetSetting, 'a+')
+		elseif popenTarget then
+			local f,msg = io.popen(popenTarget, 'w')
 
 			if f then logStream = f
 			else logTargetError = msg
 			end
+		elseif logPathSetting:sub(1, 1) == '/' then
+			local path = logPathSetting .. '/' .. logTargetSetting
+			local f,msg = io.open(path, 'a+')
+
+			if f then
+				logStream = f
+				log:setLogFilePath(path)
+			else
+				logTargetError = msg
+			end
+		else
+			logTargetError = "log file path is not absolute"
 		end
 	else
 		-- if uci config not available, fallback to /tmp/wifibox.log
-		local f,msg = io.open('/tmp/wifibox.log', 'a+')
-		if f then logStream = f
-		else logTargetError = msg
+		local path = '/tmp/wifibox.log'
+		local f,msg = io.open(path, 'a+')
+
+		if f then
+			logStream = f
+			log:setLogFilePath(path)
+		else
+			logTargetError = msg
 		end
 	end
 
@@ -173,12 +192,12 @@ local function setupLogger()
 
 	local rv = true
 	if logTargetError then
-		log:error("could not open logfile '" .. logTargetSetting .. "', using stderr as fallback (" .. logTargetError .. ")")
+		log:error(MOD_ABBR, "could not open logfile '" .. logPathSetting .. '/' .. logTargetSetting .. "', using stderr as fallback (" .. logTargetError .. ")")
 		rv = false
 	end
 
 	if logLevelError then
-		log:error("uci config specifies invalid log level '" .. logLevelSetting .. "', using debug level as fallback")
+		log:error(MOD_ABBR, "uci config specifies invalid log level '" .. logLevelSetting .. "', using verbose level as fallback")
 		rv = false
 	end
 
@@ -189,17 +208,6 @@ end
 -- The logger is set up, any POST data is read and several other subsystems are initialized.
 -- @tparam table environment The 'shell' environment containing all CGI variables. Note that @{cmdmain} simulates this.
 local function init(environment)
-	setupLogger()
-
-	local dbgText = ""
-	if confDefaults.DEBUG_API and confDefaults.DEBUG_PCALLS then dbgText = "pcall+api"
-	elseif confDefaults.DEBUG_API then dbgText = "api"
-	elseif confDefaults.DEBUG_PCALL then dbgText = "pcall"
-	end
-
-	if dbgText ~= "" then dbgText = " (" .. dbgText .. " debugging)" end
-	log:info("=======rest api" .. dbgText .. "=======")
-
 	if (environment['REQUEST_METHOD'] == 'POST') then
 		local n = tonumber(environment['CONTENT_LENGTH'])
 		postData = io.read(n)
@@ -222,50 +230,47 @@ local function main(environment)
 	local rq = RequestClass.new(environment, postData, confDefaults.DEBUG_API)
 
 	if rq:getRequestMethod() == 'CMDLINE' and rq:get('autowifi') ~= nil then
-	
+
 		local version = updater.formatVersion(updater.getCurrentVersion());
-		log:info("Doodle3D version: "..util.dump(version))
-	
-		log:info("running in autowifi mode")
+		log:info(MOD_ABBR, "Doodle3D version: "..util.dump(version))
+
+		log:info(MOD_ABBR, "Running in autowifi mode")
 		local rv,msg = setupAutoWifiMode()
 
 		if rv then
-			log:info("autowifi setup done (" .. msg .. ")")
+			log:info(MOD_ABBR, "Autowifi setup done (" .. msg .. ")")
 		else
-			log:error("autowifi setup failed (" .. msg .. ")")
+			log:error(MOD_ABBR, "Autowifi setup failed (" .. msg .. ")")
 		end
 	elseif rq:getRequestMethod() == 'CMDLINE' and rq:get('signin') ~= nil then
-		log:info("running in signin mode")
+		log:info(MOD_ABBR, "Running in signin mode")
 
-		local ds = wifi.getDeviceState()
-		log:info("  ds.mode: "..util.dump(ds.mode))
-		if ds.mode == "sta" then
-			log:info("  attempting signin")
-			local success,msg = Signin.signin()
-			if success then
-		  		log:info("Signin successful")
-			else
-				log:info("Signin failed: "..util.dump(msg))
-			end
+		log:info(MOD_ABBR, "  attempting signin")
+		local success,msg = Signin.signin()
+		if success then
+	  		log:info(MOD_ABBR, "Signin successful")
+		else
+			log:warning(MOD_ABBR, "Signin failed: "..util.dump(msg))
 		end
 	elseif rq:getRequestMethod() ~= 'CMDLINE' or confDefaults.DEBUG_API then
-	--	log:info("received request of type " .. rq:getRequestMethod() .. " for " .. (rq:getRequestedApiModule() or "<unknown>")
-	--			.. "/" .. (rq:getRealApiFunctionName() or "<unknown>") .. " with arguments: " .. util.dump(rq:getAll()))
-		log:info("received request of type " .. rq:getRequestMethod() .. " for " .. (rq:getRequestedApiModule() or "<unknown>")
-				.. "/" .. (rq:getRealApiFunctionName() or "<unknown>"))
+		-- Note: the commented log message will print too many data if it's for instance dumping a gcode add request
+		--logMessage = "received request of type " .. rq:getRequestMethod() .. " for " .. (rq:getRequestedApiModule() or "<unknown>")
+		--		.. "/" .. (rq:getRealApiFunctionName() or "<unknown>") .. " with arguments: " .. util.dump(rq:getAll())
+		logMessage = rq:getRequestMethod() .. " request for " .. (rq:getRequestedApiModule() or "<unknown>")
+				.. "/" .. (rq:getRealApiFunctionName() or "<unknown>")
 		if rq:getRequestMethod() ~= 'CMDLINE' then
-			log:info("remote IP/port: " .. rq:getRemoteHost() .. "/" .. rq:getRemotePort())
-			--log:debug("user agent: " .. rq:getUserAgent())
+			logMessage = logMessage .. " (remote IP/port: " .. rq:getRemoteHost() .. "/" .. rq:getRemotePort() .. ")"
+			--logMessage = logMessage .. " (user agent: " .. rq:getUserAgent() .. ")"
 		end
+		log:info(MOD_ABBR, logMessage)
 
 		local response, err = rq:handle()
 
-		if err ~= nil then log:error(err) end
+		if err ~= nil then log:error(MOD_ABBR, err) end
 		response:send()
-
-    	response:executePostResponseQueue()
+		response:executePostResponseQueue()
 	else
-		log:info("Nothing to do...bye.\n")
+		log:info(MOD_ABBR, "Nothing to do...bye.\n")
 	end
 end
 
@@ -278,6 +283,22 @@ end
 -- @tparam table env The CGI environment table.
 -- @treturn number A Z+ return value suitable to return from wrapper script. Note that this value is ignored by uhttpd-mod-lua.
 function handle_request(env)
+	local function constructDebugText()
+		local dbgText = ""
+		if confDefaults.DEBUG_API and confDefaults.DEBUG_PCALLS then dbgText = "pcall+api"
+		elseif confDefaults.DEBUG_API then dbgText = "api"
+		elseif confDefaults.DEBUG_PCALL then dbgText = "pcall"
+		end
+		if dbgText ~= "" then dbgText = " (" .. dbgText .. " debugging)" end
+		return dbgText
+	end
+
+	setupLogger()
+
+	local pid = osUtils.getPID()
+	local beginSecs, beginUSecs = osUtils.getTime()
+
+	log:verbose(MOD_ABBR, "START-RQ with PID=" .. pid .. constructDebugText())
 	local s, msg = init(env)
 
 	if s == false then
@@ -286,11 +307,13 @@ function handle_request(env)
 
 		resp:setError("initialization failed" .. errSuffix)
 		resp:send()
-		log:error("initialization failed" .. errSuffix) --NOTE: this assumes the logger has been initialized properly, despite init() having failed
+		log:error(MOD_ABBR, "Initialization failed" .. errSuffix)
 
 		return 1
 	else
 		main(env)
+		local elapsed,msg = osUtils.getElapsedTime(beginSecs, beginUSecs)
+		log:bulk(MOD_ABBR, "END-RQ with PID=" .. pid .. " completed in " .. elapsed .. " msec")
 		return 0
 	end
 end

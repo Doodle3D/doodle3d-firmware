@@ -129,9 +129,15 @@ local function quit(ev)
 end
 
 local function md5sum(file)
+	-- try OS X specific md5 utility
 	local rv,_,sum = pl.utils.executeex('md5 -q "' .. file .. '"')
-
-	return rv and sum:sub(1, -2) or nil
+	if rv then
+		return rv and sum:sub(1, -2) or nil
+	end
+	-- try Linux md5sum utility
+	local rv,_,output = pl.utils.executeex('md5sum "' .. file .. '"')
+	local md5 = string.match(output, "[^%s]+")
+	return md5
 end
 
 local function getYesNo(question)

@@ -16,6 +16,8 @@ local signin = require('network.signin')
 local accessManager = require('util.access')
 local printerAPI = require('rest.api.api_printer')
 
+local MOD_ABBR = "ANET"
+
 local M = {
 	isApi = true
 }
@@ -149,9 +151,9 @@ function M.associate_POST(request, response)
 
 	local rv,msg = netconf.associateSsid(argSsid, argPhrase, argRecreate)
 	if rv then
-		log:info("associated to wifi: "..utils.dump(argSsid))
+		log:info(MOD_ABBR, "associated to wifi: "..utils.dump(argSsid))
 	else
-		log:info("failed to associate to wifi: "..utils.dump(argSsid).." ("..utils.dump(msg)..")")
+		log:info(MOD_ABBR, "failed to associate to wifi: "..utils.dump(argSsid).." ("..utils.dump(msg)..")")
 	end
 
 end
@@ -201,14 +203,13 @@ function M.remove_POST(request, response)
 end
 
 function M.signin(request, response)
-	log:info("API:Network:signin")
 	local success, output = signin.signin()
 	if success then
-  		log:info("API:Network:signed in")
+  		log:info(MOD_ABBR, "signed in")
   		response:setSuccess("API:Network:signed in")
   		response:addData("response", output)
 	else
-		log:info("API:Network:Signing in failed")
+		log:warning(MOD_ABBR, "signing in failed")
 		response:setError("Signing in failed")
 	end
 end

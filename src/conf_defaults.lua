@@ -36,6 +36,8 @@ M.DEBUG_PCALLS = false
 
 --- This constant enables debugging of the REST API from the command-line by emulating GET/POST requests.
 -- Specify the path and optionally the request method as follows: `d3dapi p=/mod/func r=POST`.
+-- Note that the command-line script redirects the output streams to '/tmp/wifibox.stdout.log',
+-- meaning that any stack traces can be found there.
 M.DEBUG_API = true
 
 --- If enabled, REST responses will contain 'module' and 'function' keys describing what was requested.
@@ -131,6 +133,7 @@ M.printer_dimensions_x = {
 	default_colido_2_0_plus = 230,
 	default_colido_x3045 = 300,
 	default_colido_compact = 130,
+	default_craftbot_plus = 250,
 	subSection = 'printer_type',
 	type = 'int',
 	description = '',
@@ -182,6 +185,7 @@ M.printer_heatedbed = {
 	default_colido_2_0_plus = true,
 	default_colido_m2020 = true,
 	default_colido_x3045 = true,
+	default_craftbot_plus = true,
 	subSection = 'printer_type',
 	type = 'bool',
 	description = 'Printer has heated bed',
@@ -190,6 +194,7 @@ M.printer_filamentThickness = {
 	default = 2.89,
 	default_doodle_dream = 1.75,
 	default_wanhao_duplicator4 = 1.75,
+	default_craftbot_plus = 1.75,
 	type = 'float',
 	description = '',
 	min = 0.0,
@@ -217,7 +222,7 @@ M.printer_startcode = {
 	description = ''
 }
 
-local default_makerbot_endcode = 'M73 P100\nG92 A0 B0 ;reset extruder position to prevent retraction\nM18 A B(Turn off A and B Steppers)\nG162 Z F900\nG162 X Y F2000\nM18 X Y Z(Turn off steppers after a build)\n{if heatedBed}M140 S{preheatBedTemp} T0\nM104 S{preheatTemp} T0\nM73 P100 (end  build progress )\nM72 P1  ( Play Ta-Da song )\nM137 (build end notification)'
+local default_makerbot_endcode = 'G92 A0 B0 ;reset extruder position to prevent retraction\nM18 A B(Turn off A and B Steppers)\nG162 Z F900\nG162 X Y F2000\nM18 X Y Z(Turn off steppers after a build)\n{if heatedBed}M140 S{preheatBedTemp} T0\nM104 S{preheatTemp} T0\nM72 P1  ( Play Ta-Da song )\nM137 (build end notification)'
 local default_deltabot_endcode = 'M107 ;fan offG91 ;relative positioningG1 E-1 F300 ;retract the filament a bit before lifting the nozzle, to release some of the pressureG1 Z+0.5 E-5 X-20 Y-20 F9000 ;move Z up a bit and retract filament even moreG28 ;move to homeM84 ;disable axes / steppersG90 ;absolute positioningM109 S0 ; hot end off{if heatedBed}M140 S{preheatBedTemp}M117 Done                 ;display message (20 characters to clear whole screen)'
 local default_ultimaker2_endcode = 'M107 ;fan off\nG91 ;relative positioning\nG1 E-1 F300 ;retract the filament a bit before lifting the nozzle, to release some of the pressure\nG1 Z+5.5 E-5 X-20 Y-20 F9000 ;move Z up a bit and retract filament even more\nG28 ;home the printer\nM84 ;disable axes / steppers\nG90 ;absolute positioning\nM104 S{preheatTemp}\n{if heatedBed}M140 S{preheatBedTemp}\nM117 Done                 ;display message (20 characters to clear whole screen)'
 M.printer_endcode = {
@@ -233,6 +238,7 @@ M.printer_endcode = {
 	default_delta_rostockmax = default_deltabot_endcode,
 	default_deltamaker = default_deltabot_endcode,
 	default_kossel = default_deltabot_endcode,
+	default_craftbot_plus = 'M107 ;fan off\nG91 ;relative positioning\nG1 E-1 F300 ;retract the filament a bit before lifting the nozzle, to release some of the pressure\nG1 Z+0.5 E-5 X-20 Y-20 F9000 ;move Z up a bit and retract filament even more\nG28 X0 Y0 ;move X/Y to min endstops, so the head is out of the way\nM84 ;disable axes / steppers\nG90 ;absolute positioning\nM109 S{preheatTemp}\n{if heatedBed}M140 S{preheatBedTemp}\nM117 Done                 ;display message (20 characters to clear whole screen)',
 	type = 'string',
 	subSection = 'printer_type',
 	description = ''

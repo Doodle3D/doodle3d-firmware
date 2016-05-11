@@ -1,13 +1,20 @@
 Changelog
-# 0.10.10-e (21 api 2016)
+# 0.10.10 (11 may 2016)
+- Logging client version info to console.  
+- Logging less when printing to makerbot/wanhao
+- Logging API time info
+- Included version number file in logfiles
+- Fixed stopping while sending
+
+# 0.10.10-e (21 apr 2016)
 - Fixed Makerbot end gcode that prevented prints or stopping prints to finish.
 
-# 0.10.10-d (20 api 2016)
+# 0.10.10-d (20 apr 2016)
 - Allow print part sequence numbers to be retrieved
 - Sequence numbers are send back when sending print parts
 - When WiFi-Box responds that print part was already received the client will send the next part.
 
-# 0.10.10-c (1 api 2016)
+# 0.10.10-c (1 apr 2016)
 - Quicker log rotation
 
 # 0.10.10-b (21 mrt 2016)

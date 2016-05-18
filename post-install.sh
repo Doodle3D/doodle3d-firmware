@@ -123,6 +123,9 @@ else
 
 	uci set uhttpd.main.lua_handler='/usr/share/lua/wifibox/main.lua'
 	uci set uhttpd.main.lua_prefix='/d3dapi'
+	uci set uhttpd.main.max_requests='10'
+	uci set uhttpd.main.max_connections='15'
+
 
 	uci set wireless.@wifi-device[0].disabled=0
 	uci delete wireless.radio0.channel

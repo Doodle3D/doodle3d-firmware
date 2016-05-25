@@ -99,7 +99,7 @@ if [ -z "$IPKG_INSTROOT" ]; then
 	echo "Adding network interface 'wlan'..."
 	uci set network.wlan=interface
 	uci commit network; /etc/init.d/network reload
-	
+
 	echo "Setting default wifibox log level..."
 	uci set wifibox.general.system_log_level='info'
 	uci -q delete wifibox.system.loglevel  # remove key used in older versions (<=0.10.8a) if it exists
@@ -121,11 +121,10 @@ else
 	uci set network.lan.ipaddr=192.168.5.1
 	echo -e "beta\nbeta" | passwd root
 
+	# uhttpd config: https://wiki.openwrt.org/doc/uci/uhttpd#server_settings
 	uci set uhttpd.main.lua_handler='/usr/share/lua/wifibox/main.lua'
 	uci set uhttpd.main.lua_prefix='/d3dapi'
 	uci set uhttpd.main.max_requests='10'
-	uci set uhttpd.main.max_connections='15'
-
 
 	uci set wireless.@wifi-device[0].disabled=0
 	uci delete wireless.radio0.channel

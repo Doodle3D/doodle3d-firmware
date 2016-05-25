@@ -154,6 +154,11 @@ function M.associate_POST(request, response)
 		log:info(MOD_ABBR, "associated to wifi: "..utils.dump(argSsid))
 	else
 		log:info(MOD_ABBR, "failed to associate to wifi: "..utils.dump(argSsid).." ("..utils.dump(msg)..")")
+		wifi.removeConfig(argSsid)
+		local backupssid = wifi.getSubstitutedSsid(settings.get('network.ap.ssid'))
+		netconf.setupAccessPoint(backupssid)
+		netconf.enableAccessPoint(backupssid)
+		wifi.removeConfig(argSsid)
 	end
 
 end

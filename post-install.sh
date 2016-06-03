@@ -144,6 +144,7 @@ else
 		# Note: `crontab -l` will throw an error to stderr because the file does not exist, but that does not matter
 		(crontab -l 2> /dev/null; echo "$LOGROTATE_CRON_LINE" ) | crontab -
 	fi
+	d3dapi p=/info r=GET | grep -o -E '"wifiboxid":"(\w*-*[0-9A-Fa-f]*)"' -  | cut -d':' -f2 | cut -d'"' -f2 >> /etc/banner
 
 	exit 0
 EOM

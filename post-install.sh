@@ -61,6 +61,7 @@ if [ $? -gt 0 ]; then
 		alias encore='ulimit -c unlimited'
 		alias wopkg='opkg -f /usr/share/lua/wifibox/opkg.conf'
 
+		# Convenience aliases for the loglite script (separate package)
 		alias tailfw='loglite /tmp/wifibox.log firmware'
 		tailp3d() {
 		  logfile=/tmp/print3d-ttyACM0.log

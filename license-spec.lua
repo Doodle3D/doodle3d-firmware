@@ -1,6 +1,6 @@
 local M = {
 	BASE_PATH = 'src',
-	EXCLUDE_FILES = { 'src/util/JSON.lua', 'src/util/urlcode.lua', 'src/script/loglite%-filters.lua' },
+	EXCLUDE_FILES = { 'src/util/JSON.lua', 'src/util/urlcode.lua' },
 	PROCESS_FILES = {
 		['src/[^/]*%.lua'] = 'lua',
 		['src/network/[^/]*%.lua'] = 'lua',

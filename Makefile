@@ -62,7 +62,7 @@ define Build/Configure
 #	no configuration necessary
 endef
 
-define Build/Compile directives
+define Build/Compile
 #	no compilation necessary (although possible with luac?)
 endef
 

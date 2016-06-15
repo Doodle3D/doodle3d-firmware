@@ -1,5 +1,6 @@
 Changelog
 
+# 0.10.11
 # 0.10.11-a (25 may 2016)
 - After pressing the reset button for about 4 seconds the WiFi-Box will go to access point mode. Useful for when you can't reach it.
 - Becomes access point when it can't connect to WiFi network. 

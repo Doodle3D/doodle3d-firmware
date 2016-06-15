@@ -101,6 +101,10 @@ define Package/wifibox/install
 	#$(INSTALL_DIR) $(1)/www
 	$(INSTALL_DIR) $(1)/www/cgi-bin
 	
+	#copy wps button script to procd folder
+	$(INSTALL_DIR) $(1)/etc/rc.button/
+	$(INSTALL_BIN) $(WIFIBOX_BASE_DIR)/script/wifi-switch-netconfig.sh $(1)/etc/rc.button/wps
+	
 ### create all files in /usr/share/lua/autowifi (autowifi)
 	
 	$(CP) $(WIFIBOX_BASE_DIR)/opkg.conf $(1)/$(TGT_LUA_DIR_SUFFIX)/
@@ -118,6 +122,7 @@ define Package/wifibox/install
 	$(INSTALL_BIN) $(WIFIBOX_BASE_DIR)/script/wifibox_init $(1)/etc/init.d/wifibox
 	$(INSTALL_BIN) $(WIFIBOX_BASE_DIR)/script/dhcpcheck_init $(1)/etc/init.d/dhcpcheck
 	$(INSTALL_BIN) $(WIFIBOX_BASE_DIR)/script/d3dapi $(1)/$(TGT_LUA_DIR_SUFFIX)/script
+	$(LN) -s /$(TGT_LUA_DIR_SUFFIX)/script/d3dapi $(1)/bin/d3dapi
 	$(INSTALL_BIN) $(WIFIBOX_BASE_DIR)/script/signin.sh $(1)/$(TGT_LUA_DIR_SUFFIX)/script
 	$(CP) $(WIFIBOX_BASE_DIR)/script/logrotate-wifibox.conf $(1)/etc/logrotate.d/wifibox.conf
 	

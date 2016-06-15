@@ -1,4 +1,14 @@
 Changelog
+
+# 0.10.11
+# 0.10.11-a (25 may 2016)
+- After pressing the reset button for about 4 seconds the WiFi-Box will go to access point mode. Useful for when you can't reach it.
+- Becomes access point when it can't connect to WiFi network. 
+- Handles more clients by tweaking the uhttpd config.
+- Print3D isn't killed when there is no memory available.
+- New banner (shown after ssh login)
+- Ultimaker 2 type printers show status information on display.
+
 # 0.10.10 (11 may 2016)
 - Logging client version info to console.  
 - Logging less when printing to makerbot/wanhao

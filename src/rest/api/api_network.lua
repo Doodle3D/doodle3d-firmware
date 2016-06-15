@@ -154,6 +154,11 @@ function M.associate_POST(request, response)
 		log:info(MOD_ABBR, "associated to wifi: "..utils.dump(argSsid))
 	else
 		log:info(MOD_ABBR, "failed to associate to wifi: "..utils.dump(argSsid).." ("..utils.dump(msg)..")")
+		wifi.removeConfig(argSsid)
+		local backupssid = wifi.getSubstitutedSsid(settings.get('network.ap.ssid'))
+		netconf.setupAccessPoint(backupssid)
+		netconf.enableAccessPoint(backupssid)
+		wifi.removeConfig(argSsid)
 	end
 
 end
@@ -216,6 +221,19 @@ end
 
 function M.alive(request, response)
 	response:setSuccess("alive")
+end
+
+function M.reset_POST(request, response)
+	response:setSuccess("Resetting networks")
+
+	log:info(MOD_ABBR, "Resetting networks")
+	for _, net in ipairs(wifi.getConfigs()) do
+		wifi.removeConfig(net.ssid)
+	end
+
+	local ssid = wifi.getSubstitutedSsid(settings.get('network.ap.ssid'))
+	netconf.setupAccessPoint(ssid)
+	netconf.enableAccessPoint(ssid)
 end
 
 return M

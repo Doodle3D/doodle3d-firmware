@@ -1,4 +1,7 @@
 Changelog
+# 0.10.12-b (12 jan 2017)
+- Post install update to config for changes in 0.10.10 (fixes print3d logging)
+
 # 0.10.12-a (26 jul 2016)
 - Added Ultimaker Original Plus (Thanks Remco)
 - Added extra usb drivers

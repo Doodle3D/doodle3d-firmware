@@ -1,9 +1,16 @@
 Changelog
+# 0.10.12
+# 0.10.12-b (12 jan 2017)
+- Post install update to config for changes in 0.10.10 (fixes print3d logging)
+
+# 0.10.12-a (26 jul 2016)
+- Added Ultimaker Original Plus (Thanks Remco)
+- Added extra usb drivers
 
 # 0.10.11
 # 0.10.11-a (25 may 2016)
 - After pressing the reset button for about 4 seconds the WiFi-Box will go to access point mode. Useful for when you can't reach it.
-- Becomes access point when it can't connect to WiFi network. 
+- Becomes access point when it can't connect to WiFi network.
 - Handles more clients by tweaking the uhttpd config.
 - Print3D isn't killed when there is no memory available.
 - New banner (shown after ssh login)

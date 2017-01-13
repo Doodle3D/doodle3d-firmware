@@ -17,6 +17,7 @@ local SUPPORTED_PRINTERS = {
 	ultimaker = "Ultimaker",
 	ultimaker2 = "Ultimaker 2",
 	ultimaker2go = "Ultimaker 2 Go",
+	ultimaker_original_plus = "Ultimaker Original Plus",
 	makerbot_replicator2 = "MakerBot Replicator2",
 	makerbot_replicator2x = "MakerBot Replicator2x",
 	makerbot_thingomatic = "MakerBot Thing-o-matic",

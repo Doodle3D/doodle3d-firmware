@@ -138,6 +138,11 @@ else
 	uci set wifibox.general.system_log_level='info'
 	uci -q delete wifibox.system.loglevel  # remove key used in older versions (<=0.10.8a) if it exists
 
+	# update wifibox's config for config changes in 0.10.10
+	uci set wifibox.system.log_path='/tmp'
+	uci set wifibox.system.api_log_filename='wifibox.log'
+	uci set wifibox.system.p3d_log_basename='print3d'
+
 	crontab -l 2> /dev/null | grep logrotate\.conf > /dev/null
 	if [ $? -ne 0 ]; then
 		# add line, method from http://askubuntu.com/a/58582

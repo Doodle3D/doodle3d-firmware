@@ -1,4 +1,5 @@
 Changelog
+# 0.10.12
 # 0.10.12-b (12 jan 2017)
 - Post install update to config for changes in 0.10.10 (fixes print3d logging)
 

@@ -10,7 +10,9 @@ local remote = arg[2]
 
 local finished = false
 
-local info = JSON:decode(io.popen("wget -qO - " .. remote .. "/info/"):read("*a"))
+local id = arg[3]
+
+local info = JSON:decode(io.popen("wget -qO - " .. remote .. "/info/" .. id):read("*a"))
 
 local current_line = 0
 local total_lines = tonumber(info["lines"])
@@ -18,7 +20,7 @@ local started = false
 
 while(not finished)
 do
-    local f = io.popen("wget -qO - " .. remote .. "/fetch/" .. current_line)
+    local f = io.popen("wget -qO - " .. remote .. "/fetch/" .. id .. "/" .. current_line)
     local line = f:read()
     while line ~= nil do
         printer:appendGcode(line)

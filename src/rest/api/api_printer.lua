@@ -190,7 +190,8 @@ function M.fetch_POST(request, response)
 	if not printer or not printer:hasSocket() then return end
 
 	local socket = printer:getId()
-	io.popen("print-fetch.lua " .. socket)
+	local remote = settings.get('gcode_server')
+	io.popen("print-fetch.lua " .. socket .. " " .. remote)
 end
 
 --requires: gcode(string) (the gcode to be appended)

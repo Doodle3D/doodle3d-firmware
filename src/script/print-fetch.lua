@@ -6,7 +6,7 @@ local p3d = require("print3d")
 
 local printer = p3d.getPrinter(arg[1])
 
-local remote = "10.0.0.212:8080"
+local remote = arg[2]
 
 local finished = false
 

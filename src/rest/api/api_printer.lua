@@ -185,6 +185,14 @@ local function addSequenceNumbering(printer, response)
 	end
 end
 
+function M.fetch_POST(request, response)
+	local printer,msg = printerUtils.createPrinterOrFail(argId, response)
+	if not printer or not printer:hasSocket() then return end
+
+	local socket = printer:getId()
+	io.popen("print-fetch.lua " .. socket)
+end
+
 --requires: gcode(string) (the gcode to be appended)
 --accepts: id(string) (the printer ID to append to)
 --accepts: clear(bool) (chunks will be concatenated but output file will be cleared first if this argument is true)

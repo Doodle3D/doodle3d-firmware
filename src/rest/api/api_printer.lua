@@ -193,6 +193,7 @@ function M.fetch_POST(request, response)
 	local remote = settings.get('gcode_server')
 	local id = request:get("id")
 	io.popen("print-fetch.lua " .. socket .. " " .. remote .. " " .. id)
+	response:setSuccess()
 end
 
 --requires: gcode(string) (the gcode to be appended)

@@ -216,10 +216,23 @@ function M.fetch_POST(request, response)
 		return
 	end
 
+	local gcodeFiles = " "
+	local startCode = request:get("start_code")
+	if startCode != nil then
+		gcodeFiles = gcodeFiles .. '/tmp/startcode '
+		io.open('/tmp/startcode', 'w+').write(startCode)
+	end
+
+	local endCode = request:get("end_code")
+	if endCode != nil then
+		gcodeFiles = gcodeFiles .. '/tmp/endcode '
+		io.open('/tmp/endcode', 'w+').write(endCode)
+	end
+
 	local socket = printer:getId()
 	local remote = settings.get('gcode_server')
 	local id = request:get("id")
-	io.popen("print-fetch " .. socket .. " " .. remote .. " " .. id)
+	io.popen("print-fetch " .. socket .. " " .. remote .. " " .. id .. gcodeFiles)
 	response:setSuccess()
 end
 

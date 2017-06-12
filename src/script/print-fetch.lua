@@ -44,7 +44,7 @@ do
         current_line = current_line + 1
         line = f:read()
     end
-    if current_line > total_lines then
+    if current_line >= total_lines then
         finished = true
         break
     end
@@ -60,8 +60,6 @@ do
     while (not accepts_new_gcode)
     do
 	local current,buffer,total,bufferSize,maxBufferSize = printer:getProgress()
-
-	print("current: " .. current .. " total:" .. total .. " buffer: " .. buffer .. " bufferSize: " .. bufferSize .. " maxBufferSize: " .. maxBufferSize)
 	local percentageBufferSize = bufferSize / maxBufferSize
 
         if percentageBufferSize < 0.8 then

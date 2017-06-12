@@ -1,4 +1,17 @@
 #!/usr/bin/lua
+
+local function log(message)
+    os.execute("logger" .. message)
+    print(message)
+end
+
+if (table.getn(arg) == 0) then
+    print("Usage: ./print-fetch {printerSocket} {remoteURL} {id}")
+    return
+end
+
+log("starting gcode fetch program")
+
 package.cpath = package.cpath .. '/usr/lib/lua/?.so'
 JSON = (loadfile "/usr/share/lua/wifibox/util/JSON.lua")()
 
@@ -12,18 +25,22 @@ local finished = false
 
 local id = arg[3]
 
+log("gcode file id: " .. id)
+
 local info = JSON:decode(io.popen("wget -qO - " .. remote .. "/info/" .. id):read("*a"))
 
 local current_line = 0
 local total_lines = tonumber(info["lines"])
 local started = false
 
+log("total lines: " .. total_lines)
+
 while(not finished)
 do
     local f = io.popen("wget -qO - " .. remote .. "/fetch/" .. id .. "/" .. current_line)
     local line = f:read()
     while line ~= nil do
-        printer:appendGcode(line)
+        printer:appendGcode(line, total_lines)
         current_line = current_line + 1
         line = f:read()
     end

@@ -189,10 +189,37 @@ function M.fetch_POST(request, response)
 	local printer,msg = printerUtils.createPrinterOrFail(argId, response)
 	if not printer or not printer:hasSocket() then return end
 
+	local controllerIP = accessManager.getController()
+	local hasControl = false
+	if controllerIP == "" then
+		accessManager.setController(request.remoteAddress)
+		hasControl = true
+	elseif controllerIP == request.remoteAddress then
+		hasControl = true
+	end
+
+	if not hasControl then
+		response:setFail("No control access")
+		return
+	end
+
+
+	log:verbose(MOD_ABBR, "  clearing all gcode for " .. printer:getId())
+	response:addData('gcode_clear',true)
+	local rv,msg = printer:clearGcode()
+
+	if rv == false then
+		response:addData('status', msg)
+		response:setFail("could not clear gcode (" .. msg .. ")")
+	elseif rv == nil then
+		response:setError(msg)
+		return
+	end
+
 	local socket = printer:getId()
 	local remote = settings.get('gcode_server')
 	local id = request:get("id")
-	io.popen("print-fetch.lua " .. socket .. " " .. remote .. " " .. id)
+	io.popen("print-fetch " .. socket .. " " .. remote .. " " .. id)
 	response:setSuccess()
 end
 

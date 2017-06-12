@@ -6,7 +6,7 @@ local function log(message)
 end
 
 if (table.getn(arg) == 0) then
-    print("Usage: ./print-fetch {printerSocket} {remoteURL} {id}")
+    print("Usage: ./print-fetch {printerSocket} {remoteURL} {id} [startGcode] [endGCode]")
     return
 end
 
@@ -35,6 +35,26 @@ local started = false
 
 log("total lines: " .. total_lines)
 
+local startCode = ''
+local endCode = ''
+
+function countlines(file)
+    return tonumber(io.popen("wc -l < " .. file):read('*a'))
+end
+
+function readGCodeArg(argi)
+    local gcodeFile = arg[argi]
+    total_lines = total_lines + countlines(gcodeFile)
+    return io.open(gcodeFile):read('*a')
+end
+
+if table.getn(arg) >= 5 then
+    startCode = readGCodeArg(4)
+    endCode = readGCodeArg(5)
+end
+
+printer:appendGcode(startCode)
+
 while(not finished)
 do
     local f = io.popen("wget -qO - " .. remote .. "/fetch/" .. id .. "/" .. current_line)
@@ -45,6 +65,7 @@ do
         line = f:read()
     end
     if current_line >= total_lines then
+        printer:appendGcode(endCode)
         finished = true
         break
     end

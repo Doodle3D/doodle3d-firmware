@@ -18,6 +18,10 @@ JSON = (loadfile "/usr/share/lua/wifibox/util/JSON.lua")()
 local p3d = require("print3d")
 
 local printer = p3d.getPrinter(arg[1])
+if printer == nil then
+    log("error connecting to printer")
+    return
+end
 
 local remote = arg[2]
 
@@ -26,6 +30,7 @@ local finished = false
 local id = arg[3]
 
 log("gcode file id: " .. id)
+log("gcode server: " .. remote)
 
 local info = JSON:decode(io.popen("wget -qO - " .. remote .. "/info/" .. id):read("*a"))
 
@@ -63,7 +68,7 @@ do
     local f = io.popen("wget -qO - " .. remote .. "/fetch/" .. id .. "/" .. current_line)
     local line = f:read()
     while line ~= nil do
-        printer:appendGcode(line, total_lines)
+        printer:appendGcode(line)
         current_line = current_line + 1
         line = f:read()
     end

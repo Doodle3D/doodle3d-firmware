@@ -218,13 +218,13 @@ function M.fetch_POST(request, response)
 
 	local gcodeFiles = " "
 	local startCode = request:get("start_code")
-	if startCode != nil then
+	if not startCode then
 		gcodeFiles = gcodeFiles .. '/tmp/startcode '
 		io.open('/tmp/startcode', 'w+').write(startCode)
 	end
 
 	local endCode = request:get("end_code")
-	if endCode != nil then
+	if not endCode then
 		gcodeFiles = gcodeFiles .. '/tmp/endcode '
 		io.open('/tmp/endcode', 'w+').write(endCode)
 	end

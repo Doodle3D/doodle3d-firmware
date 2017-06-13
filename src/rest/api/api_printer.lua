@@ -230,7 +230,7 @@ function M.fetch_POST(request, response)
 	end
 
 	local socket = printer:getId()
-	local remote = settings.get('gcode_server')
+	local remote = settings.get('gcode.server')
 	local id = request:get("id")
 	io.popen("print-fetch " .. socket .. " " .. remote .. " " .. id .. gcodeFiles)
 	response:setSuccess()

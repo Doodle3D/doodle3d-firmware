@@ -218,20 +218,32 @@ function M.fetch_POST(request, response)
 
 	local gcodeFiles = " "
 	local startCode = request:get("start_code")
-	if not startCode then
+	if startCode ~= nil then
 		gcodeFiles = gcodeFiles .. '/tmp/startcode '
 		io.open('/tmp/startcode', 'w+').write(startCode)
 	end
 
 	local endCode = request:get("end_code")
-	if not endCode then
+	if endCode ~= nil then
 		gcodeFiles = gcodeFiles .. '/tmp/endcode '
 		io.open('/tmp/endcode', 'w+').write(endCode)
 	end
 
 	local socket = printer:getId()
+	if socket == nil then
+		response:setError("no socket found")
+		return
+	end
 	local remote = settings.get('gcode.server')
+	if remote == nil then
+		response:setError("no gcode server configured")
+		return
+	end
 	local id = request:get("id")
+	if id == nil then
+		response:setError("no id supplied")
+		return
+	end
 	io.popen("print-fetch " .. socket .. " " .. remote .. " " .. id .. gcodeFiles)
 	response:setSuccess()
 end

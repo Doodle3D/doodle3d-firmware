@@ -1,7 +1,7 @@
 #!/usr/bin/lua
 
 local function log(message)
-    os.execute("logger" .. message)
+    os.execute("logger " .. message)
     print(message)
 end
 
@@ -35,8 +35,8 @@ local started = false
 
 log("total lines: " .. total_lines)
 
-local startCode = ''
-local endCode = ''
+local startCode = nil
+local endCode = nil
 
 function countlines(file)
     return tonumber(io.popen("wc -l < " .. file):read('*a'))
@@ -53,7 +53,10 @@ if table.getn(arg) >= 5 then
     endCode = readGCodeArg(5)
 end
 
-printer:appendGcode(startCode)
+if startCode ~= nil then
+    log("appending start gcode")
+    printer:appendGcode(startCode)
+end
 
 while(not finished)
 do
@@ -64,17 +67,23 @@ do
         current_line = current_line + 1
         line = f:read()
     end
-    if current_line >= total_lines then
-        printer:appendGcode(endCode)
-        finished = true
-        break
-    end
 
     if not started then
 	started = true
 	print("send print start command")
         printer:startPrint()
     end
+
+    if current_line >= total_lines then
+        log("finished fetching gcode")
+        if endCode ~= nil then
+            log("appending end gcode")
+            printer:appendGcode(endCode)
+        end
+        finished = true
+        break
+    end
+
 
     local accepts_new_gcode = false
 

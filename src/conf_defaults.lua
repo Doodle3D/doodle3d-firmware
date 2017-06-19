@@ -419,7 +419,7 @@ M.doodle3d_update_baseUrl = {
 }
 
 M.gcode_server = {
-	default = 'http://tranquil-meadow-94621.herokuapp.com/',
+	default = 'http://gcodeserver.doodle3d.com',
 	type = 'string',
 	description =''
 }

@@ -126,6 +126,10 @@ define Package/wifibox/install
 	$(INSTALL_BIN) $(WIFIBOX_BASE_DIR)/script/signin.sh $(1)/$(TGT_LUA_DIR_SUFFIX)/script
 	$(CP) $(WIFIBOX_BASE_DIR)/script/logrotate-wifibox.conf $(1)/etc/logrotate.d/wifibox.conf
 	
+
+	$(INSTALL_BIN) $(WIFIBOX_BASE_DIR)/script/print-fetch.lua $(1)/$(TGT_LUA_DIR_SUFFIX)/script
+	$(LN) -s /$(TGT_LUA_DIR_SUFFIX)/script/print-fetch.lua $(1)/bin/print-fetch
+	
 	$(CP) $(WIFIBOX_BASE_DIR)/script/wifibox.uci.config $(1)/etc/config/wifibox  # copy base configuration to uci config dir
 	$(CP) $(WIFIBOX_BASE_DIR)/FIRMWARE-VERSION $(1)/etc/wifibox-version
 

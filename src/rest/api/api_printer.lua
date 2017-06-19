@@ -185,6 +185,69 @@ local function addSequenceNumbering(printer, response)
 	end
 end
 
+function M.fetch_POST(request, response)
+	local printer,msg = printerUtils.createPrinterOrFail(argId, response)
+	if not printer or not printer:hasSocket() then return end
+
+	local controllerIP = accessManager.getController()
+	local hasControl = false
+	if controllerIP == "" then
+		accessManager.setController(request.remoteAddress)
+		hasControl = true
+	elseif controllerIP == request.remoteAddress then
+		hasControl = true
+	end
+
+	if not hasControl then
+		response:setFail("No control access")
+		return
+	end
+
+
+	log:verbose(MOD_ABBR, "  clearing all gcode for " .. printer:getId())
+	response:addData('gcode_clear',true)
+	local rv,msg = printer:clearGcode()
+
+	if rv == false then
+		response:addData('status', msg)
+		response:setFail("could not clear gcode (" .. msg .. ")")
+	elseif rv == nil then
+		response:setError(msg)
+		return
+	end
+
+	local gcodeFiles = " "
+	local startCode = request:get("start_code")
+	if startCode ~= nil then
+		gcodeFiles = gcodeFiles .. '/tmp/startcode '
+		io.open('/tmp/startcode', 'w+').write(startCode)
+	end
+
+	local endCode = request:get("end_code")
+	if endCode ~= nil then
+		gcodeFiles = gcodeFiles .. '/tmp/endcode '
+		io.open('/tmp/endcode', 'w+').write(endCode)
+	end
+
+	local socket = printer:getId()
+	if socket == nil then
+		response:setError("no socket found")
+		return
+	end
+	local remote = settings.get('gcode.server')
+	if remote == nil then
+		response:setError("no gcode server configured")
+		return
+	end
+	local id = request:get("id")
+	if id == nil then
+		response:setError("no id supplied")
+		return
+	end
+	io.popen("print-fetch " .. socket .. " " .. remote .. " " .. id .. gcodeFiles)
+	response:setSuccess()
+end
+
 --requires: gcode(string) (the gcode to be appended)
 --accepts: id(string) (the printer ID to append to)
 --accepts: clear(bool) (chunks will be concatenated but output file will be cleared first if this argument is true)

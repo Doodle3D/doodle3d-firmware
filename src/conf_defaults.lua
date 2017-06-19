@@ -418,4 +418,10 @@ M.doodle3d_update_baseUrl = {
 	description = ''
 }
 
+M.gcode_server = {
+	default = 'http://gcodeserver.doodle3d.com',
+	type = 'string',
+	description =''
+}
+
 return M

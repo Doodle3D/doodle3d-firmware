@@ -1,4 +1,8 @@
 Changelog
+# 0.11.0-a
+- WiFi-Box can now 'fetch' a gcode-file in chunks from a server.
+- Added support for the Renkforce RF100 printer. 
+
 # 0.10.12
 # 0.10.12-b (12 jan 2017)
 - Post install update to config for changes in 0.10.10 (fixes print3d logging)

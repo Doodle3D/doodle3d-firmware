@@ -203,6 +203,12 @@ function M.fetch_POST(request, response)
 		return
 	end
 
+	local state = printer:getState()
+	if state ~= "idle" then
+		response:setError("printer is not idle")
+		return
+	end
+
 
 	log:verbose(MOD_ABBR, "  clearing all gcode for " .. printer:getId())
 	response:addData('gcode_clear',true)

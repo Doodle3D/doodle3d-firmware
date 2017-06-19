@@ -68,7 +68,7 @@ do
     local f = io.popen("wget -qO - " .. remote .. "/fetch/" .. id .. "/" .. current_line)
     local line = f:read()
     while line ~= nil do
-	printer:appendGcode(line, total_lines, { seq_number = -1, seq_total = -1, source = remote })
+	printer:appendGcode(line, total_lines, { seq_number = -1, seq_total = -1, source = id })
         current_line = current_line + 1
         line = f:read()
     end

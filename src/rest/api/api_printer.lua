@@ -161,6 +161,8 @@ function M.stop_POST(request, response)
 	end
 	local rv,msg = printer:stopPrint(argGcode)
 
+	io.popen("killall print-fetch")
+
 	response:addData('id', argId)
 	if rv then
 		response:setSuccess()

@@ -56,7 +56,17 @@ function M.progress(request, response)
 	-- NOTE: despite their names, `currentLine` is still the error indicator and `bufferedLines` the message in such case.
 	local currentLine,bufferedLines,totalLines,bufferSize,maxBufferSize,seqNumber,seqTotal = printer:getProgress()
 
+	local idfile = io.open('/tmp/currentprint')
+	local printId
+	if idfile ~= nil then
+		printId = idfile:read('*a')
+	end
+
+
 	response:addData('id', argId)
+	if printid ~= nil then
+		response:addData('current_print', printid)
+	end
 	if currentLine then
 		response:setSuccess()
 		response:addData('current_line', currentLine)
@@ -253,6 +263,7 @@ function M.fetch_POST(request, response)
 		return
 	end
 	io.popen("print-fetch " .. socket .. " " .. remote .. " " .. id .. gcodeFiles)
+	io.open("/tmp/current-print", 'w+').write(id)
 	response:setSuccess()
 end
 

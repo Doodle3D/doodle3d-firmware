@@ -6,7 +6,7 @@ local function log(message)
 end
 
 if (table.getn(arg) == 0) then
-    print("Usage: ./print-fetch {printerSocket} {remoteURL} {id} [startGcode] [endGCode]")
+    print("Usage: ./print-fetch {printerSocket} {gcodeServerURL} {id} [startGcode] [endGCode]")
     return
 end
 
@@ -23,16 +23,16 @@ if printer == nil then
     return
 end
 
-local remote = arg[2]
+local gcodeServer = arg[2]
 
 local finished = false
 
 local id = arg[3]
 
 log("gcode file id: " .. id)
-log("gcode server: " .. remote)
+log("gcode server: " .. gcodeServer)
 
-local info = JSON:decode(io.popen("wget -qO - " .. remote .. "/info/" .. id):read("*a"))
+local info = JSON:decode(io.popen("wget -qO - " .. gcodeServer .. "/info/" .. id):read("*a"))
 
 local current_line = 0
 local total_lines = tonumber(info["lines"])
@@ -65,7 +65,7 @@ end
 
 while(not finished)
 do
-    local f = io.popen("wget -qO - " .. remote .. "/fetch/" .. id .. "/" .. current_line)
+    local f = io.popen("wget -qO - " .. gcodeServer .. "/fetch/" .. id .. "/" .. current_line)
     local line = f:read()
     while line ~= nil do
 	printer:appendGcode(line, total_lines, { seq_number = -1, seq_total = -1, source = id })

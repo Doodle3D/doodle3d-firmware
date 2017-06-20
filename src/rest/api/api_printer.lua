@@ -252,8 +252,8 @@ function M.fetch_POST(request, response)
 		response:setError("no socket found")
 		return
 	end
-	local remote = settings.get('gcode.server')
-	if remote == nil then
+	local gcodeServer = settings.get('gcode.server')
+	if gcodeServer == nil then
 		response:setError("no gcode server configured")
 		return
 	end
@@ -262,7 +262,8 @@ function M.fetch_POST(request, response)
 		response:setError("no id supplied")
 		return
 	end
-	io.popen("print-fetch " .. socket .. " " .. remote .. " " .. id .. gcodeFiles)
+	io.popen("print-fetch " .. socket .. " " .. gcodeServer .. " " .. id .. gcodeFiles)
+
 	io.open("/tmp/current-print", 'w+').write(id)
 	response:setSuccess()
 end

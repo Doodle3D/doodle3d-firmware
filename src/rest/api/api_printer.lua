@@ -64,8 +64,8 @@ function M.progress(request, response)
 
 
 	response:addData('id', argId)
-	if printid ~= nil then
-		response:addData('current_print', printid)
+	if printId ~= nil then
+		response:addData('current_print', printId)
 	end
 	if currentLine then
 		response:setSuccess()
@@ -172,6 +172,8 @@ function M.stop_POST(request, response)
 	local rv,msg = printer:stopPrint(argGcode)
 
 	io.popen("killall print-fetch")
+	io.popen("rm /tmp/current-print /tmp/startcode /tmp/endcode")
+
 
 	response:addData('id', argId)
 	if rv then
@@ -238,13 +240,24 @@ function M.fetch_POST(request, response)
 	local startCode = request:get("start_code")
 	if startCode ~= nil then
 		gcodeFiles = gcodeFiles .. '/tmp/startcode '
-		io.open('/tmp/startcode', 'w+').write(startCode)
+		local startCodeFile = io.open('/tmp/startcode', 'w+')
+                if startCodeFile == nil then
+                        response:setError("could not open startCode file for writing")
+                        return
+                end
+                startCodeFile:write(startCode)
 	end
 
 	local endCode = request:get("end_code")
 	if endCode ~= nil then
 		gcodeFiles = gcodeFiles .. '/tmp/endcode '
-		io.open('/tmp/endcode', 'w+').write(endCode)
+		local endCodeFile = io.open('/tmp/endcode', 'w+')
+                if endCodeFile == nil then
+                        response:setError("could not open endcode file for writing")
+                        return
+                end
+                endCodeFile:write(endCode)
+
 	end
 
 	local socket = printer:getId()
@@ -262,9 +275,16 @@ function M.fetch_POST(request, response)
 		response:setError("no id supplied")
 		return
 	end
+	local cpfile = io.open("/tmp/current-print", 'w+')
+        if cpfile == nil then
+                response:setError("could not save id")
+                return
+        end
+        cpfile:write(id)
+        cpfile:close()
+
 	io.popen("print-fetch " .. socket .. " " .. gcodeServer .. " " .. id .. gcodeFiles)
 
-	io.open("/tmp/current-print", 'w+').write(id)
 	response:setSuccess()
 end
 

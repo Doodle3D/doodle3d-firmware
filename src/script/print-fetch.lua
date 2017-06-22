@@ -34,6 +34,11 @@ log("gcode server: " .. gcodeServer)
 
 local info = JSON:decode(io.popen("wget -qO - " .. gcodeServer .. "/info/" .. id):read("*a"))
 
+if info == nil then
+    log("could not retrieve file info")
+    return
+end
+
 local current_line = 0
 local total_lines = tonumber(info["lines"])
 local started = false

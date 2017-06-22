@@ -54,7 +54,6 @@ end
 
 function readGCodeArg(argi)
     local gcodeFile = arg[argi]
-    total_lines = total_lines + countlines(gcodeFile)
     return io.open(gcodeFile):read('*a')
 end
 
@@ -88,7 +87,7 @@ do
         log("finished fetching gcode")
         if endCode ~= nil then
             log("appending end gcode")
-            printer:appendGcode(endCode)
+            printer:appendGcode(endCode, total_lines, { seq_number = -1, seq_total = -1, source = id })
         end
         finished = true
         break

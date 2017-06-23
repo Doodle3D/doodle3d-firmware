@@ -334,19 +334,19 @@ M.printer_bottomEnableTraveling = {
 }
 
 M.printer_heatup_enabled = {
-	default = true,
+	default = false,
 	type = 'bool',
 	description = ''
 }
 
 M.printer_heatup_temperature = {
-	default = 180,
+	default = 0,
 	type = 'int',
 	description = ''
 }
 
 M.printer_heatup_bed_temperature = {
-	default = 70,
+	default = 0,
 	type = 'int',
 	description = ''
 }

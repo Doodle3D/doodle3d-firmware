@@ -172,7 +172,7 @@ function M.stop_POST(request, response)
 	local rv,msg = printer:stopPrint(argGcode)
 
 	io.popen("killall print-fetch")
-	io.popen("rm /tmp/current-print /tmp/startcode /tmp/endcode")
+	io.popen("rm /tmp/currentprint /tmp/startcode /tmp/endcode")
 
 
 	response:addData('id', argId)
@@ -275,7 +275,7 @@ function M.fetch_POST(request, response)
 		response:setError("no id supplied")
 		return
 	end
-	local cpfile = io.open("/tmp/current-print", 'w+')
+	local cpfile = io.open("/tmp/currentprint", 'w+')
         if cpfile == nil then
                 response:setError("could not save id")
                 return

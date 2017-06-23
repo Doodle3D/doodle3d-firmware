@@ -1,5 +1,5 @@
 Changelog
-# 0.11.0-a
+# 0.11.0-a (23 jun 2017)
 - Added 'fetch' functionality to let the WiFi-Box print from a remote server. This enables the WiFi-Box to print large g-code files. (yeah!)
 - Added support for the Renkforce RF100 printer.
 - Changed 'default startcode' to prevent Ultimaker 2 series to bump into platform [#21](https://github.com/Doodle3D/WiFi-Box/issues/21) when Ultimaker (original) is selected.

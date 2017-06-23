@@ -262,7 +262,7 @@ M.printer_baudrate = {
 }
 
 M.printer_temperature = {
-	default = 230,
+	default = 210,
 	type = 'int',
 	description = 'printing temperature',
 	min = 0

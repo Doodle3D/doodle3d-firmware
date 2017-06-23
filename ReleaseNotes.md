@@ -1,8 +1,11 @@
 Changelog
 # 0.11.0-a
-- WiFi-Box can now 'fetch' a gcode-file in chunks from a server.
+- Added 'fetch' functionality to let the WiFi-Box print from a remote server. This enables the WiFi-Box to print large g-code files. (yeah!)
 - Added support for the Renkforce RF100 printer.
-- Updated 'default startcode' to prevent Ultimaker 2 series to bump into platform [#21](https://github.com/Doodle3D/WiFi-Box/issues/21) when Ultimaker (original) is selected.
+- Changed 'default startcode' to prevent Ultimaker 2 series to bump into platform [#21](https://github.com/Doodle3D/WiFi-Box/issues/21) when Ultimaker (original) is selected.
+- Changed default nozzle temperature from 230 to 210 &deg;C.
+- Fixed corrupted endcode for delta printers.
+- Changed default endcode to cooldown to 0 after print instead of cooling down to preheat temperature.
 
 # 0.10.12
 # 0.10.12-b (12 jan 2017)

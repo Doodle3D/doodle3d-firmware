@@ -166,13 +166,14 @@ function M.stop_POST(request, response)
 	local printer,msg = printerUtils.createPrinterOrFail(argId, response)
 	if not printer or not printer:hasSocket() then return end
 
+	io.popen("killall print-fetch")
+	io.popen("rm /tmp/current-print /tmp/startcode /tmp/endcode")
+
 	if(argGcode == nil) then
 		argGcode = ""
 	end
 	local rv,msg = printer:stopPrint(argGcode)
 
-	io.popen("killall print-fetch")
-	io.popen("rm /tmp/current-print /tmp/startcode /tmp/endcode")
 
 
 	response:addData('id', argId)

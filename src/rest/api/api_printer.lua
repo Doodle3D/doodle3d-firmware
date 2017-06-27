@@ -56,7 +56,7 @@ function M.progress(request, response)
 	-- NOTE: despite their names, `currentLine` is still the error indicator and `bufferedLines` the message in such case.
 	local currentLine,bufferedLines,totalLines,bufferSize,maxBufferSize,seqNumber,seqTotal = printer:getProgress()
 
-	local idfile = io.open('/tmp/currentprint')
+	local idfile = io.open('/tmp/current-print')
 	local printId
 	if idfile ~= nil then
 		printId = idfile:read('*a')

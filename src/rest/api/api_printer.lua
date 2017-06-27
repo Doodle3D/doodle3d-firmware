@@ -175,7 +175,6 @@ function M.stop_POST(request, response)
 	local rv,msg = printer:stopPrint(argGcode)
 
 
-
 	response:addData('id', argId)
 	if rv then
 		response:setSuccess()

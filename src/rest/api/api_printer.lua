@@ -243,7 +243,7 @@ function M.fetch_POST(request, response)
 
 	local state = printer:getState()
 	if state ~= "idle" then
-		response:setError("printer is not idle")
+		response:setFail("printer is not idle")
 		return
 	end
 

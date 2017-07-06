@@ -224,29 +224,21 @@ local function addSequenceNumbering(printer, response)
 end
 
 function M.fetch_POST(request, response)
-	local printer,msg = printerUtils.createPrinterOrFail(argId, response)
-	if not printer or not printer:hasSocket() then return end
-
-	local controllerIP = accessManager.getController()
-	local hasControl = false
-	if controllerIP == "" then
-		accessManager.setController(request.remoteAddress)
-		hasControl = true
-	elseif controllerIP == request.remoteAddress then
-		hasControl = true
-	end
-
-	if not hasControl then
+	if not accessManager.hasControl(request.remoteAddress) then
 		response:setFail("No control access")
 		return
+	else
+		accessManager.setController(request.remoteAddress)
 	end
+
+	local printer,msg = printerUtils.createPrinterOrFail(argId, response)
+	if not printer or not printer:hasSocket() then return end
 
 	local state = printer:getState()
 	if state ~= "idle" then
 		response:setFail("printer is not idle")
 		return
 	end
-
 
 	log:verbose(MOD_ABBR, "  clearing all gcode for " .. printer:getId())
 	stopFetch()
@@ -281,7 +273,6 @@ function M.fetch_POST(request, response)
                         return
                 end
                 endCodeFile:write(endCode)
-
 	end
 
 	local socket = printer:getId()
@@ -318,20 +309,12 @@ end
 --         a fail with a (formal, i.e., parseable) status argument will be returned;
 --         additionally, current sequence number and total will be returned (both are -1 if they have not been set)
 function M.print_POST(request, response)
-	local controllerIP = accessManager.getController()
-	local hasControl = false
-	if controllerIP == "" then
-		accessManager.setController(request.remoteAddress)
-		hasControl = true
-	elseif controllerIP == request.remoteAddress then
-		hasControl = true
-	end
-
-	if not hasControl then
+	if not accessManager.hasControl(request.remoteAddress) then
 		response:setFail("No control access")
 		return
+	else
+		accessManager.setController(request.remoteAddress)
 	end
-
 	local argId = request:get("id")
 	local argGcode = request:get("gcode")
 	local argClear = utils.toboolean(request:get("clear"))

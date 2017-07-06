@@ -1,4 +1,9 @@
 Changelog
+
+# 0.11.0-b (6 jul 2017)
+- show id of current print in d3dapi/info/status when printing in 'fetch' mode.
+- code reuse and cleanup for control, kill and status
+
 # 0.11.0-a (23 jun 2017)
 - Added 'fetch' functionality to let the WiFi-Box print from a remote server. This enables the WiFi-Box to print large g-code files. (yeah!)
 - Added support for the Renkforce RF100 printer.

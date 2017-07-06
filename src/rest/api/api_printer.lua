@@ -73,6 +73,7 @@ end
 
 local function stopFetch()
         io.popen("killall print-fetch")
+	io.popen("rm /tmp/startcode /tmp/endcode")
 end
 
 function M.progress(request, response)
@@ -190,7 +191,6 @@ function M.stop_POST(request, response)
 	if not printer or not printer:hasSocket() then return end
 
 	stopFetch()
-	io.popen("rm /tmp/startcode /tmp/endcode")
 	setCurrentPrint(nil)
 
 	if(argGcode == nil) then

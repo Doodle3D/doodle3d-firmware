@@ -72,6 +72,7 @@ local function getCurrentPrint()
 end
 
 local function stopFetch()
+	log:verbose(MOD_ABBR, "stopping print-fetch and removing start/endgcode")
         io.popen("killall print-fetch"):close()
 	io.popen("rm /tmp/startcode /tmp/endcode"):close()
 	setCurrentPrint(nil)
@@ -292,6 +293,7 @@ function M.fetch_POST(request, response)
 	end
 	setCurrentPrint(id)
 
+	log:info(MOD_ABBR, "  starting fetch print. id: " .. id .. " server: " .. gcodeServer)
 	io.popen("print-fetch " .. socket .. " " .. gcodeServer .. " " .. id .. gcodeFiles)
 
 	response:setSuccess()

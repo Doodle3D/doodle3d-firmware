@@ -71,6 +71,9 @@ local function getCurrentPrint()
 	end
 end
 
+local function stopFetch()
+        io.popen("killall print-fetch")
+end
 
 function M.progress(request, response)
 	local argId = request:get("id")
@@ -186,7 +189,7 @@ function M.stop_POST(request, response)
 	local printer,msg = printerUtils.createPrinterOrFail(argId, response)
 	if not printer or not printer:hasSocket() then return end
 
-	io.popen("killall print-fetch")
+	stopFetch()
 	io.popen("rm /tmp/startcode /tmp/endcode")
 	setCurrentPrint(nil)
 
@@ -246,7 +249,7 @@ function M.fetch_POST(request, response)
 
 
 	log:verbose(MOD_ABBR, "  clearing all gcode for " .. printer:getId())
-	response:addData('gcode_clear',true)
+	stopFetch()
 	local rv,msg = printer:clearGcode()
 
 	if rv == false then
@@ -343,6 +346,8 @@ function M.print_POST(request, response)
 
 	local printer,msg = printerUtils.createPrinterOrFail(argId, response)
 	if not printer or not printer:hasSocket() then return end
+
+	stopFetch()
 
 	response:addData('id', argId)
 

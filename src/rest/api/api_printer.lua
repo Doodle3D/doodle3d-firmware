@@ -48,6 +48,30 @@ function M.temperature(request, response)
 	end
 end
 
+local function setCurrentPrint(id)
+	local cpfileName = "/tmp/current-print";
+	if id == nil then
+		io.popen('rm ' .. cpfileName)
+		return true
+	end
+
+	local cpfile = io.open(cpfileName, 'w+')
+	if cpfile == nil then
+		return false
+	end
+	cpfile:write(id)
+	cpfile:close()
+	return true
+end
+
+local function getCurrentPrint()
+	local idfile = io.open('/tmp/current-print')
+	if idfile ~= nil then
+		return idfile:read('*a')
+	end
+end
+
+
 function M.progress(request, response)
 	local argId = request:get("id")
 	local printer,msg = printerUtils.createPrinterOrFail(argId, response)
@@ -56,11 +80,7 @@ function M.progress(request, response)
 	-- NOTE: despite their names, `currentLine` is still the error indicator and `bufferedLines` the message in such case.
 	local currentLine,bufferedLines,totalLines,bufferSize,maxBufferSize,seqNumber,seqTotal = printer:getProgress()
 
-	local idfile = io.open('/tmp/current-print')
-	local printId
-	if idfile ~= nil then
-		printId = idfile:read('*a')
-	end
+	local printId = getCurrentPrint()
 
 
 	response:addData('id', argId)
@@ -167,7 +187,8 @@ function M.stop_POST(request, response)
 	if not printer or not printer:hasSocket() then return end
 
 	io.popen("killall print-fetch")
-	io.popen("rm /tmp/current-print /tmp/startcode /tmp/endcode")
+	io.popen("rm /tmp/startcode /tmp/endcode")
+	setCurrentPrint(nil)
 
 	if(argGcode == nil) then
 		argGcode = ""
@@ -275,13 +296,7 @@ function M.fetch_POST(request, response)
 		response:setError("no id supplied")
 		return
 	end
-	local cpfile = io.open("/tmp/current-print", 'w+')
-        if cpfile == nil then
-                response:setError("could not save id")
-                return
-        end
-        cpfile:write(id)
-        cpfile:close()
+	setCurrentPrint(id)
 
 	io.popen("print-fetch " .. socket .. " " .. gcodeServer .. " " .. id .. gcodeFiles)
 

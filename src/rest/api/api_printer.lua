@@ -72,8 +72,8 @@ local function getCurrentPrint()
 end
 
 local function stopFetch()
-        io.popen("killall print-fetch")
-	io.popen("rm /tmp/startcode /tmp/endcode")
+        io.popen("killall print-fetch"):close()
+	io.popen("rm /tmp/startcode /tmp/endcode"):close()
 end
 
 function M.progress(request, response)

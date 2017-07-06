@@ -49,7 +49,7 @@ function M.temperature(request, response)
 end
 
 local function setCurrentPrint(id)
-	local cpfileName = "/tmp/current-print";
+	local cpfileName = "/tmp/current-print"
 	if id == nil then
 		io.popen('rm ' .. cpfileName)
 		return true

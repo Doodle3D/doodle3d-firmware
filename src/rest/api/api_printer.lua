@@ -51,7 +51,7 @@ end
 local function setCurrentPrint(id)
 	local cpfileName = "/tmp/current-print"
 	if id == nil then
-		io.popen('rm ' .. cpfileName)
+		io.popen('rm ' .. cpfileName):close()
 		return true
 	end
 

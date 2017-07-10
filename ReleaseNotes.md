@@ -1,5 +1,8 @@
 Changelog
 
+# 0.11.0-c (10 jul 2017)
+- fix: Also closing file descriptor after removing current print file (commit 550e151)
+
 # 0.11.0-b (6 jul 2017)
 - show id of current print in d3dapi/info/status when printing in 'fetch' mode.
 - code reuse and cleanup for control, kill and status

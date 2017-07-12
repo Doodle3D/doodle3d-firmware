@@ -1,5 +1,6 @@
 Changelog
 
+# 0.11.0 (12 jul 2017)
 # 0.11.0-c (10 jul 2017)
 - fix: Also closing file descriptor after removing current print file (commit 550e151)
 
